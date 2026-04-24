@@ -40,6 +40,17 @@ export default function Cliente() {
   const[mostrarExtrato, setMostrarExtrato] = useState(false);
   const[extrato, setExtrato] = useState<any[]>([]);
 
+  // 🔥 NOVO: Estados da Roleta e NPS
+  const [brindesPendentes, setBrindesPendentes] = useState<any[]>([]);
+  const [configLoja, setConfigLoja] = useState<any>(null);
+  
+  const [mostrarRoletaModal, setMostrarRoletaModal] = useState(false);
+  const [etapaRoleta, setEtapaRoleta] = useState<'nps' | 'girando' | 'resultado'>('nps');
+  const [perguntasNps, setPerguntasNps] = useState<any[]>([]);
+  const [premiosRoleta, setPremiosRoleta] = useState<any[]>([]);
+  const [respostasNps, setRespostasNps] = useState<any>({});
+  const [premioGanho, setPremioGanho] = useState<any>(null);
+
   const[toast, setToast] = useState({ visible: false, message: '', tipo: 'sucesso' });
   const toastAnim = useRef(new Animated.Value(-150)).current; 
 
@@ -126,7 +137,8 @@ export default function Cliente() {
   const carregarDados = async (cpfBusca: string) => {
     const { data: lojas } = await supabase.from('lojas').select('id, nome');
     const { data: premiosRaw } = await supabase.from('recompensas').select('id, nome');
-    const { data: configs } = await supabase.from('configuracoes_loja').select('loja_id, cidade'); // Busca Cidades da Rede
+    const { data: configs } = await supabase.from('configuracoes_loja').select('loja_id, cidade, roleta_ativa, roleta_intervalo_dias'); // Busca Cidades da Rede e configs
+
 
     const mapLojas: any = {}; (lojas ||[]).forEach(l => mapLojas[l.id] = l.nome);
     const mapPremios: any = {}; (premiosRaw ||[]).forEach(p => mapPremios[p.id] = p.nome);
@@ -134,8 +146,14 @@ export default function Cliente() {
     if (loja_id) setNomeLojaAtual(mapLojas[String(loja_id)] || 'Loja Parceira');
     else setNomeLojaAtual('Minha Carteira PALM');
 
+    const configAtual = (configs ||[]).find(c => String(c.loja_id) === String(loja_id));
+    setConfigLoja(configAtual || null);
+
     const { data: ban } = await supabase.from('banners').select('*').eq('ativo', true).order('ordem', { ascending: true });
     setBanners(ban ||[]);
+
+    const { data: brindesData } = await supabase.from('brindes_pendentes').select('*').eq('cliente_cpf', cpfBusca).eq('resgatado', false);
+    setBrindesPendentes((brindesData || []).map(b => ({ ...b, nomeLoja: mapLojas[b.loja_id] || 'Loja Parceira' })));
 
     const { data: trans } = await supabase.from('transacoes').select('*').eq('cliente_cpf', cpfBusca);
     const { data: res } = await supabase.from('resgates').select('*').eq('cliente_cpf', cpfBusca);
@@ -273,6 +291,78 @@ export default function Cliente() {
 
   const abrirLink = (url: string) => { if (url) Linking.openURL(url).catch(() => mostrarToast('Erro ao abrir o link.', 'erro')); };
 
+  // 🔥 FUNÇÕES DA ROLETA E NPS
+  const abrirRoleta = async () => {
+    const clean = cpf.replace(/\D/g, '');
+    const intervaloDias = configLoja?.roleta_intervalo_dias || 1;
+    
+    const { data: lastRespostas } = await supabase.from('respostas_nps').select('created_at').eq('loja_id', String(loja_id)).eq('cliente_cpf', clean).order('created_at', { ascending: false }).limit(1);
+    if (lastRespostas && lastRespostas.length > 0) {
+      const dataUltima = new Date(lastRespostas[0].created_at);
+      const diffDias = (new Date().getTime() - dataUltima.getTime()) / (1000 * 3600 * 24);
+      if (diffDias < intervaloDias) {
+        mostrarToast(`Você já jogou recentemente. Tente novamente em algumas horas!`, 'erro');
+        return;
+      }
+    }
+
+    const { data: pNps } = await supabase.from('perguntas_nps').select('*').eq('loja_id', String(loja_id)).order('created_at', { ascending: true });
+    const { data: pRoleta } = await supabase.from('roleta_premios').select('*').eq('loja_id', String(loja_id)).order('probabilidade', { ascending: false });
+
+    setPerguntasNps(pNps || []);
+    setPremiosRoleta(pRoleta || []);
+    setRespostasNps({});
+    setEtapaRoleta('nps');
+    setMostrarRoletaModal(true);
+  };
+
+  const enviarNpsEGirar = async () => {
+    const clean = cpf.replace(/\D/g, '');
+    const insercoes = Object.keys(respostasNps).map(pergunta_id => ({
+      loja_id: String(loja_id),
+      cliente_cpf: clean,
+      pergunta_id: pergunta_id,
+      resposta: String(respostasNps[pergunta_id])
+    }));
+
+    if (insercoes.length > 0) {
+      await supabase.from('respostas_nps').insert(insercoes);
+    }
+
+    setEtapaRoleta('girando');
+    
+    setTimeout(async () => {
+       let somaProbs = 0;
+       premiosRoleta.forEach(p => somaProbs += Number(p.probabilidade));
+       
+       let random = Math.random() * somaProbs;
+       let premioSorteado = premiosRoleta[premiosRoleta.length - 1]; 
+       
+       for (const p of premiosRoleta) {
+         if (random < Number(p.probabilidade)) {
+           premioSorteado = p;
+           break;
+         }
+         random -= Number(p.probabilidade);
+       }
+
+       if (!premioSorteado) {
+          setPremioGanho({ nome: 'Nada desta vez! 😢', tipo: 'nada' });
+       } else {
+          setPremioGanho(premioSorteado);
+          if (premioSorteado.tipo === 'pontos') {
+             await supabase.from('transacoes').insert({ loja_id: String(loja_id), cliente_cpf: clean, valor: 0, pontos_gerados: premioSorteado.valor });
+          } else if (premioSorteado.tipo === 'cashback') {
+             await supabase.from('cashbacks').insert({ loja_id: String(loja_id), cliente_cpf: clean, valor: premioSorteado.valor, usado: false });
+          } else if (premioSorteado.tipo !== 'nada') {
+             await supabase.from('brindes_pendentes').insert({ loja_id: String(loja_id), cliente_cpf: clean, nome_brinde: premioSorteado.nome });
+          }
+       }
+       setEtapaRoleta('resultado');
+       await carregarDados(clean); 
+    }, 3000);
+  };
+
   const banner1 = banners.find(b => b.ordem === 1); const banner2 = banners.find(b => b.ordem === 2);
   const banner3 = banners.find(b => b.ordem === 3); const banner4 = banners.find(b => b.ordem === 4);
 
@@ -354,6 +444,19 @@ export default function Cliente() {
         )}
       </View>
 
+      {/* 🔥 ALERTA DE BRINDES PENDENTES */}
+      {brindesPendentes.length > 0 && (
+         <View style={{paddingHorizontal: 20, paddingTop: 15, paddingBottom: 5}}>
+            <View style={{backgroundColor: '#ec489915', padding: 15, borderRadius: 16, borderWidth: 1, borderColor: '#ec489950'}}>
+               <Text style={{color: '#ec4899', fontWeight: '900', fontSize: 14, marginBottom: 8}}>🎁 VOCÊ TEM PRÊMIOS PARA RETIRAR!</Text>
+               {brindesPendentes.map((b: any) => (
+                  <Text key={b.id} style={{color: c.texto, fontSize: 13, marginBottom: 4, fontWeight: 'bold'}}>• {b.nome_brinde} <Text style={{color: c.subtexto, fontWeight: 'normal'}}>({b.nomeLoja})</Text></Text>
+               ))}
+               <Text style={{color: '#ec4899', fontSize: 11, fontStyle: 'italic', marginTop: 5}}>Apresente esta tela no caixa para resgatar.</Text>
+            </View>
+         </View>
+      )}
+
       <View style={[styles.divisorSutil, { backgroundColor: c.borda }]} />
 
       {mostrarExtrato ? (
@@ -419,6 +522,14 @@ export default function Cliente() {
               </ScrollView>
               <View style={[styles.divisor, { backgroundColor: c.borda }]} />
             </View>
+          )}
+
+          {/* 🔥 BOTAO DA ROLETA */}
+          {loja_id && configLoja?.roleta_ativa && (
+            <TouchableOpacity style={[styles.bannerImageContainer, { height: 90, borderColor: '#ec4899', marginTop: 5, marginBottom: 20, backgroundColor: '#ec489915', justifyContent: 'center', alignItems: 'center' }]} onPress={abrirRoleta} activeOpacity={0.8}>
+               <Text style={{color: '#ec4899', fontSize: 24, fontWeight: '900', letterSpacing: 1}}>🎡 JOGAR ROLETA</Text>
+               <Text style={{color: c.texto, fontSize: 12, marginTop: 4, fontWeight: 'bold'}}>Avalie a loja e ganhe prêmios na hora!</Text>
+            </TouchableOpacity>
           )}
 
           {(banner1 || banner2 || banner3) && (
@@ -500,6 +611,79 @@ export default function Cliente() {
 
         </ScrollView>
       )}
+
+      {/* 🔥 MODAL DA ROLETA E NPS */}
+      {mostrarRoletaModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            {etapaRoleta === 'nps' && (
+              <ScrollView style={{maxHeight: 500}} showsVerticalScrollIndicator={false}>
+                <Text style={styles.modalTitle}>Antes de girar...</Text>
+                <Text style={styles.modalSub}>Responda rapidinho para ajudar a loja!</Text>
+                
+                {perguntasNps.length === 0 && <Text style={{color: '#94a3b8', marginVertical: 20, textAlign: 'center'}}>Nenhuma pergunta configurada. Pode girar direto!</Text>}
+                
+                {perguntasNps.map(p => (
+                  <View key={p.id} style={{marginTop: 20, backgroundColor: '#0f172a', padding: 15, borderRadius: 16}}>
+                    <Text style={{color: '#fff', fontSize: 15, fontWeight: 'bold', marginBottom: 12, textAlign: 'center'}}>{p.pergunta}</Text>
+                    {p.tipo === 'estrelas' ? (
+                      <View style={{flexDirection: 'row', gap: 10, justifyContent: 'center'}}>
+                        {[1,2,3,4,5].map(star => (
+                          <TouchableOpacity key={star} onPress={() => setRespostasNps({...respostasNps, [p.id]: star})}>
+                            <Text style={{fontSize: 32, opacity: respostasNps[p.id] >= star ? 1 : 0.3}}>⭐</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ) : (
+                      <View style={{flexDirection: 'row', gap: 15, justifyContent: 'center'}}>
+                        <TouchableOpacity style={{paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12, backgroundColor: respostasNps[p.id] === 'sim' ? '#10b981' : '#334155'}} onPress={() => setRespostasNps({...respostasNps, [p.id]: 'sim'})}>
+                          <Text style={{fontSize: 20}}>👍 SIM</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={{paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12, backgroundColor: respostasNps[p.id] === 'nao' ? '#ef4444' : '#334155'}} onPress={() => setRespostasNps({...respostasNps, [p.id]: 'nao'})}>
+                          <Text style={{fontSize: 20}}>👎 NÃO</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                ))}
+
+                <TouchableOpacity style={[styles.buttonBig, {marginTop: 25, backgroundColor: '#ec4899', shadowColor: '#ec4899'}]} onPress={enviarNpsEGirar}>
+                  <Text style={styles.buttonTextBig}>ENVIAR E GIRAR 🎡</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={{alignItems: 'center', marginTop: 15, paddingBottom: 10}} onPress={() => setMostrarRoletaModal(false)}>
+                  <Text style={{color: '#ef4444', fontWeight: 'bold'}}>CANCELAR E SAIR</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+
+            {etapaRoleta === 'girando' && (
+              <View style={{alignItems: 'center', paddingVertical: 40}}>
+                <Text style={{fontSize: 80}}>🎡</Text>
+                <Text style={[styles.modalTitle, {marginTop: 20, color: '#ec4899'}]}>Girando a Sorte...</Text>
+                <Text style={{color: '#94a3b8', marginTop: 10}}>Cruzando os dedos! 🤞</Text>
+              </View>
+            )}
+
+            {etapaRoleta === 'resultado' && (
+              <View style={{alignItems: 'center', paddingVertical: 20}}>
+                <Text style={{fontSize: 60}}>{premioGanho?.tipo === 'nada' ? '😢' : '🎉'}</Text>
+                <Text style={[styles.modalTitle, {marginTop: 20, color: premioGanho?.tipo === 'nada' ? '#94a3b8' : '#10b981'}]}>
+                  {premioGanho?.nome}
+                </Text>
+                <Text style={{color: '#e2e8f0', textAlign: 'center', marginTop: 10, lineHeight: 22}}>
+                  {premioGanho?.tipo === 'pontos' ? 'Os Springs já foram adicionados ao seu saldo!' : 
+                   premioGanho?.tipo === 'cashback' ? 'O Cashback já está na sua carteira!' :
+                   premioGanho?.tipo === 'nada' ? 'Não foi dessa vez. Tente novamente na próxima visita!' :
+                   'O seu brinde está salvo! Mostre o seu aplicativo para o lojista para retirar.'}
+                </Text>
+                <TouchableOpacity style={[styles.buttonBig, {marginTop: 30, width: '100%', backgroundColor: '#334155', shadowOpacity: 0}]} onPress={() => setMostrarRoletaModal(false)}>
+                  <Text style={styles.buttonTextBig}>FECHAR E VOLTAR</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -543,5 +727,9 @@ const styles = StyleSheet.create({
   buttonBig: { backgroundColor: '#10b981', padding: 22, borderRadius: 20, alignItems: 'center', shadowColor: '#10b981', shadowOpacity: 0.5, shadowRadius: 15, elevation: 10 },
   buttonTextBig: { color: '#fff', textAlign: 'center', fontWeight: '900', fontSize: 16, letterSpacing: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  botaoSair: { padding: 18, borderRadius: 16, alignItems: 'center', marginTop: 30, borderWidth: 1 } 
+  botaoSair: { padding: 18, borderRadius: 16, alignItems: 'center', marginTop: 30, borderWidth: 1 },
+  modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(2, 6, 23, 0.92)', zIndex: 9999, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalCard: { backgroundColor: '#1e293b', width: '100%', maxWidth: 450, padding: 25, borderRadius: 24, borderWidth: 1, borderColor: '#334155', shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 20, elevation: 15 },
+  modalTitle: { color: '#fff', fontSize: 26, fontWeight: '900', marginBottom: 5, textAlign: 'center', letterSpacing: -0.5 },
+  modalSub: { color: '#94a3b8', fontSize: 14, textAlign: 'center', marginBottom: 15 }
 });

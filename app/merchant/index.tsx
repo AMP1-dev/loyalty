@@ -68,12 +68,19 @@ export default function Merchant() {
   const[modalCRM, setModalCRM] = useState<{ visivel: boolean, cpf: string, pontos: number, dias: number } | null>(null);
   const[loadingSalvar, setLoadingSalvar] = useState(false);
 
-  // 🔥 ESTADOS DA ROLETA
+  // 🔥 ESTADOS DA ROLETA E NPS
   const[premiosRoleta, setPremiosRoleta] = useState<any[]>([]);
   const[editandoRoletaId, setEditandoRoletaId] = useState<string | null>(null);
   const[formRoleta, setFormRoleta] = useState<any>({});
   const[avaliacoes, setAvaliacoes] = useState<any[]>([]);
   const [mediaEstrelas, setMediaEstrelas] = useState(0);
+
+  const [perguntasNps, setPerguntasNps] = useState<any[]>([]);
+  const [mostrarNps, setMostrarNps] = useState(false);
+  const [editandoNpsId, setEditandoNpsId] = useState<string | null>(null);
+  const [formNps, setFormNps] = useState<any>({});
+  
+  const [brindesPendentes, setBrindesPendentes] = useState<any>({});
 
   const [config, setConfig] = useState({
     nome_loja: '', cor_primaria: '#10b981', cashback_percent: '0', cashback_expiracao_dias: '30',
@@ -112,6 +119,13 @@ export default function Merchant() {
     } else {
       setBonusPendentes((prev: any) => { const novo = {...prev}; delete novo[cpf]; return novo; });
       if (idFila) setUsarBonus((prev: any) => ({ ...prev,[idFila]: false })); 
+    }
+
+    const { data: brindes } = await supabase.from('brindes_pendentes').select('*').eq('cliente_cpf', cpf).eq('loja_id', lojaId).eq('resgatado', false).order('created_at', { ascending: true });
+    if (brindes && brindes.length > 0) {
+      setBrindesPendentes((prev: any) => ({ ...prev,[cpf]: brindes }));
+    } else {
+      setBrindesPendentes((prev: any) => { const novo = {...prev}; delete novo[cpf]; return novo; });
     }
   };
 
@@ -168,7 +182,7 @@ export default function Merchant() {
     });
   };
 
-  // 🔥 BUSCA AVALIAÇÕES E PREMIOS DA ROLETA
+  // 🔥 BUSCA AVALIAÇÕES E PREMIOS DA ROLETA E NPS
   const buscarAvaliacoesERoleta = async () => {
     if (!lojaId) return;
     const { data: avData } = await supabase.from('avaliacoes').select('*').eq('loja_id', lojaId).order('created_at', { ascending: false }).limit(20);
@@ -178,6 +192,9 @@ export default function Merchant() {
 
     const { data: rolData } = await supabase.from('roleta_premios').select('*').eq('loja_id', lojaId).order('probabilidade', { ascending: false });
     setPremiosRoleta(rolData ||[]);
+
+    const { data: npsData } = await supabase.from('perguntas_nps').select('*').eq('loja_id', lojaId).order('created_at', { ascending: true });
+    setPerguntasNps(npsData || []);
   };
 
   const carregarConfig = async () => {
@@ -289,6 +306,32 @@ export default function Merchant() {
     }, 500);
   };
 
+  // 🔥 FUNÇÕES NPS E BRINDES
+  const salvarPerguntaNps = async () => {
+    if (!editandoNpsId) return;
+    if (!formNps.pergunta || !formNps.tipo) { mostrarToast("Preencha a pergunta e escolha o tipo.", 'erro'); return; }
+    
+    const payload = { loja_id: lojaId, pergunta: formNps.pergunta, tipo: formNps.tipo, ativo: true };
+    
+    if (editandoNpsId === 'novo') await supabase.from('perguntas_nps').insert([payload]);
+    else await supabase.from('perguntas_nps').update(payload).eq('id', editandoNpsId);
+    
+    mostrarToast('📝 Pergunta NPS salva!', 'sucesso');
+    setEditandoNpsId(null); setFormNps({}); buscarAvaliacoesERoleta();
+  };
+
+  const apagarPerguntaNps = async (id: string) => {
+    await supabase.from('perguntas_nps').delete().eq('id', id);
+    mostrarToast('Pergunta apagada.', 'sucesso');
+    buscarAvaliacoesERoleta();
+  };
+
+  const entregarBrinde = async (idBrinde: string, cpf: string) => {
+    await supabase.from('brindes_pendentes').update({ resgatado: true }).eq('id', idBrinde);
+    mostrarToast('🎁 Brinde entregue com sucesso!', 'sucesso');
+    buscarFinanceiroDetalhado(cpf);
+  };
+
   // 🔥 FUNÇÕES DA ROLETA
   const salvarRoleta = async () => {
     if (!editandoRoletaId) return;
@@ -376,7 +419,7 @@ export default function Merchant() {
     setEditandoRewardId(null); setForm({}); setFormError(''); await buscarRewards(); 
   };
 
-  const linkQR = `https://palm.amp.ia.br/cliente?loja_id=${lojaId}`;
+  const linkQR = `https://springs.amp.ia.br/cliente?loja_id=${lojaId}`;
 
   if (!lojaId) return <View style={styles.center}><Text style={{color:'#fff'}}>Carregando Loja...</Text></View>;
   const roiEmReais = stats.pontosResgatadosHoje * (Number(config.reais_por_ponto) || 1);
@@ -547,6 +590,20 @@ export default function Merchant() {
                     </View>
                   )}
                   
+                  {brindesPendentes[c.cliente_cpf] && brindesPendentes[c.cliente_cpf].length > 0 && (
+                    <View style={{backgroundColor: '#ec489920', padding: 15, borderRadius: 12, marginTop: 10, borderWidth: 1, borderColor: '#ec489950'}}>
+                      <Text style={{color: '#ec4899', fontWeight: 'bold', fontSize: 16, marginBottom: 10}}>🏆 BRINDES DA ROLETA PENDENTES</Text>
+                      {brindesPendentes[c.cliente_cpf].map((b: any) => (
+                        <View key={b.id} style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5}}>
+                           <Text style={{color: '#fff', fontSize: 15}}>• {b.nome_brinde}</Text>
+                           <TouchableOpacity style={{backgroundColor: '#ec4899', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6}} onPress={() => entregarBrinde(b.id, c.cliente_cpf)}>
+                              <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 12}}>MARCAR ENTREGUE</Text>
+                           </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  
                   {valorRaw && (
                     <View style={styles.simulacaoCard}>
                       <View style={{ marginTop: 12 }}><Text style={styles.simulacaoTitulo}>💡 Resumo da venda</Text></View>
@@ -710,6 +767,58 @@ export default function Merchant() {
                   </View>
                 ))}
               </View>
+            </View>
+          )}
+
+          {/* 🔥 NOVO: GERENCIAR NPS */}
+          <TouchableOpacity style={[styles.button, { backgroundColor: '#3b82f6', marginTop: 15 }]} onPress={() => setMostrarNps(!mostrarNps)}>
+            <Text style={styles.buttonText}>{mostrarNps ? 'FECHAR PESQUISA NPS' : '📋 GERENCIAR PESQUISA NPS'}</Text>
+          </TouchableOpacity>
+
+          {mostrarNps && (
+            <View style={{marginTop: 15}}>
+              <Text style={{color: '#94a3b8', fontSize: 12, marginBottom: 15}}>Cadastre as perguntas que o cliente deve responder antes de girar a Roleta. As respostas te ajudarão a medir a satisfação.</Text>
+              <TouchableOpacity style={[styles.buttonCenter, { backgroundColor: '#3b82f6', marginBottom: 20 }]} onPress={() => { setEditandoNpsId('novo'); setFormNps({ pergunta: '', tipo: 'estrelas' }); }}>
+                <Text style={styles.buttonText}>+ CADASTRAR NOVA PERGUNTA</Text>
+              </TouchableOpacity>
+
+              {editandoNpsId === 'novo' && (
+                <View style={[styles.editBox, { marginBottom: 20, borderColor: '#3b82f6', borderWidth: 1, backgroundColor: '#020617' }]}>
+                  <Text style={{ color: '#3b82f6', fontWeight: 'bold', marginBottom: 15, fontSize: 16 }}>✨ Nova Pergunta</Text>
+                  
+                  <Text style={{ color: '#94A3B8', fontSize: 12, marginLeft: 4, marginBottom: 4 }}>Qual é a pergunta?</Text>
+                  <TextInput placeholder="Ex: Como você avalia a limpeza da loja?" placeholderTextColor="#475569" value={formNps.pergunta || ''} onChangeText={(t) => setFormNps({ ...formNps, pergunta: t })} style={[styles.input, { marginBottom: 15 }]} />
+                  
+                  <Text style={{ color: '#94A3B8', fontSize: 12, marginLeft: 4, marginBottom: 4 }}>Tipo de Resposta</Text>
+                  <View style={{flexDirection: 'row', gap: 10, marginBottom: 15}}>
+                     <TouchableOpacity style={{flex: 1, padding: 10, borderWidth: 1, borderColor: formNps.tipo === 'estrelas' ? '#facc15' : '#334155', borderRadius: 8, alignItems: 'center'}} onPress={() => setFormNps({...formNps, tipo: 'estrelas'})}>
+                        <Text style={{color: '#fff'}}>⭐ Estrelas (1 a 5)</Text>
+                     </TouchableOpacity>
+                     <TouchableOpacity style={{flex: 1, padding: 10, borderWidth: 1, borderColor: formNps.tipo === 'joia' ? '#10b981' : '#334155', borderRadius: 8, alignItems: 'center'}} onPress={() => setFormNps({...formNps, tipo: 'joia'})}>
+                        <Text style={{color: '#fff'}}>👍 Joia (Sim/Não)</Text>
+                     </TouchableOpacity>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 15 }}>
+                    <TouchableOpacity style={[styles.button, { flex: 1, backgroundColor: '#3b82f6' }]} onPress={salvarPerguntaNps}>
+                      <Text style={styles.buttonText}>SALVAR PERGUNTA</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.button, { flex: 1, backgroundColor: 'transparent', borderWidth: 1, borderColor: '#ef4444' }]} onPress={() => { setEditandoNpsId(null); setFormNps({}); }}>
+                      <Text style={[styles.buttonText, { color: '#ef4444' }]}>CANCELAR</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              {perguntasNps.map((p) => (
+                <View key={p.id} style={[styles.cardGrid, { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+                  <View style={{flex: 1}}>
+                    <Text style={{color: '#fff', fontWeight: 'bold'}}>{p.pergunta}</Text>
+                    <Text style={{color: '#3b82f6', fontSize: 12}}>Tipo: {p.tipo === 'estrelas' ? '⭐ Estrelas (1 a 5)' : '👍 Joia (Sim/Não)'}</Text>
+                  </View>
+                  <TouchableOpacity style={{padding: 10}} onPress={() => apagarPerguntaNps(p.id)}><Text style={{color: '#ef4444', fontWeight: 'bold'}}>APAGAR</Text></TouchableOpacity>
+                </View>
+              ))}
             </View>
           )}
 
