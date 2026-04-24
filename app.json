@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "Springs",
+    "slug": "springs",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "userInterfaceStyle": "automatic",
+    "platforms":["ios", "android", "web"],
+    "plugins": ["expo-camera"],
+    "android": {
+      "permissions": ["CAMERA"],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#0F172A"
+      }
+    },
+    "ios": {
+      "infoPlist": {
+        "NSCameraUsageDescription": "Precisamos da câmera para ler o QR Code"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "name": "Springs Clube de Vantagens",
+      "shortName": "Springs",
+      "themeColor": "#0F172A",
+      "backgroundColor": "#0F172A",
+      "display": "standalone",
+      "favicon": "./assets/images/favicon.png"
+    }
+  }
+}
