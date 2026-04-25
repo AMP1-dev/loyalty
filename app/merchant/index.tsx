@@ -748,13 +748,13 @@ export default function Merchant() {
             <Text style={[styles.title, { color: '#38bdf8', textAlign: 'center', marginBottom: 20 }]}>🕹️ PAINEL DE ENGAJAMENTO</Text>
             <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap', marginBottom: (mostrarCatalogo || mostrarNps || mostrarRoleta) ? 20 : 0 }}>
               <TouchableOpacity style={[styles.button, { flex: 1, minWidth: 100, backgroundColor: mostrarCatalogo ? '#1e293b' : '#334155', borderColor: mostrarCatalogo ? '#10b981' : 'transparent', borderWidth: 1 }]} onPress={async () => { const novo = !mostrarCatalogo; setMostrarCatalogo(novo); setMostrarNps(false); setMostrarRoleta(false); if (novo) { await buscarRewards(); } }}>
-                <Text style={[styles.buttonText, { fontSize: 12, color: mostrarCatalogo ? '#10b981' : '#fff' }]}>🎁 CATÁLOGO</Text>
+                <Text style={[styles.buttonText, { fontSize: 12, color: mostrarCatalogo ? '#10b981' : '#fff' }]}>{mostrarCatalogo ? 'FECHAR CATÁLOGO' : '🎁 CATÁLOGO'}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.button, { flex: 1, minWidth: 100, backgroundColor: mostrarNps ? '#1e293b' : '#334155', borderColor: mostrarNps ? '#3b82f6' : 'transparent', borderWidth: 1 }]} onPress={() => { setMostrarNps(!mostrarNps); setMostrarCatalogo(false); setMostrarRoleta(false); }}>
-                <Text style={[styles.buttonText, { fontSize: 12, color: mostrarNps ? '#3b82f6' : '#fff' }]}>📋 PESQUISA NPS</Text>
+                <Text style={[styles.buttonText, { fontSize: 12, color: mostrarNps ? '#3b82f6' : '#fff' }]}>{mostrarNps ? 'FECHAR PESQUISA' : '📋 PESQUISA NPS'}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.button, { flex: 1, minWidth: 100, backgroundColor: mostrarRoleta ? '#1e293b' : '#334155', borderColor: mostrarRoleta ? '#ec4899' : 'transparent', borderWidth: 1 }]} onPress={() => { setMostrarRoleta(!mostrarRoleta); setMostrarCatalogo(false); setMostrarNps(false); }}>
-                <Text style={[styles.buttonText, { fontSize: 12, color: mostrarRoleta ? '#ec4899' : '#fff' }]}>🎡 ROLETA</Text>
+                <Text style={[styles.buttonText, { fontSize: 12, color: mostrarRoleta ? '#ec4899' : '#fff' }]}>{mostrarRoleta ? 'FECHAR ROLETA' : '🎡 ROLETA'}</Text>
               </TouchableOpacity>
             </View>
 
