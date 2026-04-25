@@ -313,8 +313,11 @@ export default function Merchant() {
     
     const payload = { loja_id: lojaId, pergunta: formNps.pergunta, tipo: formNps.tipo, ativo: true };
     
-    if (editandoNpsId === 'novo') await supabase.from('perguntas_nps').insert([payload]);
-    else await supabase.from('perguntas_nps').update(payload).eq('id', editandoNpsId);
+    const { error } = editandoNpsId === 'novo' 
+       ? await supabase.from('perguntas_nps').insert([payload]) 
+       : await supabase.from('perguntas_nps').update(payload).eq('id', editandoNpsId);
+    
+    if (error) { mostrarToast(`Erro DB: ${error.message}`, 'erro'); return; }
     
     mostrarToast('📝 Pergunta NPS salva!', 'sucesso');
     setEditandoNpsId(null); setFormNps({}); buscarAvaliacoesERoleta();
