@@ -422,7 +422,10 @@ export default function Merchant() {
     setEditandoRewardId(null); setForm({}); setFormError(''); await buscarRewards(); 
   };
 
-  const linkQR = `https://springs.amp.ia.br/cliente?loja_id=${lojaId}`;
+  // Adicionamos um timestamp no final da URL do QR Code (ex: &v=123456)
+  // Isso força o navegador do celular do cliente a ignorar o cache antigo e sempre baixar a versão mais atualizada do código!
+  const timestamp = new Date().getTime();
+  const linkQR = `https://springs.amp.ia.br/cliente?loja_id=${lojaId}&v=${timestamp}`;
 
   if (!lojaId) return <View style={styles.center}><Text style={{color:'#fff'}}>Carregando Loja...</Text></View>;
   const roiEmReais = stats.pontosResgatadosHoje * (Number(config.reais_por_ponto) || 1);
