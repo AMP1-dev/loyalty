@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 import { supabase } from '../../lib/supabase';
 
+const AnimaTouch = Animated.createAnimatedComponent(TouchableOpacity);
+
 const salvarStorage = async (key: string, value: string) => {
   if (typeof window !== 'undefined') localStorage.setItem(key, value);
   else await AsyncStorage.setItem(key, value);
@@ -456,12 +458,12 @@ export default function Cliente() {
 
         {/* CARDS GLOBAIS (TODA A REDE) */}
         <View style={{flexDirection: 'row', gap: 10, marginTop: 10 }}>
-          <Animated.TouchableOpacity onPress={() => setMostrarExtrato(true)} activeOpacity={0.8} style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, shadowColor: '#10b981', shadowOpacity: 0.2, shadowRadius: 15, elevation: 5, transform: [{ scale: pulseWin }] }]}>
+          <AnimaTouch onPress={() => setMostrarExtrato(true)} activeOpacity={0.8} style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, shadowColor: '#10b981', shadowOpacity: 0.2, shadowRadius: 15, elevation: 5, transform: [{ scale: pulseWin }] }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <Text style={{color: c.subtexto, fontSize: 11, fontWeight: 'bold', letterSpacing: 1}}>SPRINGS (REDE)</Text><Text style={{fontSize: 16}}>👁️</Text>
             </View>
             <Text adjustsFontSizeToFit numberOfLines={1} style={{color: c.neonVerde, fontWeight: '900', fontSize: 26}}>✨ {Math.floor(displaySaldo)}</Text>
-          </Animated.TouchableOpacity>
+          </AnimaTouch>
 
           <Animated.View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, transform: [{ scale: pulseWin }] }]}>
             <Text style={{color: c.subtexto, fontSize: 11, fontWeight: 'bold', letterSpacing: 1, marginBottom: 6}}>CASHBACK (REDE)</Text>

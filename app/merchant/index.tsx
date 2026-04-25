@@ -121,7 +121,21 @@ export default function Merchant() {
     if (!lojaId || !cpf) return;
     const { data: cb } = await supabase.from('cashbacks').select('valor, created_at').eq('cliente_cpf', cpf).eq('loja_id', lojaId).eq('usado', false).order('created_at', { ascending: true });
     const lista = cb ||[];
-    setCashbacks((prev: any) => ({ ...prev,[cpf]: { total: lista.reduce((s, c) => s + Number(c.valor), 0), proximo: lista.length ? Number(lista[0].valor) : 0 } }));
+    
+    // 🔥 BUSCAR PONTOS DO CLIENTE NESTA LOJA
+    const { data: pt } = await supabase.from('transacoes').select('pontos_gerados').eq('cliente_cpf', cpf).eq('loja_id', lojaId);
+    const { data: ptUsados } = await supabase.from('resgates').select('pontos_usados').eq('cliente_cpf', cpf).eq('loja_id', lojaId);
+    const totalGanhos = (pt || []).reduce((s, t) => s + (t.pontos_gerados || 0), 0);
+    const totalUsados = (ptUsados || []).reduce((s, t) => s + (t.pontos_usados || 0), 0);
+
+    setCashbacks((prev: any) => ({ 
+      ...prev,
+      [cpf]: { 
+        total: lista.reduce((s, c) => s + Number(c.valor), 0), 
+        proximo: lista.length ? Number(lista[0].valor) : 0,
+        pontos: Math.max(0, totalGanhos - totalUsados)
+      } 
+    }));
 
     const hojeIso = new Date().toISOString();
     const { data: bn } = await supabase.from('bonus_pendentes').select('*').eq('cliente_cpf', cpf).eq('loja_id', lojaId).eq('usado', false).gte('data_expiracao', hojeIso).order('created_at', { ascending: true }).limit(1);
@@ -651,7 +665,10 @@ export default function Merchant() {
           )}
 
           <View style={styles.card}>
-            <Text style={styles.title}>📋 Fila do QR Code</Text>
+            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15}}>
+              <Text style={styles.title}>📋 Fila do QR Code</Text>
+              <TouchableOpacity onPress={buscarFila} style={{backgroundColor: '#1e293b', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8}}><Text style={{color: '#94a3b8', fontSize: 12, fontWeight: 'bold'}}>🔄 ATUALIZAR FILA</Text></TouchableOpacity>
+            </View>
             {fila.length === 0 && <Text style={{color: '#64748b', fontStyle: 'italic', marginTop: 5}}>Nenhum cliente aguardando na fila.</Text>}
             {(fila ||[]).map((c) => {
               const valorRaw = valorVenda[c.id] || '';
@@ -661,8 +678,17 @@ export default function Merchant() {
               return (
                 <View key={c.id} style={styles.filaItem}>
                   <View style={styles.filaHeader}>
-                    <Text style={styles.filaTelefone}>{formatarTelefone(c.cliente_cpf || '')}</Text>
-                    <TouchableOpacity style={styles.removeBtnTop} onPress={() => removerFila(c.id)}><Text style={styles.removeText}>✕</Text></TouchableOpacity>
+                    <View>
+                      <Text style={styles.filaTelefone}>{formatarTelefone(c.cliente_cpf || '')}</Text>
+                      <View style={{flexDirection: 'row', gap: 10, marginTop: 4}}>
+                        <Text style={{color: '#10b981', fontSize: 11, fontWeight: 'bold'}}>✨ {Math.floor(cashbacks[c.cliente_cpf]?.pontos || 0)} SPG</Text>
+                        <Text style={{color: '#facc15', fontSize: 11, fontWeight: 'bold'}}>💰 R$ {(cashbacks[c.cliente_cpf]?.total || 0).toFixed(2)} CB</Text>
+                      </View>
+                    </View>
+                    <View style={{flexDirection: 'row', gap: 8}}>
+                      <TouchableOpacity onPress={() => buscarFinanceiroDetalhado(c.cliente_cpf, c.id)} style={{backgroundColor: '#1e293b', padding: 8, borderRadius: 8}}><Text style={{fontSize: 12}}>🔄</Text></TouchableOpacity>
+                      <TouchableOpacity style={styles.removeBtnTop} onPress={() => removerFila(c.id)}><Text style={styles.removeText}>✕</Text></TouchableOpacity>
+                    </View>
                   </View>
 
                   <TextInput placeholder="R$ 0,00" placeholderTextColor="#94A3B8" keyboardType="numeric" value={valorFormatado} onChangeText={(t) => setValorVenda((p: any) => ({ ...p,[c.id]: t.replace(/\D/g, '') }))} style={styles.inputValor} returnKeyType="done" onSubmitEditing={() => atender(c.id)} onKeyPress={(e) => { if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter') atender(c.id); }} />
