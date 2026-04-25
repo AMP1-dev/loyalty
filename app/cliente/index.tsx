@@ -51,6 +51,9 @@ export default function Cliente() {
   const [respostasNps, setRespostasNps] = useState<any>({});
   const [premioGanho, setPremioGanho] = useState<any>(null);
 
+  const [slotItems, setSlotItems] = useState<any[]>([]);
+  const slotAnim = useRef(new Animated.Value(0)).current;
+
   const[toast, setToast] = useState({ visible: false, message: '', tipo: 'sucesso' });
   const toastAnim = useRef(new Animated.Value(-150)).current; 
 
@@ -327,40 +330,62 @@ export default function Cliente() {
 
     if (insercoes.length > 0) {
       await supabase.from('respostas_nps').insert(insercoes);
+    } else {
+      await supabase.from('respostas_nps').insert([{ loja_id: String(loja_id), cliente_cpf: clean, resposta: 'JOGADA_ROLETA' }]);
     }
 
     setEtapaRoleta('girando');
     
-    setTimeout(async () => {
-       let somaProbs = 0;
-       premiosRoleta.forEach(p => somaProbs += Number(p.probabilidade));
-       
-       let random = Math.random() * somaProbs;
-       let premioSorteado = premiosRoleta[premiosRoleta.length - 1]; 
-       
-       for (const p of premiosRoleta) {
-         if (random < Number(p.probabilidade)) {
-           premioSorteado = p;
-           break;
-         }
-         random -= Number(p.probabilidade);
-       }
+    let somaProbs = 0;
+    premiosRoleta.forEach(p => somaProbs += Number(p.probabilidade));
+    
+    let random = Math.random() * somaProbs;
+    let premioSorteado = premiosRoleta[premiosRoleta.length - 1]; 
+    
+    for (const p of premiosRoleta) {
+      if (random < Number(p.probabilidade)) {
+        premioSorteado = p;
+        break;
+      }
+      random -= Number(p.probabilidade);
+    }
 
-       if (!premioSorteado) {
-          setPremioGanho({ nome: 'Nada desta vez! 😢', tipo: 'nada' });
-       } else {
-          setPremioGanho(premioSorteado);
-          if (premioSorteado.tipo === 'pontos') {
-             await supabase.from('transacoes').insert({ loja_id: String(loja_id), cliente_cpf: clean, valor: 0, pontos_gerados: premioSorteado.valor });
-          } else if (premioSorteado.tipo === 'cashback') {
-             await supabase.from('cashbacks').insert({ loja_id: String(loja_id), cliente_cpf: clean, valor: premioSorteado.valor, usado: false });
-          } else if (premioSorteado.tipo !== 'nada') {
-             await supabase.from('brindes_pendentes').insert({ loja_id: String(loja_id), cliente_cpf: clean, nome_brinde: premioSorteado.nome });
-          }
+    if (!premioSorteado || !premioSorteado.id) {
+       premioSorteado = { nome: 'Nada desta vez! 😢', tipo: 'nada' };
+    }
+
+    // 🔥 PREPARA O CAÇA-NÍQUEIS
+    const itensSlot = [];
+    const fallback = [{nome:'🎁'}, {nome:'⭐'}, {nome:'💰'}, {nome:'😢'}];
+    const source = premiosRoleta.length > 0 ? premiosRoleta : fallback;
+    for(let i=0; i<30; i++) {
+        itensSlot.push(source[Math.floor(Math.random() * source.length)]);
+    }
+    itensSlot.push(premioSorteado);
+    setSlotItems(itensSlot);
+    slotAnim.setValue(0);
+    
+    // Animação Slot Machine (100px de altura por item)
+    Animated.timing(slotAnim, {
+      toValue: -(itensSlot.length - 1) * 100, 
+      duration: 5000,
+      easing: Easing.out(Easing.cubic), 
+      useNativeDriver: true
+    }).start(async () => {
+       setPremioGanho(premioSorteado);
+       if (premioSorteado.tipo === 'pontos') {
+          await supabase.from('transacoes').insert({ loja_id: String(loja_id), cliente_cpf: clean, valor: 0, pontos_gerados: premioSorteado.valor });
+       } else if (premioSorteado.tipo === 'cashback') {
+          await supabase.from('cashbacks').insert({ loja_id: String(loja_id), cliente_cpf: clean, valor: premioSorteado.valor, usado: false });
+       } else if (premioSorteado.tipo !== 'nada') {
+          await supabase.from('brindes_pendentes').insert({ loja_id: String(loja_id), cliente_cpf: clean, nome_brinde: premioSorteado.nome });
        }
        setEtapaRoleta('resultado');
        await carregarDados(clean); 
-    }, 3000);
+    });
+  };
+
+
   };
 
   const banner1 = banners.find(b => b.ordem === 1); const banner2 = banners.find(b => b.ordem === 2);
@@ -657,10 +682,25 @@ export default function Cliente() {
             )}
 
             {etapaRoleta === 'girando' && (
-              <View style={{alignItems: 'center', paddingVertical: 40}}>
-                <Text style={{fontSize: 80}}>🎡</Text>
-                <Text style={[styles.modalTitle, {marginTop: 20, color: '#ec4899'}]}>Girando a Sorte...</Text>
-                <Text style={{color: '#94a3b8', marginTop: 10}}>Cruzando os dedos! 🤞</Text>
+              <View style={{alignItems: 'center', paddingVertical: 20}}>
+                <Text style={[styles.modalTitle, {color: '#ec4899', marginBottom: 20}]}>Boa sorte! 🤞</Text>
+                
+                {/* Janela do Caça-Níqueis */}
+                <View style={{height: 100, overflow: 'hidden', width: 280, backgroundColor: '#0f172a', borderRadius: 20, borderWidth: 4, borderColor: '#ec4899', justifyContent: 'center'}}>
+                   {/* Linha indicadora central (mira) */}
+                   <View style={{position: 'absolute', width: '100%', height: 2, backgroundColor: 'rgba(255,255,255,0.1)', zIndex: 10, top: 49}} />
+                   <View style={{position: 'absolute', width: 10, height: 10, borderRadius: 5, backgroundColor: '#ec4899', zIndex: 10, left: 5, top: 45}} />
+                   <View style={{position: 'absolute', width: 10, height: 10, borderRadius: 5, backgroundColor: '#ec4899', zIndex: 10, right: 5, top: 45}} />
+
+                   <Animated.View style={{transform: [{translateY: slotAnim}]}}>
+                     {slotItems.map((item, index) => (
+                       <View key={index} style={{height: 100, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10}}>
+                         <Text style={{color: '#fff', fontSize: item.nome.length > 15 ? 16 : 22, fontWeight: '900', textAlign: 'center'}}>{item.nome}</Text>
+                       </View>
+                     ))}
+                   </Animated.View>
+                </View>
+
               </View>
             )}
 
