@@ -304,7 +304,7 @@ export default function Cliente() {
       const dataUltima = new Date(lastRespostas[0].created_at);
       const diffDias = (new Date().getTime() - dataUltima.getTime()) / (1000 * 3600 * 24);
       if (diffDias < intervaloDias) {
-        mostrarToast(`Você já jogou recentemente. Tente novamente em algumas horas!`, 'erro');
+        mostrarToast(`Você já jogou recentemente. O intervalo mínimo é de ${intervaloDias} dia(s).`, 'erro');
         return;
       }
     }
@@ -370,15 +370,20 @@ export default function Cliente() {
       toValue: -(itensSlot.length - 1) * 100, 
       duration: 5000,
       easing: Easing.out(Easing.cubic), 
-      useNativeDriver: true
+      useNativeDriver: false
     }).start(async () => {
        setPremioGanho(premioSorteado);
-       if (premioSorteado.tipo === 'pontos') {
-          await supabase.from('transacoes').insert({ loja_id: String(loja_id), cliente_cpf: clean, valor: 0, pontos_gerados: premioSorteado.valor });
-       } else if (premioSorteado.tipo === 'cashback') {
-          await supabase.from('cashbacks').insert({ loja_id: String(loja_id), cliente_cpf: clean, valor: premioSorteado.valor, usado: false });
-       } else if (premioSorteado.tipo !== 'nada') {
-          await supabase.from('brindes_pendentes').insert({ loja_id: String(loja_id), cliente_cpf: clean, nome_brinde: premioSorteado.nome });
+       
+       const isNada = premioSorteado.tipo === 'nada' || (premioSorteado.tipo !== 'brinde' && (!premioSorteado.valor || premioSorteado.valor <= 0));
+       
+       if (!isNada) {
+         if (premioSorteado.tipo === 'pontos') {
+            await supabase.from('transacoes').insert({ loja_id: String(loja_id), cliente_cpf: clean, valor: 0, pontos_gerados: premioSorteado.valor });
+         } else if (premioSorteado.tipo === 'cashback') {
+            await supabase.from('cashbacks').insert({ loja_id: String(loja_id), cliente_cpf: clean, valor: premioSorteado.valor, usado: false });
+         } else {
+            await supabase.from('brindes_pendentes').insert({ loja_id: String(loja_id), cliente_cpf: clean, nome_brinde: premioSorteado.nome });
+         }
        }
        setEtapaRoleta('resultado');
        await carregarDados(clean); 
@@ -694,7 +699,7 @@ export default function Cliente() {
 
                    <Animated.View style={{transform: [{translateY: slotAnim}]}}>
                      {slotItems.map((item, index) => (
-                       <View key={index} style={{height: 100, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10}}>
+                     <View key={index} style={{height: 100, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10}}>
                          <Text style={{color: '#fff', fontSize: item.nome.length > 15 ? 16 : 22, fontWeight: '900', textAlign: 'center'}}>{item.nome}</Text>
                        </View>
                      ))}
@@ -706,15 +711,18 @@ export default function Cliente() {
 
             {etapaRoleta === 'resultado' && (
               <View style={{alignItems: 'center', paddingVertical: 20}}>
-                <Text style={{fontSize: 60}}>{premioGanho?.tipo === 'nada' ? '😢' : '🎉'}</Text>
-                <Text style={[styles.modalTitle, {marginTop: 20, color: premioGanho?.tipo === 'nada' ? '#94a3b8' : '#10b981'}]}>
-                  {premioGanho?.nome}
+                <Text style={{fontSize: 60}}>
+                  {premioGanho?.tipo === 'nada' || (!premioGanho?.valor && premioGanho?.tipo !== 'brinde') ? '😢' : '🎉'}
+                </Text>
+                <Text style={[styles.modalTitle, {marginTop: 20, color: premioGanho?.tipo === 'nada' || (!premioGanho?.valor && premioGanho?.tipo !== 'brinde') ? '#94a3b8' : '#10b981'}]}>
+                  {premioGanho?.tipo === 'nada' || (!premioGanho?.valor && premioGanho?.tipo !== 'brinde') ? 'Que pena!' : premioGanho?.nome}
                 </Text>
                 <Text style={{color: '#e2e8f0', textAlign: 'center', marginTop: 10, lineHeight: 22}}>
-                  {premioGanho?.tipo === 'pontos' ? 'Os Springs já foram adicionados ao seu saldo!' : 
-                   premioGanho?.tipo === 'cashback' ? 'O Cashback já está na sua carteira!' :
-                   premioGanho?.tipo === 'nada' ? 'Não foi dessa vez. Tente novamente na próxima visita!' :
-                   'O seu brinde está salvo! Mostre o seu aplicativo para o lojista para retirar.'}
+                  {premioGanho?.tipo === 'nada' || (!premioGanho?.valor && premioGanho?.tipo !== 'brinde')
+                    ? `Você tirou: ${premioGanho?.nome}. Tente novamente na próxima visita!`
+                    : premioGanho?.tipo === 'pontos' ? 'Os Springs já foram adicionados ao seu saldo!' : 
+                      premioGanho?.tipo === 'cashback' ? 'O Cashback já está na sua carteira!' :
+                      'O seu brinde está salvo! Mostre o seu aplicativo para o lojista para retirar.'}
                 </Text>
                 <TouchableOpacity style={[styles.buttonBig, {marginTop: 30, width: '100%', backgroundColor: '#334155', shadowOpacity: 0}]} onPress={() => setMostrarRoletaModal(false)}>
                   <Text style={styles.buttonTextBig}>FECHAR E VOLTAR</Text>
