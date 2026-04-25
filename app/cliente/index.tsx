@@ -289,7 +289,7 @@ export default function Cliente() {
 
   const sairDaCarteira = async () => {
     await salvarStorage('cliente_cpf', ''); setCpf(''); setStatus('idle'); setSaldo(0); setCashback(0); setExtrato([]);
-    if (Platform.OS === 'web') window.history.replaceState({}, '', '/cliente'); else router.setParams({ loja_id: '' });
+    router.replace('/cliente');
   };
 
   const abrirLink = (url: string) => { if (url) Linking.openURL(url).catch(() => mostrarToast('Erro ao abrir o link.', 'erro')); };

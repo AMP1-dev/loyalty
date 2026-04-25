@@ -518,6 +518,19 @@ export default function Merchant() {
               </ScrollView>
             </View>
 
+            <View style={[styles.card, { flex: 1, minWidth: 200 }]}>
+              <Text style={styles.title}>🔄 Últimos Resgates</Text>
+              {(!stats.ultimosResgates || stats.ultimosResgates.length === 0) && <Text style={{color: '#64748b', fontSize: 12}}>Nenhum resgate hoje.</Text>}
+              {(stats.ultimosResgates ||[]).map((r: any, i: number) => (
+                <View key={i} style={styles.topItem}>
+                   <View style={{flex: 1}}>
+                      <Text style={{color: '#fff', fontSize: 14}}>{r.nome_premio}</Text>
+                      <Text style={{color: '#94a3b8', fontSize: 10}}>{formatarTelefone(r.cliente_cpf || '')}</Text>
+                   </View>
+                </View>
+              ))}
+            </View>
+
             <View style={[styles.card, { width: '100%', backgroundColor: '#020617', borderColor: '#facc15' }]}>
               <Text style={[styles.title, {color: '#facc15'}]}>📈 Lucratividade (Retorno sobre Prêmios)</Text>
               <Text style={{color: '#e2e8f0', fontSize: 14, lineHeight: 22, marginTop: 5}}>Hoje os clientes resgataram <Text style={{fontWeight: 'bold', color: '#fff'}}>{stats.pontosResgatadosHoje || 0} Springs</Text>.</Text>
@@ -730,12 +743,23 @@ export default function Merchant() {
             </View>
           )}
 
-          <TouchableOpacity style={styles.button} onPress={async () => { const novo = !mostrarCatalogo; setMostrarCatalogo(novo); if (novo) { await buscarRewards(); } }}>
-            <Text style={styles.buttonText}>{mostrarCatalogo ? 'FECHAR CATÁLOGO' : 'VER CATÁLOGO'}</Text>
-          </TouchableOpacity>
+          {/* 🔥 PAINEL DE ENGAJAMENTO (Botões Lado a Lado) */}
+          <View style={[styles.card, { marginTop: 10, borderColor: '#38bdf8', borderWidth: 1 }]}>
+            <Text style={[styles.title, { color: '#38bdf8', textAlign: 'center', marginBottom: 20 }]}>🕹️ PAINEL DE ENGAJAMENTO</Text>
+            <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap', marginBottom: (mostrarCatalogo || mostrarNps || mostrarRoleta) ? 20 : 0 }}>
+              <TouchableOpacity style={[styles.button, { flex: 1, minWidth: 100, backgroundColor: mostrarCatalogo ? '#1e293b' : '#334155', borderColor: mostrarCatalogo ? '#10b981' : 'transparent', borderWidth: 1 }]} onPress={async () => { const novo = !mostrarCatalogo; setMostrarCatalogo(novo); setMostrarNps(false); setMostrarRoleta(false); if (novo) { await buscarRewards(); } }}>
+                <Text style={[styles.buttonText, { fontSize: 12, color: mostrarCatalogo ? '#10b981' : '#fff' }]}>🎁 CATÁLOGO</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, { flex: 1, minWidth: 100, backgroundColor: mostrarNps ? '#1e293b' : '#334155', borderColor: mostrarNps ? '#3b82f6' : 'transparent', borderWidth: 1 }]} onPress={() => { setMostrarNps(!mostrarNps); setMostrarCatalogo(false); setMostrarRoleta(false); }}>
+                <Text style={[styles.buttonText, { fontSize: 12, color: mostrarNps ? '#3b82f6' : '#fff' }]}>📋 PESQUISA NPS</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, { flex: 1, minWidth: 100, backgroundColor: mostrarRoleta ? '#1e293b' : '#334155', borderColor: mostrarRoleta ? '#ec4899' : 'transparent', borderWidth: 1 }]} onPress={() => { setMostrarRoleta(!mostrarRoleta); setMostrarCatalogo(false); setMostrarNps(false); }}>
+                <Text style={[styles.buttonText, { fontSize: 12, color: mostrarRoleta ? '#ec4899' : '#fff' }]}>🎡 ROLETA</Text>
+              </TouchableOpacity>
+            </View>
 
           {mostrarCatalogo && (
-            <View>
+            <View style={{ paddingTop: 15, borderTopWidth: 1, borderTopColor: '#334155' }}>
               <TouchableOpacity style={[styles.buttonCenter, { marginBottom: 20 }]} onPress={() => { setEditandoRewardId('novo'); setFormError(''); setForm({ nome: '', pontos: '', imagem: '', limiteCliente: '', limiteDia: '', limiteTotal: '' }); }}>
                 <Text style={styles.buttonText}>+ ADICIONAR NOVO PRÊMIO</Text>
               </TouchableOpacity>
@@ -773,13 +797,8 @@ export default function Merchant() {
             </View>
           )}
 
-          {/* 🔥 NOVO: GERENCIAR NPS */}
-          <TouchableOpacity style={[styles.button, { backgroundColor: '#3b82f6', marginTop: 15 }]} onPress={() => setMostrarNps(!mostrarNps)}>
-            <Text style={styles.buttonText}>{mostrarNps ? 'FECHAR PESQUISA NPS' : '📋 GERENCIAR PESQUISA NPS'}</Text>
-          </TouchableOpacity>
-
           {mostrarNps && (
-            <View style={{marginTop: 15}}>
+            <View style={{ paddingTop: 15, borderTopWidth: 1, borderTopColor: '#334155' }}>
               <Text style={{color: '#94a3b8', fontSize: 12, marginBottom: 15}}>Cadastre as perguntas que o cliente deve responder antes de girar a Roleta. As respostas te ajudarão a medir a satisfação.</Text>
               <TouchableOpacity style={[styles.buttonCenter, { backgroundColor: '#3b82f6', marginBottom: 20 }]} onPress={() => { setEditandoNpsId('novo'); setFormNps({ pergunta: '', tipo: 'estrelas' }); }}>
                 <Text style={styles.buttonText}>+ CADASTRAR NOVA PERGUNTA</Text>
@@ -825,13 +844,8 @@ export default function Merchant() {
             </View>
           )}
 
-          {/* 🔥 NOVO: GERENCIAR A ROLETA */}
-          <TouchableOpacity style={[styles.button, { backgroundColor: '#ec4899', marginTop: 15, marginBottom: 15 }]} onPress={() => setMostrarRoleta(!mostrarRoleta)}>
-            <Text style={styles.buttonText}>{mostrarRoleta ? 'FECHAR ROLETA DA SORTE' : '🎡 GERENCIAR ROLETA DA SORTE'}</Text>
-          </TouchableOpacity>
-
           {mostrarRoleta && (
-            <View>
+            <View style={{ paddingTop: 15, borderTopWidth: 1, borderTopColor: '#334155' }}>
               <Text style={{color: '#94a3b8', fontSize: 12, marginBottom: 15}}>Cadastre os prêmios (fatias) que o cliente pode ganhar ao avaliar a loja. A soma das probabilidades não precisa ser 100%.</Text>
               <TouchableOpacity style={[styles.buttonCenter, { backgroundColor: '#ec4899', marginBottom: 20 }]} onPress={() => { setEditandoRoletaId('novo'); setFormRoleta({ nome: '', tipo: 'pontos', valor: '', probabilidade: '10' }); }}>
                 <Text style={styles.buttonText}>+ CADASTRAR FATIA NA ROLETA</Text>
@@ -875,11 +889,15 @@ export default function Merchant() {
                     <Text style={{color: '#fff', fontWeight: 'bold'}}>{p.nome}</Text>
                     <Text style={{color: '#ec4899', fontSize: 12}}>Tipo: {p.tipo} | Valor: {p.valor} | Chance: {p.probabilidade}%</Text>
                   </View>
-                  <TouchableOpacity style={{padding: 10}} onPress={() => apagarRoleta(p.id)}><Text style={{color: '#ef4444', fontWeight: 'bold'}}>APAGAR</Text></TouchableOpacity>
+                  <TouchableOpacity style={{padding: 10}} onPress={() => apagarRoleta(p.id)}>
+                     <Text style={{color: '#ef4444', fontWeight: 'bold'}}>APAGAR</Text>
+                  </TouchableOpacity>
                 </View>
               ))}
             </View>
           )}
+
+          </View>
 
         </View>
       </ScrollView>
