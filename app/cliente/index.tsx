@@ -390,9 +390,6 @@ export default function Cliente() {
     });
   };
 
-
-  };
-
   const banner1 = banners.find(b => b.ordem === 1); const banner2 = banners.find(b => b.ordem === 2);
   const banner3 = banners.find(b => b.ordem === 3); const banner4 = banners.find(b => b.ordem === 4);
 
