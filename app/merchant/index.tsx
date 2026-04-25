@@ -207,7 +207,7 @@ export default function Merchant() {
         limite_resgates_diario_cliente: data.limite_resgates_diario_cliente !== null && data.limite_resgates_diario_cliente !== undefined ? String(data.limite_resgates_diario_cliente) : '',
         tempo_bloqueio_minutos: data.tempo_bloqueio_minutos !== null && data.tempo_bloqueio_minutos !== undefined ? String(data.tempo_bloqueio_minutos) : '',
         bonus_retorno_pontos: String(data.bonus_retorno_pontos || 50), bonus_retorno_validade_dias: String(data.bonus_retorno_validade_dias || 3),
-        roleta_ativa: data.roleta_ativa || false, roleta_intervalo_dias: String(data.roleta_intervalo_dias || 1) // 🔥 ATUALIZA CONFIG DA ROLETA
+        roleta_ativa: data.roleta_ativa || false, roleta_intervalo_dias: data.roleta_intervalo_dias !== undefined && data.roleta_intervalo_dias !== null ? String(data.roleta_intervalo_dias) : '1' // 🔥 ATUALIZA CONFIG DA ROLETA
       });
     } else { setConfig(prev => ({ ...prev, senha: lojaData?.senha || '' })); }
   };
@@ -384,7 +384,7 @@ export default function Merchant() {
       bonus_retorno_pontos: Number(config.bonus_retorno_pontos) || 50, bonus_retorno_validade_dias: Number(config.bonus_retorno_validade_dias) || 3,
       usar_cashback_total: config.usar_cashback_total, telefone: config.telefone, endereco: config.endereco, numero: config.numero,
       bairro: config.bairro, cidade: config.cidade, estado: config.estado, cep: config.cep,
-      roleta_ativa: config.roleta_ativa, roleta_intervalo_dias: Number(config.roleta_intervalo_dias) || 1 // 🔥 SALVA ROLETA
+      roleta_ativa: config.roleta_ativa, roleta_intervalo_dias: config.roleta_intervalo_dias !== undefined && config.roleta_intervalo_dias !== '' ? Number(config.roleta_intervalo_dias) : 1 // 🔥 SALVA ROLETA
     }, { onConflict: 'loja_id' });
 
     if (config.senha && config.senha.trim() !== '') await supabase.from('lojas').update({ senha: config.senha }).eq('id', lojaId);

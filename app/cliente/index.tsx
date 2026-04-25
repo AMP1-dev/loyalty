@@ -297,7 +297,7 @@ export default function Cliente() {
   // 🔥 FUNÇÕES DA ROLETA E NPS
   const abrirRoleta = async () => {
     const clean = cpf.replace(/\D/g, '');
-    const intervaloDias = configLoja?.roleta_intervalo_dias || 1;
+    const intervaloDias = configLoja?.roleta_intervalo_dias !== undefined && configLoja?.roleta_intervalo_dias !== null ? Number(configLoja.roleta_intervalo_dias) : 1;
     
     const { data: lastRespostas } = await supabase.from('respostas_nps').select('created_at').eq('loja_id', String(loja_id)).eq('cliente_cpf', clean).order('created_at', { ascending: false }).limit(1);
     if (lastRespostas && lastRespostas.length > 0) {
