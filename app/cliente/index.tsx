@@ -53,6 +53,7 @@ export default function Cliente() {
 
   const [slotItems, setSlotItems] = useState<any[]>([]);
   const slotAnim = useRef(new Animated.Value(0)).current;
+  const pulseWin = useRef(new Animated.Value(1)).current; // 🔥 ANIMAÇÃO DE PULSAR SALDO
 
   const[toast, setToast] = useState({ visible: false, message: '', tipo: 'sucesso' });
   const toastAnim = useRef(new Animated.Value(-150)).current; 
@@ -103,6 +104,15 @@ export default function Cliente() {
   useEffect(() => {
     Animated.timing(animatedSaldo, { toValue: saldo, duration: 1200, useNativeDriver: false }).start();
     const listener = animatedSaldo.addListener(({ value }) => setDisplaySaldo(value));
+    
+    // 🔥 Efeito de pulsar se o saldo aumentar
+    if (saldo > 0) {
+      Animated.sequence([
+        Animated.timing(pulseWin, { toValue: 1.2, duration: 200, useNativeDriver: true }),
+        Animated.spring(pulseWin, { toValue: 1, friction: 3, useNativeDriver: true })
+      ]).start();
+    }
+    
     return () => animatedSaldo.removeListener(listener);
   }, [saldo]);
 
@@ -365,9 +375,9 @@ export default function Cliente() {
     setSlotItems(itensSlot);
     slotAnim.setValue(0);
     
-    // Animação Slot Machine (100px de altura por item)
+    // Animação Slot Machine (120px de altura por item)
     Animated.timing(slotAnim, {
-      toValue: -(itensSlot.length - 1) * 100, 
+      toValue: -(itensSlot.length - 1) * 120, 
       duration: 5000,
       easing: Easing.out(Easing.cubic), 
       useNativeDriver: false
@@ -376,15 +386,18 @@ export default function Cliente() {
        
        const isNada = premioSorteado.tipo === 'nada' || (premioSorteado.tipo !== 'brinde' && (!premioSorteado.valor || premioSorteado.valor <= 0));
        
-       if (!isNada) {
-         if (premioSorteado.tipo === 'pontos') {
-            await supabase.from('transacoes').insert({ loja_id: String(loja_id), cliente_cpf: clean, valor: 0, pontos_gerados: premioSorteado.valor });
-         } else if (premioSorteado.tipo === 'cashback') {
-            await supabase.from('cashbacks').insert({ loja_id: String(loja_id), cliente_cpf: clean, valor: premioSorteado.valor, usado: false });
-         } else {
-            await supabase.from('brindes_pendentes').insert({ loja_id: String(loja_id), cliente_cpf: clean, nome_brinde: premioSorteado.nome });
-         }
-       }
+        if (!isNada) {
+          if (premioSorteado.tipo === 'pontos') {
+             await supabase.from('transacoes').insert({ loja_id: String(loja_id), cliente_cpf: clean, valor: 0, pontos_gerados: premioSorteado.valor });
+             mostrarToast(`✨ +${premioSorteado.valor} Springs adicionados!`, 'sucesso');
+          } else if (premioSorteado.tipo === 'cashback') {
+             await supabase.from('cashbacks').insert({ loja_id: String(loja_id), cliente_cpf: clean, valor: premioSorteado.valor, usado: false });
+             mostrarToast(`💰 R$ ${premioSorteado.valor} de Cashback ganho!`, 'sucesso');
+          } else {
+             await supabase.from('brindes_pendentes').insert({ loja_id: String(loja_id), cliente_cpf: clean, nome_brinde: premioSorteado.nome });
+             mostrarToast(`🎁 Brinde: ${premioSorteado.nome} salvo!`, 'sucesso');
+          }
+        }
        setEtapaRoleta('resultado');
        await carregarDados(clean); 
     });
@@ -443,17 +456,17 @@ export default function Cliente() {
 
         {/* CARDS GLOBAIS (TODA A REDE) */}
         <View style={{flexDirection: 'row', gap: 10, marginTop: 10 }}>
-          <TouchableOpacity onPress={() => setMostrarExtrato(true)} activeOpacity={0.8} style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, shadowColor: '#10b981', shadowOpacity: 0.2, shadowRadius: 15, elevation: 5 }]}>
+          <Animated.TouchableOpacity onPress={() => setMostrarExtrato(true)} activeOpacity={0.8} style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, shadowColor: '#10b981', shadowOpacity: 0.2, shadowRadius: 15, elevation: 5, transform: [{ scale: pulseWin }] }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <Text style={{color: c.subtexto, fontSize: 11, fontWeight: 'bold', letterSpacing: 1}}>SPRINGS (REDE)</Text><Text style={{fontSize: 16}}>👁️</Text>
             </View>
             <Text adjustsFontSizeToFit numberOfLines={1} style={{color: c.neonVerde, fontWeight: '900', fontSize: 26}}>✨ {Math.floor(displaySaldo)}</Text>
-          </TouchableOpacity>
+          </Animated.TouchableOpacity>
 
-          <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda }]}>
+          <Animated.View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, transform: [{ scale: pulseWin }] }]}>
             <Text style={{color: c.subtexto, fontSize: 11, fontWeight: 'bold', letterSpacing: 1, marginBottom: 6}}>CASHBACK (REDE)</Text>
             <Text adjustsFontSizeToFit numberOfLines={1} style={{color: c.neonAmarelo, fontWeight: '900', fontSize: 20}}>💰 R$ {displayCash.toFixed(2)}</Text>
-          </View>
+          </Animated.View>
         </View>
 
         {/* 🔥 NOVOS MINI-CARDS LOCAIS (SÓ APARECE SE TIVER NA LOJA) */}
@@ -706,24 +719,41 @@ export default function Cliente() {
 
             {etapaRoleta === 'girando' && (
               <View style={{alignItems: 'center', paddingVertical: 20}}>
-                <Text style={[styles.modalTitle, {color: '#ec4899', marginBottom: 20}]}>Boa sorte! 🤞</Text>
+                <View style={{ marginBottom: 20, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 28, fontWeight: '900', color: '#facc15', textShadowColor: '#facc1560', textShadowRadius: 10 }}>🎰 JACKPOT 🎰</Text>
+                </View>
                 
-                {/* Janela do Caça-Níqueis */}
-                <View style={{height: 100, overflow: 'hidden', width: 280, backgroundColor: '#0f172a', borderRadius: 20, borderWidth: 4, borderColor: '#ec4899', justifyContent: 'center'}}>
-                   {/* Linha indicadora central (mira) */}
-                   <View style={{position: 'absolute', width: '100%', height: 2, backgroundColor: 'rgba(255,255,255,0.1)', zIndex: 10, top: 49}} />
-                   <View style={{position: 'absolute', width: 10, height: 10, borderRadius: 5, backgroundColor: '#ec4899', zIndex: 10, left: 5, top: 45}} />
-                   <View style={{position: 'absolute', width: 10, height: 10, borderRadius: 5, backgroundColor: '#ec4899', zIndex: 10, right: 5, top: 45}} />
+                {/* 🔥 FRAME DA MÁQUINA (GOLD) */}
+                <View style={{ padding: 15, backgroundColor: '#475569', borderRadius: 30, borderWidth: 8, borderColor: '#facc15', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.5, shadowRadius: 20 }}>
+                  
+                  {/* Luzes do Topo */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 10 }}>
+                    {[1,2,3,4,5].map(i => <View key={i} style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: i % 2 === 0 ? '#ef4444' : '#facc15' }} />)}
+                  </View>
 
-                   <Animated.View style={{transform: [{translateY: slotAnim}]}}>
-                     {slotItems.map((item, index) => (
-                     <View key={index} style={{height: 100, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10}}>
-                         <Text style={{color: '#fff', fontSize: item.nome.length > 15 ? 16 : 22, fontWeight: '900', textAlign: 'center'}}>{item.nome}</Text>
-                       </View>
-                     ))}
-                   </Animated.View>
+                  <View style={{height: 120, overflow: 'hidden', width: 260, backgroundColor: '#020617', borderRadius: 15, borderWidth: 3, borderColor: '#1e293b', justifyContent: 'center'}}>
+                     {/* Vidro Refletivo */}
+                     <View style={{position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgba(255,255,255,0.03)', zIndex: 5}} />
+                     
+                     {/* Linha indicadora central (mira) */}
+                     <View style={{position: 'absolute', width: '100%', height: 4, backgroundColor: '#facc1540', zIndex: 10, top: 58}} />
+                     
+                     <Animated.View style={{transform: [{translateY: slotAnim}]}}>
+                       {slotItems.map((item, index) => (
+                       <View key={index} style={{height: 120, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10}}>
+                           <Text style={{color: '#fff', fontSize: item.nome.length > 15 ? 18 : 26, fontWeight: '900', textAlign: 'center', textShadowColor: '#3b82f6', textShadowRadius: 8}}>{item.nome}</Text>
+                         </View>
+                       ))}
+                     </Animated.View>
+                  </View>
+
+                  {/* Luzes da Base */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginTop: 10 }}>
+                    {[1,2,3,4,5].map(i => <View key={i} style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: i % 2 !== 0 ? '#ef4444' : '#facc15' }} />)}
+                  </View>
                 </View>
 
+                <Text style={{ color: '#94a3b8', marginTop: 25, fontWeight: 'bold', fontSize: 14 }}>GIRANDO...</Text>
               </View>
             )}
 
