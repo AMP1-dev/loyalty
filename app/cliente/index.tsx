@@ -130,6 +130,7 @@ export default function Cliente() {
 
   const innerPulse = pulse.interpolate({ inputRange:[1, 1.15], outputRange:[1, 0.4] });
   const spin = rotateAnim.interpolate({ inputRange:[0, 1], outputRange:['0deg', '360deg'] });
+  const wheelSpin = rotateAnim.interpolate({ inputRange:[0, 1], outputRange:['0deg', '1440deg'] }); // 4 voltas para o jogo
   const neonColor = colorAnim.interpolate({ inputRange:[0, 0.33, 0.66, 1], outputRange:['#10b981', '#0ea5e9', '#ec4899', '#10b981'] });
 
   useEffect(() => {
@@ -377,12 +378,17 @@ export default function Cliente() {
     setSlotItems(itensSlot);
     slotAnim.setValue(0);
     
-    // Animação Slot Machine (120px de altura por item)
-    Animated.timing(slotAnim, {
-      toValue: -(itensSlot.length - 1) * 120, 
+    // Animação Roleta Circular (Gira 4 voltas + offset do prêmio)
+    const totalSlices = source.length || 8;
+    const sliceAngle = 360 / totalSlices;
+    const indexPremio = source.findIndex(p => p.id === premioSorteado.id);
+    const targetRotate = 1440 + (360 - (indexPremio * sliceAngle)); // Gira 4 vezes e para no prêmio
+
+    Animated.timing(rotateAnim, {
+      toValue: 1, 
       duration: 5000,
       easing: Easing.out(Easing.cubic), 
-      useNativeDriver: false
+      useNativeDriver: true
     }).start(async () => {
        setPremioGanho(premioSorteado);
        
@@ -566,11 +572,14 @@ export default function Cliente() {
             </View>
           )}
 
-          {/* 🔥 BOTAO DA ROLETA */}
+          {/* 🔥 BOTAO DA ROLETA (REDONDO) */}
           {loja_id && configLoja?.roleta_ativa && (
-            <TouchableOpacity style={[styles.bannerImageContainer, { height: 90, borderColor: '#ec4899', marginTop: 5, marginBottom: 20, backgroundColor: '#ec489915', justifyContent: 'center', alignItems: 'center' }]} onPress={abrirRoleta} activeOpacity={0.8}>
-               <Text style={{color: '#ec4899', fontSize: 24, fontWeight: '900', letterSpacing: 1}}>🎡 JOGAR ROLETA</Text>
-               <Text style={{color: c.texto, fontSize: 12, marginTop: 4, fontWeight: 'bold'}}>Avalie a loja e ganhe prêmios na hora!</Text>
+            <TouchableOpacity onPress={abrirRoleta} style={{ alignItems: 'center', marginTop: 10, marginBottom: 25 }}>
+               <View style={{ width: 130, height: 130, borderRadius: 65, backgroundColor: '#020617', borderWidth: 6, borderColor: '#facc15', justifyContent: 'center', alignItems: 'center', shadowColor: '#facc15', shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 }}>
+                  <Text style={{ fontSize: 42 }}>🎡</Text>
+                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13, marginTop: 5 }}>JOGAR</Text>
+                  <Text style={{ color: '#facc15', fontWeight: 'bold', fontSize: 10 }}>ROLETA</Text>
+               </View>
             </TouchableOpacity>
           )}
 
@@ -720,42 +729,32 @@ export default function Cliente() {
             )}
 
             {etapaRoleta === 'girando' && (
-              <View style={{alignItems: 'center', paddingVertical: 20}}>
-                <View style={{ marginBottom: 20, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 28, fontWeight: '900', color: '#facc15', textShadowColor: '#facc1560', textShadowRadius: 10 }}>🎰 JACKPOT 🎰</Text>
+              <View style={{alignItems: 'center', paddingVertical: 40}}>
+                <View style={{ marginBottom: 25, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 28, fontWeight: '900', color: '#facc15', textShadowColor: '#facc15', textShadowRadius: 15 }}>🎡 SORTEIO 🎡</Text>
                 </View>
                 
-                {/* 🔥 FRAME DA MÁQUINA (GOLD) */}
-                <View style={{ padding: 15, backgroundColor: '#475569', borderRadius: 30, borderWidth: 8, borderColor: '#facc15', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.5, shadowRadius: 20 }}>
-                  
-                  {/* Luzes do Topo */}
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 10 }}>
-                    {[1,2,3,4,5].map(i => <View key={i} style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: i % 2 === 0 ? '#ef4444' : '#facc15' }} />)}
-                  </View>
+                {/* SETA INDICADORA */}
+                <View style={{ width: 0, height: 0, borderLeftWidth: 15, borderLeftColor: 'transparent', borderRightWidth: 15, borderRightColor: 'transparent', borderTopWidth: 25, borderTopColor: '#ef4444', marginBottom: -15, zIndex: 10 }} />
+                
+                <Animated.View style={{ width: 280, height: 280, borderRadius: 140, borderWidth: 10, borderColor: '#facc15', overflow: 'hidden', transform: [{ rotate: wheelSpin }], backgroundColor: '#020617', shadowColor: '#facc15', shadowOpacity: 0.6, shadowRadius: 30, elevation: 20 }}>
+                   {/* SEGMENTOS DA ROLETA */}
+                   {(premiosRoleta.length > 0 ? premiosRoleta : [1,2,3,4,5,6,7,8]).map((p, i) => {
+                      const total = (premiosRoleta.length > 0 ? premiosRoleta.length : 8);
+                      const angle = 360 / total;
+                      return (
+                        <View key={i} style={{ position: 'absolute', width: '100%', height: '100%', transform: [{ rotate: `${i * angle}deg` }], alignItems: 'center' }}>
+                          <View style={{ width: 4, height: '50%', backgroundColor: 'rgba(250, 204, 21, 0.4)', position: 'absolute', top: 0 }} />
+                          <View style={{ marginTop: 25, transform: [{ rotate: '0deg' }] }}>
+                             <Text style={{ color: '#fff', fontWeight: '900', fontSize: 10, textAlign: 'center', width: 80 }}>{p.nome || 'SORTE'}</Text>
+                          </View>
+                        </View>
+                      );
+                   })}
+                </Animated.View>
 
-                  <View style={{height: 120, overflow: 'hidden', width: 260, backgroundColor: '#020617', borderRadius: 15, borderWidth: 3, borderColor: '#1e293b', justifyContent: 'center'}}>
-                     {/* Vidro Refletivo */}
-                     <View style={{position: 'absolute', width: '100%', height: '100%', backgroundColor: 'rgba(255,255,255,0.03)', zIndex: 5}} />
-                     
-                     {/* Linha indicadora central (mira) */}
-                     <View style={{position: 'absolute', width: '100%', height: 4, backgroundColor: '#facc1540', zIndex: 10, top: 58}} />
-                     
-                     <Animated.View style={{transform: [{translateY: slotAnim}]}}>
-                       {slotItems.map((item, index) => (
-                       <View key={index} style={{height: 120, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10}}>
-                           <Text style={{color: '#fff', fontSize: item.nome.length > 15 ? 18 : 26, fontWeight: '900', textAlign: 'center', textShadowColor: '#3b82f6', textShadowRadius: 8}}>{item.nome}</Text>
-                         </View>
-                       ))}
-                     </Animated.View>
-                  </View>
-
-                  {/* Luzes da Base */}
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginTop: 10 }}>
-                    {[1,2,3,4,5].map(i => <View key={i} style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: i % 2 !== 0 ? '#ef4444' : '#facc15' }} />)}
-                  </View>
-                </View>
-
-                <Text style={{ color: '#94a3b8', marginTop: 25, fontWeight: 'bold', fontSize: 14 }}>GIRANDO...</Text>
+                <Text style={{ color: '#facc15', marginTop: 40, fontWeight: '900', fontSize: 18, letterSpacing: 2 }}>BOA SORTE! 🍀</Text>
+              </View>
               </View>
             )}
 

@@ -202,10 +202,15 @@ export default function Merchant() {
     setHistoricoCRM(apenasAtrasados);
     setClientesAtrasados(apenasAtrasados.length); 
 
+    const { data: npsRespostas } = await supabase.from('respostas_nps').select('resposta').eq('loja_id', lojaId);
+    const npsNotas = (npsRespostas || []).filter(r => !isNaN(Number(r.resposta))).map(r => Number(r.resposta));
+    const mediaNps = npsNotas.length ? npsNotas.reduce((s, v) => s + v, 0) / npsNotas.length : 0;
+
     setStats({ 
       totalMes: vendasMes.reduce((s, v) => s + Number(v.valor), 0), totalDia, ticketMedio: vendasDiaHoje.length ? totalDia / vendasDiaHoje.length : 0, 
       top5: vendasDiaHoje.sort((a: any, b: any) => b.valor - a.valor).slice(0, 5) as any, resgatesHojeLista: resgatesHojeLista as any, resgatesAgrupados: resgatesAgrupados as any,
-      pontosResgatadosHoje: pontosResgatados, ultimosResgates: resgatesHojeLista.slice(0, 5).map(r => ({ cliente_cpf: r.cliente_cpf, nome_premio: recompensasMap[r.recompensa_id] || 'Prêmio' })) as any
+      pontosResgatadosHoje: pontosResgatados, npsMedia: mediaNps, npsTotal: npsNotas.length,
+      ultimosResgates: resgatesHojeLista.slice(0, 5).map(r => ({ cliente_cpf: r.cliente_cpf, nome_premio: recompensasMap[r.recompensa_id] || 'Prêmio' })) as any
     });
   };
 
@@ -665,9 +670,9 @@ export default function Merchant() {
           )}
 
           <View style={styles.card}>
-            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15}}>
-              <Text style={styles.title}>📋 Fila do QR Code</Text>
-              <TouchableOpacity onPress={buscarFila} style={{backgroundColor: '#1e293b', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8}}><Text style={{color: '#94a3b8', fontSize: 12, fontWeight: 'bold'}}>🔄 ATUALIZAR FILA</Text></TouchableOpacity>
+            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, backgroundColor: '#1e293b', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#334155'}}>
+              <Text style={[styles.title, { marginBottom: 0 }]}>📋 Fila do QR Code</Text>
+              <TouchableOpacity onPress={buscarFila} style={{backgroundColor: '#10b981', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, shadowColor: '#10b981', shadowOpacity: 0.3, shadowRadius: 5}}><Text style={{color: '#fff', fontSize: 13, fontWeight: '900'}}>🔄 ATUALIZAR FILA</Text></TouchableOpacity>
             </View>
             {fila.length === 0 && <Text style={{color: '#64748b', fontStyle: 'italic', marginTop: 5}}>Nenhum cliente aguardando na fila.</Text>}
             {(fila ||[]).map((c) => {
@@ -685,8 +690,8 @@ export default function Merchant() {
                         <Text style={{color: '#facc15', fontSize: 11, fontWeight: 'bold'}}>💰 R$ {(cashbacks[c.cliente_cpf]?.total || 0).toFixed(2)} CB</Text>
                       </View>
                     </View>
-                    <View style={{flexDirection: 'row', gap: 8}}>
-                      <TouchableOpacity onPress={() => buscarFinanceiroDetalhado(c.cliente_cpf, c.id)} style={{backgroundColor: '#1e293b', padding: 8, borderRadius: 8}}><Text style={{fontSize: 12}}>🔄</Text></TouchableOpacity>
+                    <View style={{flexDirection: 'row', gap: 12, alignItems: 'center'}}>
+                      <TouchableOpacity onPress={() => buscarFinanceiroDetalhado(c.cliente_cpf, c.id)} style={{backgroundColor: '#3b82f6', padding: 12, borderRadius: 10}}><Text style={{fontSize: 16}}>🔄</Text></TouchableOpacity>
                       <TouchableOpacity style={styles.removeBtnTop} onPress={() => removerFila(c.id)}><Text style={styles.removeText}>✕</Text></TouchableOpacity>
                     </View>
                   </View>
