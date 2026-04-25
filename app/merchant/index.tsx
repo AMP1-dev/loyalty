@@ -91,6 +91,9 @@ export default function Merchant() {
     roleta_ativa: false, roleta_intervalo_dias: '1' // 🔥 ROLETA CONFIG
   });
   
+  const [cnpjBusca, setCnpjBusca] = useState('');
+  const [loadingCnpj, setLoadingCnpj] = useState(false);
+  
   const [stats, setStats] = useState({
     totalMes: 0, totalDia: 0, ticketMedio: 0, top5:[], resgatesHojeLista:[], resgatesAgrupados:[], pontosResgatadosHoje: 0, ultimosResgates:[]
   });
@@ -102,6 +105,16 @@ export default function Merchant() {
     if (!lojaId) return;
     const { data } = await supabase.from('checkins').select('*').eq('loja_id', lojaId).order('created_at', { ascending: true });
     setFila((data ||[]).filter(c => c.status === 'ativo' || c.status === 'aguardando'));
+  };
+
+  const formatarCnpj = (text: string) => {
+    const cleaned = text.replace(/\D/g, '');
+    let formatted = cleaned;
+    if (cleaned.length > 2) formatted = cleaned.slice(0, 2) + '.' + cleaned.slice(2);
+    if (cleaned.length > 5) formatted = formatted.slice(0, 6) + '.' + formatted.slice(6);
+    if (cleaned.length > 8) formatted = formatted.slice(0, 10) + '/' + formatted.slice(10);
+    if (cleaned.length > 12) formatted = formatted.slice(0, 15) + '-' + formatted.slice(15);
+    setCnpjBusca(formatted.slice(0, 18));
   };
 
   const buscarFinanceiroDetalhado = async (cpf: string, idFila?: string) => {
@@ -361,6 +374,31 @@ export default function Merchant() {
     buscarAvaliacoesERoleta();
   };
 
+  const buscarCnpj = async () => {
+    const clean = cnpjBusca.replace(/\D/g, '');
+    if (clean.length !== 14) { mostrarToast('CNPJ deve ter 14 números.', 'erro'); return; }
+    setLoadingCnpj(true);
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${clean}`);
+      const data = await res.json();
+      if (data.nome_fantasia || data.razao_social) {
+        setConfig({
+          ...config,
+          nome_loja: data.nome_fantasia || data.razao_social,
+          telefone: data.ddd_telefone_1 || '',
+          cep: data.cep || '',
+          endereco: data.logradouro || '',
+          numero: data.numero || '',
+          bairro: data.bairro || '',
+          cidade: data.municipio || '',
+          estado: data.uf || ''
+        });
+        mostrarToast('✅ Dados da loja importados!', 'sucesso');
+      } else { mostrarToast('CNPJ não encontrado.', 'erro'); }
+    } catch (e) { mostrarToast('Erro ao buscar CNPJ.', 'erro'); }
+    setLoadingCnpj(false);
+  };
+
   const baixarQRCode = () => {
     if (qrRef.current) {
       qrRef.current.toDataURL((dataURL: string) => {
@@ -544,7 +582,34 @@ export default function Merchant() {
           {mostrarConfig && (
             <View style={styles.card}>
               <Text style={styles.title}>⚙️ Configurações da Loja</Text>
+              
+              <View style={{ backgroundColor: '#1e293b', padding: 15, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: '#334155' }}>
+                <Text style={{ color: '#94A3B8', fontSize: 12, marginBottom: 8 }}>Importar dados via CNPJ</Text>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <TextInput placeholder="00.000.000/0000-00" placeholderTextColor="#475569" value={cnpjBusca} onChangeText={formatarCnpj} style={[styles.input, { flex: 1, marginBottom: 0 }]} keyboardType="numeric" />
+                  <TouchableOpacity style={[styles.button, { width: 100, height: 45, marginTop: 0, justifyContent: 'center' }]} onPress={buscarCnpj} disabled={loadingCnpj}>
+                    <Text style={[styles.buttonText, { fontSize: 12 }]}>{loadingCnpj ? '...' : 'BUSCAR'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               <TextInput placeholder="Nome da loja" value={config.nome_loja} onChangeText={(t) => setConfig({ ...config, nome_loja: t })} style={styles.input} />
+              
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TextInput placeholder="CEP" value={config.cep} onChangeText={(t) => setConfig({ ...config, cep: t })} style={[styles.input, { flex: 1 }]} keyboardType="numeric" />
+                <TextInput placeholder="Telefone" value={config.telefone} onChangeText={(t) => setConfig({ ...config, telefone: t })} style={[styles.input, { flex: 1 }]} keyboardType="phone-pad" />
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TextInput placeholder="Endereço" value={config.endereco} onChangeText={(t) => setConfig({ ...config, endereco: t })} style={[styles.input, { flex: 3 }]} />
+                <TextInput placeholder="Nº" value={config.numero} onChangeText={(t) => setConfig({ ...config, numero: t })} style={[styles.input, { flex: 1 }]} />
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TextInput placeholder="Bairro" value={config.bairro} onChangeText={(t) => setConfig({ ...config, bairro: t })} style={[styles.input, { flex: 1 }]} />
+                <TextInput placeholder="Cidade" value={config.cidade} onChangeText={(t) => setConfig({ ...config, cidade: t })} style={[styles.input, { flex: 1 }]} />
+                <TextInput placeholder="UF" value={config.estado} onChangeText={(t) => setConfig({ ...config, estado: t })} style={[styles.input, { width: 50 }]} maxLength={2} autoCapitalize="characters" />
+              </View>
               <Text style={[styles.title, { marginTop: 20 }]}>🔐 Segurança e Bloqueios</Text>
               <Text style={{ color: '#94A3B8', fontSize: 12, marginLeft: 4 }}>Senha de Acesso ao Painel</Text>
               <TextInput placeholder="Sua senha de login" placeholderTextColor="#475569" value={config.senha} onChangeText={(t) => setConfig({ ...config, senha: t })} style={styles.input} />

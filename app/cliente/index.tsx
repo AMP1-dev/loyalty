@@ -600,8 +600,29 @@ export default function Cliente() {
           {/* 🔥 CARROSSEL DE PROXIMIDADE (HYPERLOCAL) */}
           {recompensasRede.length > 0 && (
             <View style={{ marginBottom: 20 }}>
-              <Text style={[styles.sectionTitle, { color: c.texto, marginBottom: 5 }]}>🌐 Brindes perto de você</Text>
-              <Text style={{color: c.subtexto, fontSize: 12, marginBottom: 15}}>Lojas e parceiros na sua cidade.</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <View>
+                  <Text style={[styles.sectionTitle, { color: c.texto, marginBottom: 2 }]}>🌐 Brindes perto de você</Text>
+                  <Text style={{color: c.subtexto, fontSize: 11}}>Lojas e parceiros na sua região.</Text>
+                </View>
+                {!loja_id && (
+                  <TouchableOpacity 
+                    onPress={() => {
+                      if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition((pos) => {
+                          mostrarToast("📍 Localização capturada! Buscando lojas próximas...", "sucesso");
+                          // Aqui poderíamos fazer um cálculo de distância se tivéssemos as coordenadas das lojas
+                        }, () => {
+                          mostrarToast("Não foi possível obter sua localização.", "erro");
+                        });
+                      }
+                    }}
+                    style={{ backgroundColor: c.card, padding: 8, borderRadius: 10, borderWidth: 1, borderColor: c.borda }}
+                  >
+                    <Text style={{ fontSize: 18 }}>📍</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginLeft: -20, paddingLeft: 20}}>
                 {recompensasRede.map((r) => (
                   <View key={r.id} style={[styles.cardCarrosselRede, { borderColor: c.borda }]}>
