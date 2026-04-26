@@ -378,11 +378,12 @@ export default function Cliente() {
     setSlotItems(itensSlot);
     slotAnim.setValue(0);
     
+    rotateAnim.setValue(0);
     // Animação Roleta Circular (Gira 4 voltas + offset do prêmio)
     const totalSlices = source.length || 8;
     const sliceAngle = 360 / totalSlices;
     const indexPremio = source.findIndex(p => p.id === premioSorteado.id);
-    const targetRotate = 1440 + (360 - (indexPremio * sliceAngle)); // Gira 4 vezes e para no prêmio
+    const targetRotate = 1440 + (360 - (indexPremio * sliceAngle)) - (sliceAngle / 2); // Para no meio da fatia
 
     Animated.timing(rotateAnim, {
       toValue: 1, 
@@ -747,11 +748,12 @@ export default function Cliente() {
                    {(premiosRoleta.length > 0 ? premiosRoleta : [1,2,3,4,5,6,7,8]).map((p, i) => {
                       const total = (premiosRoleta.length > 0 ? premiosRoleta.length : 8);
                       const angle = 360 / total;
+                      const midAngle = (i * angle) + (angle / 2); // Centraliza no meio da fatia
                       return (
-                        <View key={i} style={{ position: 'absolute', width: '100%', height: '100%', transform: [{ rotate: `${i * angle}deg` }], alignItems: 'center' }}>
-                          <View style={{ width: 4, height: '50%', backgroundColor: 'rgba(250, 204, 21, 0.4)', position: 'absolute', top: 0 }} />
-                          <View style={{ marginTop: 25, transform: [{ rotate: '0deg' }] }}>
-                             <Text style={{ color: '#fff', fontWeight: '900', fontSize: 10, textAlign: 'center', width: 80 }}>{p.nome || 'SORTE'}</Text>
+                        <View key={i} style={{ position: 'absolute', width: '100%', height: '100%', transform: [{ rotate: `${midAngle}deg` }], alignItems: 'center' }}>
+                          <View style={{ width: 2, height: '50%', backgroundColor: 'rgba(250, 204, 21, 0.2)', position: 'absolute', top: 0, transform: [{rotate: `${-angle/2}deg`}] }} />
+                          <View style={{ marginTop: 35 }}>
+                             <Text style={{ color: '#fff', fontWeight: '900', fontSize: 10, textAlign: 'center', width: 100 }}>{p.nome || 'SORTE'}</Text>
                           </View>
                         </View>
                       );
