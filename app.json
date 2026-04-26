@@ -5,14 +5,14 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "platforms":["ios", "android", "web"],
     "plugins": ["expo-camera"],
     "android": {
       "permissions": ["CAMERA"],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#0F172A"
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#020617"
       }
     },
     "ios": {
@@ -22,12 +22,12 @@
     },
     "web": {
       "bundler": "metro",
-      "name": "Springs Clube de Vantagens",
+      "name": "Palm Springs - Loyalty",
       "shortName": "Springs",
-      "themeColor": "#0F172A",
-      "backgroundColor": "#0F172A",
+      "themeColor": "#facc15",
+      "backgroundColor": "#020617",
       "display": "standalone",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/icon.png"
     }
   }
 }
