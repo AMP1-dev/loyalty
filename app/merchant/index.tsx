@@ -545,7 +545,7 @@ export default function Merchant() {
 
             {/* 🔥 NOVO CARD DE AVALIAÇÕES */}
             <View style={[styles.card, { flex: 1, minWidth: 200, borderColor: '#facc15' }]}>
-              <Text style={[styles.title, {color: '#facc15'}]}>⭐ Avaliações (Média: {mediaEstrelas.toFixed(1)})</Text>
+              <Text style={[styles.title, {color: '#facc15'}]}>⭐ Avaliações (Média: {stats.npsMedia ? stats.npsMedia.toFixed(1) : '0.0'})</Text>
               {avaliacoes.length === 0 && <Text style={{color: '#64748b', fontSize: 12}}>Nenhuma avaliação recebida.</Text>}
               <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled={true}>
                 {avaliacoes.map((av, i) => (

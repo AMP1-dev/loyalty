@@ -681,6 +681,11 @@ export default function Cliente() {
             <Text style={{ color: '#ef4444', fontWeight: 'bold', fontSize: 14, textTransform: 'uppercase' }}>🚪 Sair da Minha Conta</Text>
           </TouchableOpacity>
 
+          <View style={{ marginTop: 40, alignItems: 'center', opacity: 0.3, paddingBottom: 20 }}>
+            <Text style={{ color: c.texto, fontSize: 10 }}>Versão 1.1.0 - Roleta Premium</Text>
+            <Text style={{ color: c.texto, fontSize: 9, marginTop: 2 }}>PALM SPRINGS © 2026</Text>
+          </View>
+
         </ScrollView>
       )}
 
