@@ -64,6 +64,7 @@ export default function Merchant() {
 
   const [bonusPendentes, setBonusPendentes] = useState<any>({});
   const [usarBonus, setUsarBonus] = useState<any>({});
+  const [brindesPendentes, setBrindesPendentes] = useState<any>({});
 
   const [modalCRM, setModalCRM] = useState<{ visivel: boolean, cpf: string, pontos: number, dias: number } | null>(null);
   const [loadingSalvar, setLoadingSalvar] = useState(false);
@@ -113,6 +114,9 @@ export default function Merchant() {
       setBonusPendentes((prev: any) => { const novo = { ...prev }; delete novo[cpf]; return novo; });
       if (idFila) setUsarBonus((prev: any) => ({ ...prev, [idFila]: false }));
     }
+
+    const { data: br } = await supabase.from('roleta_brindes_pendentes').select('*').eq('cliente_cpf', cpf).eq('loja_id', lojaId).eq('entregue', false);
+    setBrindesPendentes((prev: any) => ({ ...prev, [cpf]: br || [] }));
   };
 
   const eHoje = (dataString: string) => {
