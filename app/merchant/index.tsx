@@ -96,7 +96,7 @@ export default function Merchant() {
   
   const [stats, setStats] = useState<any>({
     totalMes: 0, totalDia: 0, ticketMedio: 0, top5:[], resgatesHojeLista:[], resgatesAgrupados:[], pontosResgatadosHoje: 0, ultimosResgates:[],
-    npsMedia: 0, npsTotal: 0
+    npsMedia: 0, npsTotal: 0, npsHistory: []
   });
 
   const[historicoCRM, setHistoricoCRM] = useState<any[]>([]); 
@@ -203,14 +203,19 @@ export default function Merchant() {
     setHistoricoCRM(apenasAtrasados);
     setClientesAtrasados(apenasAtrasados.length); 
 
-    const { data: npsRespostas } = await supabase.from('respostas_nps').select('resposta').eq('loja_id', lojaId);
-    const npsNotas = (npsRespostas || []).filter(r => !isNaN(Number(r.resposta))).map(r => Number(r.resposta));
-    const mediaNps = npsNotas.length ? npsNotas.reduce((s, v) => s + v, 0) / npsNotas.length : 0;
+    const { data: npsRespostas } = await supabase.from('respostas_nps').select('resposta, created_at').eq('loja_id', lojaId);
+    const npsNotas = (npsRespostas || []).filter(r => !isNaN(Number(r.resposta))).map(r => ({ nota: Number(r.resposta), data: new Date(r.created_at).toLocaleDateString() }));
+    const mediaNps = npsNotas.length ? npsNotas.reduce((s, v) => s + v.nota, 0) / npsNotas.length : 0;
+
+    // Agrupar por data para o gráfico
+    const historyMap: any = {};
+    npsNotas.forEach(n => { historyMap[n.data] = historyMap[n.data] ? { s: historyMap[n.data].s + n.nota, c: historyMap[n.data].c + 1 } : { s: n.nota, c: 1 }; });
+    const npsHistory = Object.keys(historyMap).sort((a,b) => new Date(a).getTime() - new Date(b).getTime()).map(d => ({ data: d, media: historyMap[d].s / historyMap[d].c }));
 
     setStats({ 
       totalMes: vendasMes.reduce((s, v) => s + Number(v.valor), 0), totalDia, ticketMedio: vendasDiaHoje.length ? totalDia / vendasDiaHoje.length : 0, 
       top5: vendasDiaHoje.sort((a: any, b: any) => b.valor - a.valor).slice(0, 5) as any, resgatesHojeLista: resgatesHojeLista as any, resgatesAgrupados: resgatesAgrupados as any,
-      pontosResgatadosHoje: pontosResgatados, npsMedia: mediaNps, npsTotal: npsNotas.length,
+      pontosResgatadosHoje: pontosResgatados, npsMedia: mediaNps, npsTotal: npsNotas.length, npsHistory: npsHistory.slice(-7),
       ultimosResgates: resgatesHojeLista.slice(0, 5).map(r => ({ cliente_cpf: r.cliente_cpf, nome_premio: recompensasMap[r.recompensa_id] || 'Prêmio' })) as any
     });
   };
@@ -547,6 +552,21 @@ export default function Merchant() {
             {/* 🔥 NOVO CARD DE AVALIAÇÕES */}
             <View style={[styles.card, { flex: 1, minWidth: 200, borderColor: '#facc15' }]}>
               <Text style={[styles.title, {color: '#facc15'}]}>⭐ Avaliações (Média: {stats.npsMedia ? stats.npsMedia.toFixed(1) : '0.0'})</Text>
+              
+              {/* 🔥 GRÁFICO DE EVOLUÇÃO NPS */}
+              {stats.npsHistory.length > 1 && (
+                <View style={{ height: 60, marginVertical: 10, justifyContent: 'flex-end' }}>
+                   <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 40, gap: 4 }}>
+                      {stats.npsHistory.map((h: any, i: number) => (
+                        <View key={i} style={{ flex: 1, alignItems: 'center' }}>
+                           <View style={{ width: '100%', height: (h.media / 5) * 40, backgroundColor: '#facc1540', borderTopLeftRadius: 4, borderTopRightRadius: 4, borderWidth: 1, borderColor: '#facc15' }} />
+                           <Text style={{ fontSize: 8, color: '#94a3b8', marginTop: 2 }}>{h.data.split('/')[0]}</Text>
+                        </View>
+                      ))}
+                   </View>
+                </View>
+              )}
+
               {avaliacoes.length === 0 && <Text style={{color: '#64748b', fontSize: 12}}>Nenhuma avaliação recebida.</Text>}
               <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled={true}>
                 {avaliacoes.map((av, i) => (
