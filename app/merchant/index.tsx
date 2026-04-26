@@ -576,8 +576,7 @@ export default function Merchant() {
             </View>
 
             {/* BÔNUS E PRÊMIOS DA FILA (Dinâmico) */}
-            {fila.length > 0 && (
-              fila.slice(0, 1).map(c => {
+            {fila.length > 0 && fila.slice(0, 1).map((c) => {
                 const temBonus = bonusPendentes[c.cliente_cpf];
                 const brindes = brindesPendentes[c.cliente_cpf] || [];
                 if (temBonus > 0 || brindes.length > 0) {
@@ -601,8 +600,7 @@ export default function Merchant() {
                   );
                 }
                 return null;
-              })
-            )}
+            })}
           </View>
 
           {/* 📊 ÁREA 2: INDICADORES (LINHA 3) */}
