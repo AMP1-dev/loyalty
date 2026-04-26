@@ -554,7 +554,10 @@ export default function Merchant() {
         <View style={styles.wrapper}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => setMostrarConfig(!mostrarConfig)}><Text style={styles.headerButton}>⚙️ Configurações</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => { localStorage.removeItem('@loja_id_merchant'); router.re          {/* 🚀 LINHA 1: OPERAÇÃO PRIORITÁRIA (Mecanismo Original Reestilizado) */}
+            <TouchableOpacity onPress={() => { localStorage.removeItem('@loja_id_merchant'); router.replace('/login'); }}><Text style={styles.closeText}>✕ SAIR</Text></TouchableOpacity>
+          </View>
+
+          {/* 🚀 LINHA 1: OPERAÇÃO PRIORITÁRIA (Mecanismo Original Reestilizado) */}
           <View style={{ marginBottom: 20 }}>
             {fila.length === 0 ? (
               <View style={[styles.card, { padding: 30, alignItems: 'center', backgroundColor: '#020617', borderColor: '#334155' }]}>
@@ -789,9 +792,6 @@ export default function Merchant() {
                 )) : <Text style={{ color: '#64748b', fontSize: 14, textAlign: 'center', padding: 30 }}>Todos os seus clientes estão ativos! Parabéns! 🎉</Text>}
              </ScrollView>
           </View>
-4748b', fontSize: 12, textAlign: 'center', padding: 20 }}>Todos os seus clientes estão em dia! 🎉</Text>}
-             </ScrollView>
-          </View>
 
           {mostrarConfig && (
             <View style={styles.card}>
@@ -864,18 +864,6 @@ export default function Merchant() {
             </View>
           )}
 
-          {/* BLOCO DE CONFIGURAÇÕES (Removido o card duplicado da fila daqui) */}
-          {mostrarConfig && (
-                            {cb_total > 0 && <Text style={{ color: '#22c55e', marginTop: 10, fontSize: 18, fontWeight: 'bold' }}>💳 A PAGAR: {formatarMoeda(aPagar)}</Text>}
-                          </>
-                        );
-                      })()}
-                    </View>
-                  )}
-                  <TouchableOpacity style={[styles.buttonCenter, { backgroundColor: '#10b981' }]} onPress={() => atender(c.id)}><Text style={styles.buttonText}>ATENDER E FINALIZAR</Text></TouchableOpacity>
-                </View>
-              );
-            })} 
           </View>
 
           <TouchableOpacity style={[styles.button, { backgroundColor: '#334155', marginBottom: 15 }]} onPress={() => setMostrarManual(!mostrarManual)}>
