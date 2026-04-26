@@ -557,36 +557,87 @@ export default function Merchant() {
             <TouchableOpacity onPress={() => { localStorage.removeItem('@loja_id_merchant'); router.replace('/login'); }}><Text style={styles.closeText}>✕ SAIR</Text></TouchableOpacity>
           </View>
 
-          <Text style={styles.logo}>PALM SPRINGS</Text>
+          {/* 🚀 LINHA 1: OPERAÇÃO PRIORITÁRIA */}
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 15, flexWrap: 'wrap' }}>
+             {/* FILA */}
+             <View style={[styles.card, { flex: 2, minWidth: 250, borderColor: '#facc15', backgroundColor: '#020617', alignItems: 'center', justifyContent: 'center', paddingVertical: 25 }]}>
+                <View style={{ position: 'absolute', top: 10, right: 10, backgroundColor: '#facc15', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 }}>
+                   <Text style={{ color: '#020617', fontWeight: 'bold', fontSize: 10 }}>FILA ATIVA</Text>
+                </View>
+                <Text style={{ color: '#94a3b8', fontSize: 14, fontWeight: 'bold' }}>CLIENTES NA FILA</Text>
+                <Text style={{ color: '#facc15', fontSize: 64, fontWeight: '900' }}>{fila.length}</Text>
+             </View>
 
-          <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
-            <View style={[styles.cardCenter, { flex: 1 }]}>
-              <QRCode value={linkQR} size={120} getRef={(c) => (qrRef.current = c)} />
-              <Text style={{color: '#94a3b8', fontSize: 10, marginTop: 10}}>QR do Balcão</Text>
-              <TouchableOpacity onPress={baixarQRCode} style={{ marginTop: 15, backgroundColor: '#38bdf820', paddingVertical: 8, paddingHorizontal: 15, borderRadius: 8, borderWidth: 1, borderColor: '#38bdf8' }}>
-                <Text style={{ color: '#38bdf8', fontSize: 11, fontWeight: 'bold' }}>📥 BAIXAR P/ IMPRIMIR</Text>
-              </TouchableOpacity>
-            </View>
+             {/* R$ VENDA E ATENDER */}
+             <View style={[styles.card, { flex: 3, minWidth: 300, backgroundColor: '#1e293b', padding: 20 }]}>
+                <Text style={{ color: '#10b981', fontSize: 12, fontWeight: 'bold', marginBottom: 5 }}>R$ VALOR DA VENDA</Text>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                   <TextInput 
+                     placeholder="0,00" 
+                     placeholderTextColor="#475569" 
+                     value={fila.length > 0 ? (valorVenda[fila[0]?.id] || '') : valorManual} 
+                     onChangeText={(t) => {
+                       const clean = t.replace(/\D/g, '');
+                       if (fila.length > 0) setValorVenda({ ...valorVenda, [fila[0].id]: clean });
+                       else setValorManual(clean);
+                     }}
+                     style={{ flex: 1, backgroundColor: '#020617', color: '#10b981', fontSize: 42, fontWeight: '900', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#10b981' }} 
+                     keyboardType="numeric"
+                   />
+                   <TouchableOpacity 
+                     onPress={() => fila.length > 0 ? atender(fila[0].id) : atenderManual()}
+                     style={{ width: 120, backgroundColor: '#10b981', borderRadius: 12, justifyContent: 'center', alignItems: 'center', elevation: 5 }}
+                   >
+                      <Text style={{ color: '#020617', fontWeight: '900', fontSize: 16 }}>ATENDER</Text>
+                   </TouchableOpacity>
+                </View>
+                {fila.length > 0 ? (
+                   <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 10 }}>Atendendo agora: <Text style={{ color: '#fff', fontWeight: 'bold' }}>{formatarTelefone(fila[0].cliente_cpf)}</Text></Text>
+                ) : (
+                   <Text style={{ color: '#64748b', fontSize: 11, marginTop: 10 }}>Digite o telefone acima se o cliente não estiver na fila.</Text>
+                )}
+             </View>
+          </View>
 
-            <View style={[styles.card, { flex: 1, minWidth: 200 }]}>
-              <Text style={styles.title}>💳 Caixa Hoje</Text>
-              <Text style={{color: '#10b981', fontSize: 28, fontWeight: 'bold', marginBottom: 10}}>{formatarMoeda(stats.totalDia)}</Text>
-              <Text style={styles.stat}>📅 Mês: {formatarMoeda(stats.totalMes)}</Text>
-              <Text style={styles.stat}>🎯 Ticket Médio: {formatarMoeda(stats.ticketMedio)}</Text>
-              {clientesAtrasados > 0 && (
-                <TouchableOpacity style={styles.btnAlertaCrm} onPress={() => setMostrarCRM(true)}>
-                  <Text style={styles.txtAlertaCrm}>🚨 {clientesAtrasados} clientes aguardando contato</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+          {/* 📊 LINHA 2: INDICADORES (Cards Menores) */}
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 15, flexWrap: 'wrap' }}>
+             {/* QR */}
+             <TouchableOpacity onPress={baixarQRCode} style={[styles.cardSmall, { flex: 1, minWidth: 120, alignItems: 'center' }]}>
+                <QRCode value={linkQR} size={40} />
+                <Text style={styles.cardSmallTitle}>QR BALCÃO</Text>
+             </TouchableOpacity>
 
-            {/* 🔥 NOVO CARD DE AVALIAÇÕES */}
-            <View style={[styles.card, { flex: 1, minWidth: 200, borderColor: '#facc15' }]}>
-              <Text style={[styles.title, {color: '#facc15'}]}>⭐ Avaliações (Média: {stats.npsMedia ? stats.npsMedia.toFixed(1) : '0.0'})</Text>
+             {/* CX */}
+             <View style={[styles.cardSmall, { flex: 1, minWidth: 120 }]}>
+                <Text style={{ color: '#10b981', fontSize: 16, fontWeight: '900' }}>{formatarMoeda(stats.totalDia)}</Text>
+                <Text style={styles.cardSmallTitle}>CAIXA HOJE</Text>
+             </View>
+
+             {/* TP5 */}
+             <View style={[styles.cardSmall, { flex: 1, minWidth: 120 }]}>
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>{stats.top5.length}</Text>
+                <Text style={styles.cardSmallTitle}>TOP CLIENTES</Text>
+             </View>
+
+             {/* ESTOQUE */}
+             <TouchableOpacity style={[styles.cardSmall, { flex: 1, minWidth: 120 }]}>
+                <Text style={{ color: '#38bdf8', fontSize: 16, fontWeight: '900' }}>{rewards.length}</Text>
+                <Text style={styles.cardSmallTitle}>ESTOQUE</Text>
+             </TouchableOpacity>
+
+             {/* RESGATE */}
+             <View style={[styles.cardSmall, { flex: 1, minWidth: 120 }]}>
+                <Text style={{ color: '#ec4899', fontSize: 16, fontWeight: '900' }}>{stats.ultimosResgates.length}</Text>
+                <Text style={styles.cardSmallTitle}>RESGATES</Text>
+             </View>
+          </View>
+
+          {/* 📈 LINHA 3: GRÁFICO (Largura Total) */}
+          <View style={[styles.card, { width: '100%', marginBottom: 15, borderColor: '#facc15' }]}>
+              <Text style={[styles.title, {color: '#facc15'}]}>⭐ Evolução de Avaliações (NPS)</Text>
               
-              {/* 🔥 GRÁFICO DE LINHAS NPS (Multi-questões) */}
-              {stats.npsHistory.length > 0 && (
-                <View style={{ height: 100, marginVertical: 15 }}>
+              {stats.npsHistory.length > 0 ? (
+                <View style={{ height: 120, marginVertical: 15 }}>
                    <View style={{ height: 80, borderLeftWidth: 1, borderBottomWidth: 1, borderColor: '#334155', position: 'relative' }}>
                       {stats.npsHistory.map((line: any, idx: number) => (
                         <View key={idx} style={{ position: 'absolute', width: '100%', height: '100%' }}>
@@ -602,78 +653,54 @@ export default function Merchant() {
                               }).join(' ')}
                               strokeLinejoin="round"
                             />
-                            {line.pontos.map((p: any, i: number) => (
-                              <circle key={i} cx={line.pontos.length > 1 ? (i / (line.pontos.length - 1)) * 100 : 50} cy={80 - (p.media / 5) * 80} r="2" fill={line.cor} />
-                            ))}
                           </svg>
                         </View>
                       ))}
                    </View>
-                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
-                      <Text style={{ fontSize: 8, color: '#64748b' }}>Início</Text>
-                      <Text style={{ fontSize: 8, color: '#64748b' }}>Hoje</Text>
-                   </View>
-                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 }}>
                       {stats.npsHistory.map((line: any, i: number) => (
-                        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                           <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: line.cor }} />
-                           <Text style={{ fontSize: 8, color: '#cbd5e1' }} numberOfLines={1}>{line.nome}</Text>
+                        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                           <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: line.cor }} />
+                           <Text style={{ fontSize: 10, color: '#cbd5e1' }}>{line.nome}</Text>
                         </View>
                       ))}
                    </View>
                 </View>
-              )}
+              ) : <Text style={{color: '#64748b', fontSize: 12, padding: 20, textAlign: 'center'}}>Aguardando avaliações para gerar o gráfico...</Text>}
+          </View>
 
-              {avaliacoes.length === 0 && <Text style={{color: '#64748b', fontSize: 12}}>Nenhuma avaliação recebida.</Text>}
-              <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled={true}>
-                {avaliacoes.map((av, i) => (
-                  <View key={i} style={styles.topItem}>
-                    <View style={{flex: 1}}>
-                      <Text style={{color: '#facc15', fontWeight: 'bold', fontSize: 12}}>{"⭐".repeat(av.nota)}</Text>
-                      {av.comentario && <Text style={{color: '#cbd5e1', fontSize: 12, marginTop: 4, fontStyle: 'italic'}}>&quot;{av.comentario}&quot;</Text>}
-                    </View>
-                    <Text style={{color: '#64748b', fontSize: 10}}>{new Date(av.created_at).toLocaleDateString()}</Text>
-                  </View>
-                ))}
-              </ScrollView>
-            </View>
+          {/* 🛠️ LINHA 4: FERRAMENTAS */}
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 15, flexWrap: 'wrap' }}>
+             <View style={[styles.card, { flex: 2, minWidth: 250, backgroundColor: '#020617', borderColor: '#10b981' }]}>
+                <Text style={[styles.title, { color: '#10b981', fontSize: 14 }]}>📈 Lucratividade</Text>
+                <Text style={{ color: '#e2e8f0', fontSize: 13 }}>Retorno hoje: <Text style={{ color: '#10b981', fontWeight: 'bold' }}>{formatarMoeda(roiEmReais || 0)}</Text></Text>
+             </View>
 
-            <View style={[styles.card, { flex: 1, minWidth: 200 }]}>
-              <Text style={styles.title}>🔥 Top 5 Clientes</Text>
-              {(!stats.top5 || stats.top5.length === 0) && <Text style={{color: '#64748b', fontSize: 12}}>Nenhuma venda hoje.</Text>}
-              {(stats.top5 ||[]).map((t: any, i: number) => (
-                <View key={i} style={styles.topItem}><Text style={styles.topTelefone}>{formatarTelefone(t.cliente_cpf || '')}</Text><Text style={styles.topValor}>{formatarMoeda(Number(t.valor))}</Text></View>
-              ))}
-            </View>
+             <TouchableOpacity onPress={() => setMostrarManual(!mostrarManual)} style={[styles.card, { flex: 1, minWidth: 150, backgroundColor: '#334155', alignItems: 'center', justifyContent: 'center' }]}>
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>⌨️ LANÇAMENTO MANUAL</Text>
+             </TouchableOpacity>
+          </View>
 
-            <View style={[styles.card, { flex: 1, minWidth: 200 }]}>
-              <Text style={styles.title}>📦 Saída de Estoque</Text>
-              {(!stats.resgatesAgrupados || stats.resgatesAgrupados.length === 0) && <Text style={{color: '#64748b', fontSize: 12}}>Nenhum item resgatado hoje.</Text>}
-              <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled={true}>
-                {(stats.resgatesAgrupados ||[]).map((item: any, i: number) => (
-                  <View key={i} style={styles.topItem}><Text style={{color: '#facc15', fontSize: 16, fontWeight: 'bold', marginRight: 10}}>{item.qtde}x</Text><Text style={{color: '#fff', fontSize: 14}}>{item.nome}</Text></View>
-                ))}
-              </ScrollView>
-            </View>
-
-            <View style={[styles.card, { flex: 1, minWidth: 200 }]}>
-              <Text style={styles.title}>🔄 Últimos Resgates</Text>
-              {(!stats.ultimosResgates || stats.ultimosResgates.length === 0) && <Text style={{color: '#64748b', fontSize: 12}}>Nenhum resgate hoje.</Text>}
-              {(stats.ultimosResgates ||[]).map((r: any, i: number) => (
-                <View key={i} style={styles.topItem}>
-                   <View style={{flex: 1}}>
-                      <Text style={{color: '#fff', fontSize: 14}}>{r.nome_premio}</Text>
-                      <Text style={{color: '#94a3b8', fontSize: 10}}>{formatarTelefone(r.cliente_cpf || '')}</Text>
-                   </View>
+          {/* 📣 LINHA 5: ENGAJAMENTO (CRM) */}
+          <View style={[styles.card, { width: '100%', marginBottom: 30 }]}>
+             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                <Text style={styles.title}>📣 Engajamento (Clientes Sumidos)</Text>
+                <View style={{ backgroundColor: '#ef4444', paddingHorizontal: 10, paddingVertical: 2, borderRadius: 10 }}>
+                   <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>{clientesAtrasados} ALERTAS</Text>
                 </View>
-              ))}
-            </View>
-
-            <View style={[styles.card, { width: '100%', backgroundColor: '#020617', borderColor: '#facc15' }]}>
-              <Text style={[styles.title, {color: '#facc15'}]}>📈 Lucratividade (Retorno sobre Prêmios)</Text>
-              <Text style={{color: '#e2e8f0', fontSize: 14, lineHeight: 22, marginTop: 5}}>Hoje os clientes resgataram <Text style={{fontWeight: 'bold', color: '#fff'}}>{stats.pontosResgatadosHoje || 0} Springs</Text>.</Text>
-              <Text style={{color: '#e2e8f0', fontSize: 14, lineHeight: 22, marginTop: 5}}>Esses prêmios equivalem a um retorno de <Text style={{color: '#10b981', fontWeight: 'bold', fontSize: 18}}>{formatarMoeda(roiEmReais || 0)}</Text> em faturamento fidelizado.</Text>
-            </View>
+             </View>
+             
+             <ScrollView style={{ maxHeight: 200 }}>
+                {historicoCRM.length > 0 ? historicoCRM.map((c, i) => (
+                  <TouchableOpacity key={i} onPress={() => setModalCRM(c)} style={styles.crmItem}>
+                    <View>
+                      <Text style={styles.crmTelefone}>{formatarTelefone(c.cpf)}</Text>
+                      <Text style={styles.crmDetalhe}>Última compra: {c.ultimaCompraFormatada}</Text>
+                    </View>
+                    <Text style={[styles.crmRetorno, { color: '#facc15' }]}>Sugestão: {c.sugestao}</Text>
+                  </TouchableOpacity>
+                )) : <Text style={{ color: '#64748b', fontSize: 12, textAlign: 'center', padding: 20 }}>Todos os seus clientes estão em dia! 🎉</Text>}
+             </ScrollView>
           </View>
 
           {mostrarConfig && (
@@ -1104,6 +1131,8 @@ const styles = StyleSheet.create({
   closeBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: '#334155', alignItems: 'center', justifyContent: 'center' },
   closeText: { color: '#ef4444', fontWeight: 'bold' },
   logo: { color: '#10b981', fontSize: 28, textAlign: 'center', fontWeight: 'bold', marginBottom: 20 },
+  cardSmall: { backgroundColor: '#1e293b', padding: 12, borderRadius: 16, borderWidth: 1, borderColor: '#334155', justifyContent: 'center' },
+  cardSmallTitle: { color: '#94a3b8', fontSize: 9, fontWeight: 'bold', marginTop: 4, textAlign: 'center' },
   cardCenter: { backgroundColor: '#1e293b', padding: 16, borderRadius: 20, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: '#334155' },
   card: { backgroundColor: '#1e293b', padding: 16, borderRadius: 20, marginBottom: 10, borderWidth: 1, borderColor: '#334155' },
   title: { color: '#fff', fontWeight: 'bold', marginBottom: 10, fontSize: 18 },
@@ -1133,4 +1162,5 @@ const styles = StyleSheet.create({
   crmRetorno: { fontSize: 12, fontWeight: 'bold', marginTop: 4 },
   btnAlertaCrm: { marginTop: 15, backgroundColor: '#ef444420', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#ef4444' },
   txtAlertaCrm: { color: '#ef4444', fontWeight: 'bold', fontSize: 12, textAlign: 'center' },
+  topItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#334155' },
 });
