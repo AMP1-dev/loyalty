@@ -94,8 +94,9 @@ export default function Merchant() {
   const [cnpjBusca, setCnpjBusca] = useState('');
   const [loadingCnpj, setLoadingCnpj] = useState(false);
   
-  const [stats, setStats] = useState({
-    totalMes: 0, totalDia: 0, ticketMedio: 0, top5:[], resgatesHojeLista:[], resgatesAgrupados:[], pontosResgatadosHoje: 0, ultimosResgates:[]
+  const [stats, setStats] = useState<any>({
+    totalMes: 0, totalDia: 0, ticketMedio: 0, top5:[], resgatesHojeLista:[], resgatesAgrupados:[], pontosResgatadosHoje: 0, ultimosResgates:[],
+    npsMedia: 0, npsTotal: 0
   });
 
   const[historicoCRM, setHistoricoCRM] = useState<any[]>([]); 
