@@ -554,68 +554,130 @@ export default function Merchant() {
         <View style={styles.wrapper}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => setMostrarConfig(!mostrarConfig)}><Text style={styles.headerButton}>⚙️ Configurações</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => { localStorage.removeItem('@loja_id_merchant'); router.re          {/* 🚀 LINHA 1: OPERAÇÃO PRIORITÁRIA (COMPONENTES ORIGINAIS MOVIDOS) */}
-          <View style={{ flexDirection: 'row', gap: 15, marginBottom: 20, flexWrap: 'wrap' }}>
-             
-             {/* FILA - DESTAQUE GIGANTE (ESQUERDA) */}
-             <View style={[styles.card, { flex: 2, minWidth: 250, borderColor: '#facc15', backgroundColor: '#020617', alignItems: 'center', justifyContent: 'center', paddingVertical: 40 }]}>
-                <View style={{ position: 'absolute', top: 15, right: 15, backgroundColor: '#facc15', paddingHorizontal: 15, paddingVertical: 6, borderRadius: 20 }}>
-                   <Text style={{ color: '#020617', fontWeight: 'bold', fontSize: 12 }}>FILA ATIVA</Text>
-                </View>
-                <Text style={{ color: '#94a3b8', fontSize: 16, fontWeight: 'bold', marginBottom: 10 }}>CLIENTES ESPERANDO</Text>
-                <Text style={{ color: '#facc15', fontSize: 100, fontWeight: '900', lineHeight: 110 }}>{fila.length}</Text>
-             </View>
-
-             {/* VALOR DA VENDA E ATENDER (DIREITA) */}
-             <View style={[styles.card, { flex: 4, minWidth: 400, backgroundColor: '#0f172a', padding: 25 }]}>
-                {fila.length > 0 ? (
-                  <>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 15 }}>
-                       <View>
-                          <Text style={{ color: '#10b981', fontSize: 28, fontWeight: '900' }}>{formatarTelefone(fila[0].cliente_cpf)}</Text>
-                          <View style={{ flexDirection: 'row', gap: 15, marginTop: 5 }}>
-                             <Text style={{ color: '#10b981', fontSize: 14, fontWeight: 'bold' }}>✨ {Math.floor(cashbacks[fila[0].cliente_cpf]?.pontos || 0)} Springs</Text>
-                             <Text style={{ color: '#facc15', fontSize: 14, fontWeight: 'bold' }}>💰 R$ {(cashbacks[fila[0].cliente_cpf]?.total || 0).toFixed(2)} Cashback</Text>
+            <TouchableOpacity onPress={() => { localStorage.removeItem('@loja_id_merchant'); router.re          {/* 🚀 LINHA 1: OPERAÇÃO PRIORITÁRIA (Mecanismo Original Reestilizado) */}
+          <View style={{ marginBottom: 20 }}>
+            {fila.length === 0 ? (
+              <View style={[styles.card, { padding: 30, alignItems: 'center', backgroundColor: '#020617', borderColor: '#334155' }]}>
+                 <Text style={{ color: '#64748b', fontSize: 18, textAlign: 'center' }}>Nenhum cliente na fila no momento.</Text>
+                 <TouchableOpacity onPress={buscarFila} style={{ marginTop: 15, backgroundColor: '#1e293b', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 }}>
+                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>🔄 ATUALIZAR FILA</Text>
+                 </TouchableOpacity>
+              </View>
+            ) : (
+              fila.slice(0, 1).map((c) => {
+                const valorRaw = valorVenda[c.id] || '';
+                const valorFormatado = valorRaw ? (parseInt(valorRaw, 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
+                const temBonus = bonusPendentes[c.cliente_cpf];
+                
+                return (
+                  <View key={c.id} style={[styles.card, { backgroundColor: '#0f172a', padding: 20, borderColor: '#10b981', borderWidth: 2 }]}>
+                    {/* PARTE SUPERIOR: TELEFONE | VALOR | BOTÃO */}
+                    <View style={{ flexDirection: 'row', gap: 15, alignItems: 'center', flexWrap: 'wrap' }}>
+                       {/* TELEFONE GIGANTE (ESQUERDA) */}
+                       <View style={{ flex: 3, minWidth: 280, backgroundColor: '#020617', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#334155' }}>
+                          <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 4 }}>ATENDENDO AGORA:</Text>
+                          <Text style={{ color: '#fff', fontSize: 48, fontWeight: '900', letterSpacing: -1 }}>{formatarTelefone(c.cliente_cpf)}</Text>
+                          <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                            <Text style={{ color: '#10b981', fontSize: 12, fontWeight: 'bold' }}>✨ {Math.floor(cashbacks[c.cliente_cpf]?.pontos || 0)} SPG</Text>
+                            <Text style={{ color: '#facc15', fontSize: 12, fontWeight: 'bold' }}>💰 R$ {(cashbacks[c.cliente_cpf]?.total || 0).toFixed(2)} CB</Text>
                           </View>
                        </View>
-                       <TouchableOpacity style={{ backgroundColor: '#ef444420', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#ef444450' }} onPress={() => removerFila(fila[0].id)}>
-                          <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>✕ REMOVER</Text>
+
+                       {/* INPUT VALOR GIGANTE (CENTRO) */}
+                       <View style={{ flex: 2, minWidth: 200 }}>
+                          <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 'bold', marginBottom: 4 }}>VALOR DA VENDA (R$):</Text>
+                          <TextInput 
+                            placeholder="R$ 0,00" 
+                            placeholderTextColor="#475569" 
+                            keyboardType="numeric" 
+                            value={valorFormatado} 
+                            onChangeText={(t) => setValorVenda((p: any) => ({ ...p, [c.id]: t.replace(/\D/g, '') }))} 
+                            style={{ backgroundColor: '#020617', color: '#10b981', fontSize: 48, fontWeight: '900', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#10b981', textAlign: 'right' }} 
+                            onSubmitEditing={() => atender(c.id)} 
+                          />
+                       </View>
+
+                       {/* BOTÃO ATENDER (DIREITA) */}
+                       <TouchableOpacity 
+                         onPress={() => atender(c.id)}
+                         style={{ flex: 1, minWidth: 150, height: 95, backgroundColor: '#10b981', borderRadius: 12, justifyContent: 'center', alignItems: 'center', shadowColor: '#10b981', shadowOpacity: 0.4, shadowRadius: 10, elevation: 5 }}
+                       >
+                          <Text style={{ color: '#020617', fontWeight: '900', fontSize: 20 }}>ATENDER</Text>
                        </TouchableOpacity>
                     </View>
 
-                    <TextInput 
-                      placeholder="R$ 0,00" 
-                      placeholderTextColor="#475569" 
-                      keyboardType="numeric" 
-                      value={valorVenda[fila[0].id] ? (parseInt(valorVenda[fila[0].id], 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : ''} 
-                      onChangeText={(t) => setValorVenda((p: any) => ({ ...p, [fila[0].id]: t.replace(/\D/g, '') }))} 
-                      style={[styles.inputValor, { height: 90, fontSize: 54 }]} 
-                      onSubmitEditing={() => atender(fila[0].id)} 
-                    />
+                    {/* MECANISMO ORIGINAL (RESUMO E BÔNUS) - ABAIXO DOS INPUTS */}
+                    <View style={{ marginTop: 20, paddingTop: 20, borderTopWidth: 1, borderTopColor: '#334155' }}>
+                       <View style={{ flexDirection: 'row', gap: 20, flexWrap: 'wrap' }}>
+                          
+                          {/* SIMULAÇÃO / RESUMO */}
+                          <View style={{ flex: 1, minWidth: 300 }}>
+                             {valorRaw ? (
+                               <View style={{ backgroundColor: '#1e293b', padding: 15, borderRadius: 12 }}>
+                                  <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 14, marginBottom: 8 }}>💡 Resumo da venda:</Text>
+                                  {(() => {
+                                    const valorReal = parseInt(valorRaw, 10) / 100;
+                                    const cb_total = cashbacks[c.cliente_cpf]?.total || 0;
+                                    const cb_proximo = cashbacks[c.cliente_cpf]?.proximo || 0;
+                                    const usarCb = config.usar_cashback_total ? cb_total : cb_proximo;
+                                    const limiteCb = valorReal * (Number(config.cashback_limite_uso_percent) / 100);
+                                    const cashbackUsado = Math.min(Math.min(valorReal, limiteCb), usarCb);
+                                    const base = config.pontos_sobre_valor_bruto ? valorReal : (valorReal - cashbackUsado);
+                                    const pontosCompra = Math.floor(base / (Number(config.reais_por_ponto) || 1));
+                                    const aPagar = valorReal - cashbackUsado;
 
-                    <TouchableOpacity 
-                      onPress={() => atender(fila[0].id)}
-                      style={{ backgroundColor: '#10b981', borderRadius: 16, padding: 25, alignItems: 'center', marginTop: 15, shadowColor: '#10b981', shadowOpacity: 0.4, shadowRadius: 15, elevation: 10 }}
-                    >
-                       <Text style={{ color: '#020617', fontWeight: '900', fontSize: 22 }}>ATENDER E FINALIZAR</Text>
-                    </TouchableOpacity>
+                                    return (
+                                      <>
+                                        <Text style={{ color: '#fff', fontSize: 14 }}>Venda: {formatarMoeda(valorReal)}</Text>
+                                        {cashbackUsado > 0 && <Text style={{ color: '#facc15', fontSize: 13 }}>- Cashback Usado: {formatarMoeda(cashbackUsado)}</Text>}
+                                        <Text style={{ color: '#22c55e', fontSize: 18, fontWeight: '900', marginTop: 5 }}>💳 A PAGAR: {formatarMoeda(aPagar)}</Text>
+                                        <Text style={{ color: '#94a3b8', fontSize: 13, marginTop: 4 }}>✨ +{pontosCompra} Springs acumulados</Text>
+                                      </>
+                                    );
+                                  })()}
+                               </View>
+                             ) : <Text style={{ color: '#64748b', fontStyle: 'italic' }}>Aguardando valor para simular pontos...</Text>}
+                          </View>
 
-                    {/* RESUMO RÁPIDO */}
-                    {valorVenda[fila[0].id] && (
-                       <View style={{ marginTop: 15, padding: 15, backgroundColor: '#1e293b', borderRadius: 12, borderWidth: 1, borderColor: '#334155' }}>
-                          <Text style={{ color: '#10b981', fontWeight: 'bold' }}>🎯 +{Math.floor((parseInt(valorVenda[fila[0].id], 10) / 100) / (Number(config.reais_por_ponto) || 1))} Springs nesta compra</Text>
+                          {/* BÔNUS E BRINDES */}
+                          <View style={{ flex: 1, minWidth: 300, gap: 10 }}>
+                             {temBonus > 0 && (
+                               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#facc1515', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#facc1530' }}>
+                                  <Switch value={usarBonus[c.id] !== false} onValueChange={(v) => setUsarBonus((prev: any) => ({...prev, [c.id]: v}))} />
+                                  <Text style={{ color: '#facc15', marginLeft: 10, fontWeight: 'bold' }}>🎁 USAR BÔNUS: +{temBonus} SPG</Text>
+                               </View>
+                             )}
+
+                             {brindesPendentes[c.cliente_cpf]?.map((b: any) => (
+                               <View key={b.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ec489915', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#ec489930' }}>
+                                  <Text style={{ color: '#ec4899', fontWeight: 'bold', fontSize: 13 }}>🏆 Brinde: {b.nome_brinde}</Text>
+                                  <TouchableOpacity style={{ backgroundColor: '#ec4899', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6 }} onPress={() => entregarBrinde(b.id, c.cliente_cpf)}>
+                                     <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 10 }}>ENTREGAR</Text>
+                                  </TouchableOpacity>
+                               </View>
+                             ))}
+                          </View>
                        </View>
-                    )}
-                  </>
-                ) : (
-                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                     <Text style={{ color: '#475569', fontSize: 18, textAlign: 'center' }}>Aguardando próximo cliente...</Text>
-                     <TouchableOpacity onPress={buscarFila} style={{ marginTop: 20, backgroundColor: '#334155', padding: 15, borderRadius: 12 }}>
-                        <Text style={{ color: '#fff', fontWeight: 'bold' }}>🔄 ATUALIZAR FILA</Text>
-                     </TouchableOpacity>
+                    </View>
                   </View>
-                )}
-             </View>
+                );
+              })
+            )}
+            
+            {/* LISTA SECUNDÁRIA (Se houver mais de 1 na fila) */}
+            {fila.length > 1 && (
+               <View style={{ marginTop: 10, padding: 10, backgroundColor: '#1e293b50', borderRadius: 12 }}>
+                  <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold', marginBottom: 5 }}>PRÓXIMOS NA FILA:</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                     {fila.slice(1).map((f) => (
+                       <View key={f.id} style={{ backgroundColor: '#334155', padding: 8, borderRadius: 8, marginRight: 8, flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                          <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>{formatarTelefone(f.cliente_cpf)}</Text>
+                          <TouchableOpacity onPress={() => removerFila(f.id)}><Text style={{ color: '#ef4444', fontWeight: 'bold' }}>✕</Text></TouchableOpacity>
+                       </View>
+                     ))}
+                  </ScrollView>
+               </View>
+            )}
           </View>
 
           {/* 📊 LINHA 2: INDICADORES (Cards MAIORES e PROPORCIONAIS) */}
