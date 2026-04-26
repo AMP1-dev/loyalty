@@ -377,7 +377,7 @@ export default function Merchant() {
     setEditandoRewardId(null); setForm({}); setFormError(''); await buscarRewards();
   };
 
-  const linkQR = `https://palm.amp.ia.br/cliente?loja_id=${lojaId}`;
+  const linkQR = `https://springs.amp.ia.br/cliente?loja_id=${lojaId}`;
 
   if (!lojaId) return <View style={styles.center}><Text style={{ color: '#fff' }}>Carregando Loja...</Text></View>;
   const roiEmReais = stats.pontosResgatadosHoje * (Number(config.reais_por_ponto) || 1);
@@ -567,6 +567,30 @@ export default function Merchant() {
                 <Text style={{ color: '#ec4899', fontSize: 36, fontWeight: '900' }}>{stats.ultimosResgates.length}</Text>
                 <Text style={{ color: '#94a3b8', fontSize: 13, fontWeight: 'bold', marginTop: 5 }}>RESGATES</Text>
                 <Text style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>Brindes entregues</Text>
+             </View>
+          </View>
+
+          {/* 📊 ÁREA 2.5: AVALIAÇÕES E LUCRATIVIDADE (RESTAURADOS) */}
+          <View style={{ flexDirection: 'row', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
+             <View style={[styles.card, { flex: 1, minWidth: 280, borderColor: '#facc15' }]}>
+                <Text style={[styles.title, { color: '#facc15' }]}>⭐ Últimas Avaliações ({mediaEstrelas.toFixed(1)})</Text>
+                <ScrollView style={{ maxHeight: 120 }} nestedScrollEnabled={true}>
+                   {avaliacoes.slice(0, 5).map((av, i) => (
+                     <View key={i} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#334155' }}>
+                        <Text style={{ color: '#facc15', fontWeight: 'bold' }}>{"⭐".repeat(av.nota)}</Text>
+                        {av.comentario && <Text style={{ color: '#cbd5e1', fontSize: 12, fontStyle: 'italic' }}>"{av.comentario}"</Text>}
+                     </View>
+                   ))}
+                </ScrollView>
+             </View>
+
+             <View style={[styles.card, { flex: 1, minWidth: 280, borderColor: '#10b981' }]}>
+                <Text style={[styles.title, { color: '#10b981' }]}>📈 Lucratividade (ROI)</Text>
+                <Text style={{ color: '#e2e8f0', fontSize: 14, lineHeight: 22 }}>
+                  Hoje os prêmios entregues geraram um retorno de 
+                  <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 18 }}> {formatarMoeda(stats.pontosResgatadosHoje * (Number(config.reais_por_ponto) || 1))}</Text> 
+                  em faturamento fiel.
+                </Text>
              </View>
           </View>
 
