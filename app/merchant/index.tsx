@@ -203,19 +203,41 @@ export default function Merchant() {
     setHistoricoCRM(apenasAtrasados);
     setClientesAtrasados(apenasAtrasados.length); 
 
-    const { data: npsRespostas } = await supabase.from('respostas_nps').select('resposta, created_at').eq('loja_id', lojaId);
-    const npsNotas = (npsRespostas || []).filter(r => !isNaN(Number(r.resposta))).map(r => ({ nota: Number(r.resposta), data: new Date(r.created_at).toLocaleDateString() }));
+    const { data: npsRespostas } = await supabase.from('respostas_nps').select('resposta, created_at, pergunta_id').eq('loja_id', lojaId);
+    const { data: perguntas } = await supabase.from('perguntas_nps').select('id, pergunta');
+    
+    const npsNotas = (npsRespostas || []).filter(r => !isNaN(Number(r.resposta))).map(r => ({ 
+      nota: Number(r.resposta), 
+      data: new Date(r.created_at).toLocaleDateString(),
+      pergunta_id: r.pergunta_id 
+    }));
     const mediaNps = npsNotas.length ? npsNotas.reduce((s, v) => s + v.nota, 0) / npsNotas.length : 0;
 
-    // Agrupar por data para o gráfico
-    const historyMap: any = {};
-    npsNotas.forEach(n => { historyMap[n.data] = historyMap[n.data] ? { s: historyMap[n.data].s + n.nota, c: historyMap[n.data].c + 1 } : { s: n.nota, c: 1 }; });
-    const npsHistory = Object.keys(historyMap).sort((a,b) => new Date(a).getTime() - new Date(b).getTime()).map(d => ({ data: d, media: historyMap[d].s / historyMap[d].c }));
+    // Agrupar por pergunta e data para o gráfico multi-linhas
+    const cores = ['#facc15', '#10b981', '#38bdf8', '#ec4899', '#a855f7'];
+    const historyData: any = {};
+    
+    (perguntas || []).forEach((p, idx) => {
+      const notasDaPergunta = npsNotas.filter(n => n.pergunta_id === p.id);
+      const mapPorData: any = {};
+      notasDaPergunta.forEach(n => {
+        mapPorData[n.data] = mapPorData[n.data] ? { s: mapPorData[n.data].s + n.nota, c: mapPorData[n.data].c + 1 } : { s: n.nota, c: 1 };
+      });
+      
+      const pontos = Object.keys(mapPorData).sort((a,b) => new Date(a).getTime() - new Date(b).getTime()).map(d => ({
+        data: d,
+        media: mapPorData[d].s / mapPorData[d].c
+      }));
+
+      if (pontos.length > 0) {
+        historyData[p.id] = { nome: p.pergunta, cor: cores[idx % cores.length], pontos: pontos.slice(-7) };
+      }
+    });
 
     setStats({ 
       totalMes: vendasMes.reduce((s, v) => s + Number(v.valor), 0), totalDia, ticketMedio: vendasDiaHoje.length ? totalDia / vendasDiaHoje.length : 0, 
       top5: vendasDiaHoje.sort((a: any, b: any) => b.valor - a.valor).slice(0, 5) as any, resgatesHojeLista: resgatesHojeLista as any, resgatesAgrupados: resgatesAgrupados as any,
-      pontosResgatadosHoje: pontosResgatados, npsMedia: mediaNps, npsTotal: npsNotas.length, npsHistory: npsHistory.slice(-7),
+      pontosResgatadosHoje: pontosResgatados, npsMedia: mediaNps, npsTotal: npsNotas.length, npsHistory: Object.values(historyData),
       ultimosResgates: resgatesHojeLista.slice(0, 5).map(r => ({ cliente_cpf: r.cliente_cpf, nome_premio: recompensasMap[r.recompensa_id] || 'Prêmio' })) as any
     });
   };
@@ -553,14 +575,48 @@ export default function Merchant() {
             <View style={[styles.card, { flex: 1, minWidth: 200, borderColor: '#facc15' }]}>
               <Text style={[styles.title, {color: '#facc15'}]}>⭐ Avaliações (Média: {stats.npsMedia ? stats.npsMedia.toFixed(1) : '0.0'})</Text>
               
-              {/* 🔥 GRÁFICO DE EVOLUÇÃO NPS */}
-              {stats.npsHistory.length > 1 && (
-                <View style={{ height: 60, marginVertical: 10, justifyContent: 'flex-end' }}>
-                   <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 40, gap: 4 }}>
-                      {stats.npsHistory.map((h: any, i: number) => (
-                        <View key={i} style={{ flex: 1, alignItems: 'center' }}>
-                           <View style={{ width: '100%', height: (h.media / 5) * 40, backgroundColor: '#facc1540', borderTopLeftRadius: 4, borderTopRightRadius: 4, borderWidth: 1, borderColor: '#facc15' }} />
-                           <Text style={{ fontSize: 8, color: '#94a3b8', marginTop: 2 }}>{h.data.split('/')[0]}</Text>
+              {/* 🔥 GRÁFICO DE LINHAS NPS (Multi-questões) */}
+              {stats.npsHistory.length > 0 && (
+                <View style={{ height: 100, marginVertical: 15 }}>
+                   <View style={{ height: 80, borderLeftWidth: 1, borderBottomWidth: 1, borderColor: '#334155', position: 'relative' }}>
+                      {stats.npsHistory.map((line: any, idx: number) => {
+                        const points = line.pontos.map((p: any, i: number) => {
+                          const x = (i / (line.pontos.length - 1 || 1)) * 100;
+                          const y = 80 - (p.media / 5) * 80;
+                          return `${x}% ${y}`;
+                        }).join(' L ');
+                        
+                        return (
+                          <View key={idx} style={{ position: 'absolute', width: '100%', height: '100%' }}>
+                            <svg width="100%" height="80" style={{ position: 'absolute' }}>
+                              <polyline
+                                fill="none"
+                                stroke={line.cor}
+                                strokeWidth="2"
+                                points={line.pontos.map((p: any, i: number) => {
+                                  const x = (i / (line.pontos.length - 1 || 1)) * 100;
+                                  const y = 80 - (p.media / 5) * 80;
+                                  return `${x},${y}`;
+                                }).join(' ')}
+                                strokeLinejoin="round"
+                              />
+                              {line.pontos.map((p: any, i: number) => (
+                                <circle key={i} cx={`${(i / (line.pontos.length - 1 || 1)) * 100}%`} cy={80 - (p.media / 5) * 80} r="3" fill={line.cor} />
+                              ))}
+                            </svg>
+                          </View>
+                        );
+                      })}
+                   </View>
+                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+                      <Text style={{ fontSize: 8, color: '#64748b' }}>Início</Text>
+                      <Text style={{ fontSize: 8, color: '#64748b' }}>Hoje</Text>
+                   </View>
+                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                      {stats.npsHistory.map((line: any, i: number) => (
+                        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                           <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: line.cor }} />
+                           <Text style={{ fontSize: 8, color: '#cbd5e1' }} numberOfLines={1}>{line.nome}</Text>
                         </View>
                       ))}
                    </View>

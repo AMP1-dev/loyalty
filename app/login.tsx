@@ -79,53 +79,62 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1, backgroundColor: '#020617', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
       {/* TOAST FLUTUANTE */}
       <Animated.View style={[styles.toastContainer, { transform: [{ translateY: toastAnim }], backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444' }]}>
         <Text style={{ fontSize: 24, marginRight: 12 }}>{toast.tipo === 'sucesso' ? '✅' : '⚠️'}</Text>
         <Text style={styles.toastText}>{toast.message}</Text>
       </Animated.View>
 
-      <Text style={styles.logo}>PALM SPRINGS</Text>
-      <Text style={styles.subtitle}>Acesso Restrito do Lojista</Text>
+      <View style={{ width: '100%', maxWidth: 420, backgroundColor: '#0f172a', borderRadius: 24, padding: 40, borderWidth: 1, borderColor: '#1e293b', shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 30, elevation: 20 }}>
+        <Text style={{ color: '#10b981', fontSize: 32, fontWeight: '900', textAlign: 'center', letterSpacing: -1 }}>PALM SPRINGS</Text>
+        <Text style={{ color: '#94a3b8', fontSize: 14, textAlign: 'center', marginBottom: 40, fontWeight: '500' }}>Painel de Controle do Lojista</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="CNPJ da Loja"
-        placeholderTextColor="#64748b"
-        value={cnpj}
-        onChangeText={setCnpj}
-        keyboardType="numeric"
-        autoCapitalize="none"
-      />
+        <Text style={{ color: '#f8fafc', fontSize: 13, fontWeight: '700', marginBottom: 8, marginLeft: 4 }}>CNPJ da Loja</Text>
+        <TextInput
+          style={{ backgroundColor: '#1e293b', color: '#fff', padding: 18, borderRadius: 12, marginBottom: 20, fontSize: 16, borderWidth: 1, borderColor: '#334155' }}
+          placeholder="00.000.000/0001-00"
+          placeholderTextColor="#475569"
+          value={cnpj}
+          onChangeText={setCnpj}
+          keyboardType="numeric"
+          autoCapitalize="none"
+        />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Senha de Acesso"
-        placeholderTextColor="#64748b"
-        value={senha}
-        onChangeText={setSenha}
-        secureTextEntry={true}
-        returnKeyType="go"
-        onSubmitEditing={handleLogin}
-        onKeyPress={(e) => {
-          if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter') handleLogin();
-        }}
-      />
+        <Text style={{ color: '#f8fafc', fontSize: 13, fontWeight: '700', marginBottom: 8, marginLeft: 4 }}>Senha de Acesso</Text>
+        <TextInput
+          style={{ backgroundColor: '#1e293b', color: '#fff', padding: 18, borderRadius: 12, marginBottom: 35, fontSize: 16, borderWidth: 1, borderColor: '#334155' }}
+          placeholder="••••••••"
+          placeholderTextColor="#475569"
+          value={senha}
+          onChangeText={setSenha}
+          secureTextEntry={true}
+          returnKeyType="go"
+          onSubmitEditing={handleLogin}
+          onKeyPress={(e) => {
+            if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter') handleLogin();
+          }}
+        />
 
-      <TouchableOpacity 
-        style={[styles.button, { opacity: loading ? 0.7 : 1 }]} 
-        onPress={handleLogin} 
-        disabled={loading}
-      >
-        <Text style={styles.buttonText}>
-          {loading ? 'VERIFICANDO DADOS...' : 'ENTRAR NO PAINEL'}
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity onPress={() => router.replace('/')} style={{ marginTop: 40, alignItems: 'center' }}>
-        <Text style={{ color: '#64748b', fontSize: 12, fontWeight: 'bold' }}>⬅ VOLTAR AO INÍCIO</Text>
-      </TouchableOpacity>
+        <TouchableOpacity 
+          style={{ backgroundColor: '#10b981', padding: 20, borderRadius: 14, alignItems: 'center', shadowColor: '#10b981', shadowOpacity: 0.3, shadowRadius: 15, elevation: 5, opacity: loading ? 0.7 : 1 }} 
+          onPress={handleLogin} 
+          disabled={loading}
+        >
+          <Text style={{ color: '#020617', fontWeight: '900', fontSize: 16 }}>
+            {loading ? 'VERIFICANDO...' : 'ENTRAR NO PAINEL'}
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity onPress={() => router.replace('/')} style={{ marginTop: 24, alignItems: 'center' }}>
+          <Text style={{ color: '#64748b', fontSize: 13, fontWeight: '600' }}>← Voltar ao início</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={{ marginTop: 40, alignItems: 'center', opacity: 0.3 }}>
+        <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold' }}>SPRING NETWORK © 2026</Text>
+        <Text style={{ color: '#94a3b8', fontSize: 9, marginTop: 4 }}>v1.1.2 - SEGUREZA CRIPTOGRAFADA</Text>
+      </View>
     </View>
   );
 }
