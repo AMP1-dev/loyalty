@@ -204,13 +204,22 @@ export default function Merchant() {
     setClientesAtrasados(apenasAtrasados.length); 
 
     const { data: npsRespostas } = await supabase.from('respostas_nps').select('resposta, created_at, pergunta_id').eq('loja_id', lojaId);
-    const { data: perguntas } = await supabase.from('perguntas_nps').select('id, pergunta');
+    const { data: perguntas } = await supabase.from('perguntas_nps').select('id, pergunta').eq('loja_id', lojaId);
     
-    const npsNotas = (npsRespostas || []).filter(r => !isNaN(Number(r.resposta))).map(r => ({ 
-      nota: Number(r.resposta), 
-      data: new Date(r.created_at).toLocaleDateString(),
-      pergunta_id: r.pergunta_id 
-    }));
+    const npsNotas = (npsRespostas || []).map(r => {
+      let nota = Number(r.resposta);
+      if (isNaN(nota)) {
+        if (r.resposta?.toLowerCase() === 'sim') nota = 5;
+        else if (r.resposta?.toLowerCase() === 'nao') nota = 1;
+        else return null;
+      }
+      return { 
+        nota, 
+        data: new Date(r.created_at).toLocaleDateString(),
+        pergunta_id: r.pergunta_id 
+      };
+    }).filter(n => n !== null) as any[];
+
     const mediaNps = npsNotas.length ? npsNotas.reduce((s, v) => s + v.nota, 0) / npsNotas.length : 0;
 
     // Agrupar por pergunta e data para o gráfico multi-linhas
