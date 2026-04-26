@@ -86,7 +86,7 @@ export default function Merchant() {
   });
 
   const [stats, setStats] = useState({
-    totalMes: 0, totalDia: 0, ticketMedio: 0, top5: [], resgatesHojeLista: [], resgatesAgrupados: [], pontosResgatadosHoje: 0, ultimosResgates: []
+    totalMes: 0, totalDia: 0, vendasCount: 0, ticketMedio: 0, top5: [], resgatesHojeLista: [], resgatesAgrupados: [], pontosResgatadosHoje: 0, ultimosResgates: []
   });
 
   const [historicoCRM, setHistoricoCRM] = useState<any[]>([]);
@@ -166,9 +166,15 @@ export default function Merchant() {
     setClientesAtrasados(apenasAtrasados.length);
 
     setStats({
-      totalMes: vendasMes.reduce((s, v) => s + Number(v.valor), 0), totalDia, ticketMedio: vendasDiaHoje.length ? totalDia / vendasDiaHoje.length : 0,
-      top5: vendasDiaHoje.sort((a: any, b: any) => b.valor - a.valor).slice(0, 5) as any, resgatesHojeLista: resgatesHojeLista as any, resgatesAgrupados: resgatesAgrupados as any,
-      pontosResgatadosHoje: pontosResgatados, ultimosResgates: resgatesHojeLista.slice(0, 5).map(r => ({ cliente_cpf: r.cliente_cpf, nome_premio: recompensasMap[r.recompensa_id] || 'Prêmio' })) as any
+      totalMes: vendasMes.reduce((s, v) => s + Number(v.valor), 0), 
+      totalDia, 
+      vendasCount: vendasDiaHoje.length,
+      ticketMedio: vendasDiaHoje.length ? totalDia / vendasDiaHoje.length : 0,
+      top5: vendasDiaHoje.sort((a: any, b: any) => b.valor - a.valor).slice(0, 5) as any, 
+      resgatesHojeLista: resgatesHojeLista as any, 
+      resgatesAgrupados: resgatesAgrupados as any,
+      pontosResgatadosHoje: pontosResgatados, 
+      ultimosResgates: resgatesHojeLista.slice(0, 5).map(r => ({ cliente_cpf: r.cliente_cpf, nome_premio: recompensasMap[r.recompensa_id] || 'Prêmio' })) as any
     });
   };
 
@@ -388,6 +394,47 @@ export default function Merchant() {
 
   return (
     <View style={{ flex: 1 }}>
+      {mostrarConfig && (
+        <View style={styles.modalOverlay}>
+          <ScrollView contentContainerStyle={{ paddingVertical: 50, width: '100%', alignItems: 'center' }}>
+            <View style={[styles.modalCard, { maxWidth: 600 }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <Text style={styles.modalTitle}>⚙️ Configurações da Loja</Text>
+                <TouchableOpacity onPress={() => setMostrarConfig(false)} style={styles.closeBtn}><Text style={styles.closeText}>✕</Text></TouchableOpacity>
+              </View>
+              
+              <Text style={styles.label}>NOME DA LOJA:</Text>
+              <TextInput value={config.nome_loja} onChangeText={(t) => setConfig({ ...config, nome_loja: t })} style={styles.input} />
+
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>CASHBACK (%):</Text>
+                  <TextInput value={config.cashback_percent} onChangeText={(t) => setConfig({ ...config, cashback_percent: t })} style={styles.input} keyboardType="numeric" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>REAIS POR PONTO:</Text>
+                  <TextInput value={config.reais_por_ponto} onChangeText={(t) => setConfig({ ...config, reais_por_ponto: t })} style={styles.input} keyboardType="numeric" />
+                </View>
+              </View>
+
+              <Text style={styles.label}>BÔNUS DE RETORNO (SPRINGS):</Text>
+              <TextInput value={config.bonus_retorno_pontos} onChangeText={(t) => setConfig({ ...config, bonus_retorno_pontos: t })} style={styles.input} keyboardType="numeric" />
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 20, gap: 10 }}>
+                <Switch value={config.roleta_ativa} onValueChange={(v) => setConfig({ ...config, roleta_ativa: v })} />
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>🎡 ROLETA DA SORTE ATIVA</Text>
+              </View>
+
+              <TouchableOpacity 
+                style={[styles.buttonCenter, { backgroundColor: '#10b981', marginTop: 30 }]} 
+                onPress={() => { salvarConfig(); setMostrarConfig(false); }}>
+                <Text style={styles.buttonText}>{loadingSalvar ? 'SALVANDO...' : '✅ SALVAR ALTERAÇÕES'}</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      )}
+
       {modalCRM && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
@@ -423,127 +470,137 @@ export default function Merchant() {
 
           {/* 🚀 ÁREA 1: OPERAÇÃO (ENTRADA E STATUS) */}
           <View style={{ gap: 15, marginBottom: 25 }}>
-            {fila.length === 0 ? (
-              <View style={[styles.card, { padding: 40, alignItems: 'center', backgroundColor: '#020617', borderColor: '#334155' }]}>
-                <Text style={{ color: '#64748b', fontSize: 18 }}>Aguardando próximo cliente na fila...</Text>
-                <TouchableOpacity onPress={buscarFila} style={{ marginTop: 20, backgroundColor: '#1e293b', paddingHorizontal: 25, paddingVertical: 12, borderRadius: 12 }}>
-                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>🔄 ATUALIZAR FILA</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              fila.slice(0, 1).map((c) => {
-                const valorRaw = valorVenda[c.id] || '';
-                const valorFormatado = valorRaw ? (parseInt(valorRaw, 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
-                const temBonus = bonusPendentes[c.cliente_cpf];
-                const ticketMedioValue = stats.totalDia / (stats.countDia || 1);
-
-                return (
-                  <View key={c.id} style={{ gap: 15 }}>
-                    {/* LINHA 1: ENTRADA GIGANTE */}
-                    <View style={{ flexDirection: 'row', gap: 15, alignItems: 'stretch' }}>
-                      <View style={[styles.card, { flex: 3, backgroundColor: '#020617', padding: 20, height: 130, justifyContent: 'center', borderColor: '#10b981', borderWidth: 2 }]}>
-                        <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 4 }}>ATENDENDO AGORA:</Text>
-                        <Text style={{ color: '#fff', fontSize: 48, fontWeight: '900', letterSpacing: -1 }}>{formatarTelefone(c.cliente_cpf)}</Text>
-                        <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
-                          <Text style={{ color: '#10b981', fontSize: 12, fontWeight: 'bold' }}>✨ {Math.floor(cashbacks[c.cliente_cpf]?.pontos || 0)} SPG</Text>
-                          <Text style={{ color: '#facc15', fontSize: 12, fontWeight: 'bold' }}>💰 R$ {(cashbacks[c.cliente_cpf]?.total || 0).toFixed(2)} CB</Text>
-                        </View>
+            {/* LINHA 1: ENTRADA GIGANTE */}
+            <View style={{ flexDirection: 'row', gap: 15, alignItems: 'stretch' }}>
+               {/* CARD DE TELEFONE (Dinâmico) */}
+               <View style={[styles.card, { flex: 3, backgroundColor: '#020617', padding: 20, height: 130, justifyContent: 'center', borderColor: '#10b981', borderWidth: 2 }]}>
+                  {fila.length > 0 ? (
+                    <>
+                      <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 4 }}>ATENDENDO AGORA:</Text>
+                      <Text style={{ color: '#fff', fontSize: 48, fontWeight: '900', letterSpacing: -1 }}>{formatarTelefone(fila[0].cliente_cpf)}</Text>
+                      <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                        <Text style={{ color: '#10b981', fontSize: 12, fontWeight: 'bold' }}>✨ {Math.floor(cashbacks[fila[0].cliente_cpf]?.pontos || 0)} SPG</Text>
+                        <Text style={{ color: '#facc15', fontSize: 12, fontWeight: 'bold' }}>💰 R$ {(cashbacks[fila[0].cliente_cpf]?.total || 0).toFixed(2)} CB</Text>
                       </View>
+                    </>
+                  ) : (
+                    <Text style={{ color: '#64748b', fontSize: 24, textAlign: 'center', fontWeight: 'bold' }}>AGUARDANDO FILA...</Text>
+                  )}
+               </View>
 
-                      <View style={[styles.card, { flex: 2, backgroundColor: '#020617', padding: 15, height: 130, justifyContent: 'center', borderColor: '#10b981', borderWidth: 1 }]}>
-                        <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 'bold', marginBottom: 4 }}>VALOR DA VENDA (R$):</Text>
-                        <TextInput 
-                          placeholder="R$ 0,00" 
-                          placeholderTextColor="#475569" 
-                          keyboardType="numeric" 
-                          value={valorFormatado} 
-                          onChangeText={(t) => setValorVenda((p: any) => ({ ...p, [c.id]: t.replace(/\D/g, '') }))} 
-                          style={{ color: '#10b981', fontSize: 48, fontWeight: '900', textAlign: 'right', outlineWidth: 0 } as any} 
-                          onSubmitEditing={() => atender(c.id)} 
-                        />
-                      </View>
+               {/* CARD DE VALOR (GIGANTE) */}
+               <View style={[styles.card, { flex: 2.5, backgroundColor: '#020617', padding: 15, height: 130, justifyContent: 'center', borderColor: '#10b981', borderWidth: 1 }]}>
+                  <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 'bold', position: 'absolute', top: 15, left: 15 }}>VALOR DA VENDA (R$):</Text>
+                  <TextInput
+                    placeholder="R$ 0,00"
+                    placeholderTextColor="#1e293b"
+                    keyboardType="numeric"
+                    value={fila.length > 0 ? (valorVenda[fila[0].id] ? (parseInt(valorVenda[fila[0].id], 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '') : ''}
+                    onChangeText={(t) => {
+                      if (fila.length > 0) setValorVenda({ ...valorVenda, [fila[0].id]: t.replace(/\D/g, '') });
+                    }}
+                    style={{ color: '#10b981', fontSize: 56, fontWeight: '900', textAlign: 'right', width: '100%', height: '100%', outlineStyle: 'none', borderWidth: 0 } as any}
+                  />
+               </View>
 
-                      <TouchableOpacity onPress={() => atender(c.id)} style={{ flex: 1.2, height: 130, backgroundColor: '#10b981', borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowColor: '#10b981', shadowOpacity: 0.4, shadowRadius: 10, elevation: 5 }}>
-                        <Text style={{ color: '#020617', fontWeight: '900', fontSize: 22 }}>ATENDER</Text>
-                      </TouchableOpacity>
-                    </View>
+               {/* BOTÃO ATENDER */}
+               <TouchableOpacity 
+                 onPress={() => fila.length > 0 && atender(fila[0].id)}
+                 style={[styles.card, { flex: 1.2, backgroundColor: fila.length > 0 ? '#10b981' : '#334155', height: 130, alignItems: 'center', justifyContent: 'center' }]}>
+                  <Text style={{ color: '#0f172a', fontWeight: 'bold', fontSize: 20 }}>ATENDER</Text>
+               </TouchableOpacity>
+            </View>
 
-                    {/* LINHA 2: FINANCEIRO E RESUMO (FIXO ABAIXO DA L1) */}
-                    <View style={{ flexDirection: 'row', gap: 15, alignItems: 'stretch' }}>
-                      {/* CARD CAIXA (ESQUERDA) */}
-                      <View style={[styles.card, { flex: 1, backgroundColor: '#0f172a', padding: 20, borderColor: '#334155', minHeight: 160 }]}>
-                         <View style={{ marginBottom: 15 }}>
-                            <Text style={{ color: '#10b981', fontSize: 36, fontWeight: '900' }}>{formatarMoeda(stats.totalMes)}</Text>
-                            <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold' }}>TOTAL DO MÊS</Text>
-                         </View>
-                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#334155', paddingTop: 15 }}>
-                            <View>
-                               <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold' }}>{formatarMoeda(stats.totalDia)}</Text>
-                               <Text style={{ color: '#64748b', fontSize: 10, fontWeight: 'bold' }}>TOTAL HOJE</Text>
-                            </View>
-                            <View style={{ alignItems: 'flex-end' }}>
-                               <Text style={{ color: '#38bdf8', fontSize: 24, fontWeight: 'bold' }}>{formatarMoeda(ticketMedioValue)}</Text>
-                               <Text style={{ color: '#64748b', fontSize: 10, fontWeight: 'bold' }}>TICKET MÉDIO</Text>
-                            </View>
-                         </View>
-                      </View>
-
-                      {/* CARD RESUMO (DIREITA) */}
-                      <View style={[styles.card, { flex: 1, backgroundColor: '#1e293b', padding: 20, borderColor: '#334155', minHeight: 160, justifyContent: 'center' }]}>
-                        {valorRaw ? (
-                           <View>
-                             <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 14, marginBottom: 10 }}>💡 DETALHES DA COMPRA:</Text>
-                             {(() => {
-                               const valorReal = parseInt(valorRaw, 10) / 100;
-                               const cb_total = cashbacks[c.cliente_cpf]?.total || 0;
-                               const cb_proximo = cashbacks[c.cliente_cpf]?.proximo || 0;
-                               const usarCb = config.usar_cashback_total ? cb_total : cb_proximo;
-                               const limiteCb = valorReal * (Number(config.cashback_limite_uso_percent) / 100);
-                               const cashbackUsado = Math.min(Math.min(valorReal, limiteCb), usarCb);
-                               const base = config.pontos_sobre_valor_bruto ? valorReal : (valorReal - cashbackUsado);
-                               const pontosCompra = Math.floor(base / (Number(config.reais_por_ponto) || 1));
-                               const aPagar = valorReal - cashbackUsado;
-
-                               return (
-                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <View>
-                                       <Text style={{ color: '#fff', fontSize: 18 }}>Venda: {formatarMoeda(valorReal)}</Text>
-                                       {cashbackUsado > 0 && <Text style={{ color: '#facc15', fontSize: 15 }}>- Cashback: {formatarMoeda(cashbackUsado)}</Text>}
-                                       <Text style={{ color: '#94a3b8', fontSize: 14, marginTop: 4 }}>✨ Ganhando +{pontosCompra} Springs</Text>
-                                    </View>
-                                    <View style={{ alignItems: 'flex-end' }}>
-                                       <Text style={{ color: '#22c55e', fontSize: 42, fontWeight: '900' }}>{formatarMoeda(aPagar)}</Text>
-                                       <Text style={{ color: '#10b981', fontSize: 12, fontWeight: 'bold' }}>VALOR FINAL</Text>
-                                    </View>
-                                 </View>
-                               );
-                             })()}
-                           </View>
-                        ) : <Text style={{ color: '#475569', fontSize: 16, fontStyle: 'italic', textAlign: 'center' }}>Digite o valor para ver o resumo...</Text>}
-                      </View>
-                    </View>
-
-                    {/* BÔNUS E PRÊMIOS */}
-                    {(temBonus > 0 || brindesPendentes[c.cliente_cpf]?.length > 0) && (
-                      <View style={{ flexDirection: 'row', gap: 10 }}>
-                        {temBonus > 0 && (
-                          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#facc1515', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#facc1530' }}>
-                            <Switch value={usarBonus[c.id] !== false} onValueChange={(v) => setUsarBonus((prev: any) => ({ ...prev, [c.id]: v }))} />
-                            <Text style={{ color: '#facc15', marginLeft: 12, fontWeight: 'bold', fontSize: 16 }}>🎁 APLICAR BÔNUS: +{temBonus} SPG</Text>
-                          </View>
-                        )}
-                        {brindesPendentes[c.cliente_cpf]?.map((b: any) => (
-                          <View key={b.id} style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ec489915', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#ec489930' }}>
-                            <Text style={{ color: '#ec4899', fontWeight: 'bold', fontSize: 15 }}>🏆 Brinde: {b.nome_brinde}</Text>
-                            <TouchableOpacity style={{ backgroundColor: '#ec4899', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10 }} onPress={() => entregarBrinde(b.id, c.cliente_cpf)}>
-                              <Text style={{ color: '#fff', fontWeight: 'bold' }}>ENTREGAR</Text>
-                            </TouchableOpacity>
-                          </View>
-                        ))}
-                      </View>
-                    )}
+            {/* LINHA 2: CAIXA E RESUMO (SEMPRE VISÍVEIS) */}
+            <View style={{ flexDirection: 'row', gap: 15, alignItems: 'stretch' }}>
+               {/* CARD DE CAIXA */}
+               <View style={[styles.card, { flex: 1, padding: 25, backgroundColor: '#1e293b', minHeight: 200, justifyContent: 'space-between' }]}>
+                  <View>
+                    <Text style={{ color: '#10b981', fontSize: 42, fontWeight: '900' }}>{formatarMoeda(stats.totalMes)}</Text>
+                    <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold', marginTop: 4 }}>TOTAL DO MÊS</Text>
                   </View>
-                );
+                  
+                  <View style={{ height: 1, backgroundColor: '#334155', marginVertical: 15 }} />
+                  
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                    <View>
+                      <Text style={{ color: '#fff', fontSize: 38, fontWeight: '900' }}>{formatarMoeda(stats.totalDia)}</Text>
+                      <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold' }}>TOTAL HOJE</Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ color: '#38bdf8', fontSize: 38, fontWeight: '900' }}>{formatarMoeda(stats.ticketMedio)}</Text>
+                      <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold' }}>TICKET MÉDIO</Text>
+                    </View>
+                  </View>
+               </View>
+
+               {/* CARD DE RESUMO */}
+               <View style={[styles.card, { flex: 1, padding: 25, backgroundColor: '#1e293b', minHeight: 200 }]}>
+                  {fila.length > 0 && valorVenda[fila[0].id] ? (
+                    <View style={{ height: '100%', justifyContent: 'space-between' }}>
+                      <View>
+                        <Text style={{ color: '#facc15', fontSize: 12, fontWeight: 'bold', marginBottom: 10 }}>💡 DETALHES DA COMPRA:</Text>
+                        <Text style={{ color: '#cbd5e1', fontSize: 20 }}>Venda: {formatarMoeda(parseInt(valorVenda[fila[0].id], 10) / 100)}</Text>
+                        {(() => {
+                           const cpf = fila[0].cliente_cpf;
+                           const valorReal = parseInt(valorVenda[fila[0].id], 10) / 100;
+                           const cb_total = cashbacks[cpf]?.total || 0;
+                           const cb_proximo = cashbacks[cpf]?.proximo || 0;
+                           const usarCb = config.usar_cashback_total ? cb_total : cb_proximo;
+                           const limiteCb = valorReal * (Number(config.cashback_limite_uso_percent) / 100);
+                           const cashbackUsado = Math.min(Math.min(valorReal, limiteCb), usarCb);
+                           const aPagar = valorReal - cashbackUsado;
+                           const base = config.pontos_sobre_valor_bruto ? valorReal : aPagar;
+                           const pts = Math.floor(base / (Number(config.reais_por_ponto) || 1));
+
+                           return (
+                             <>
+                               <Text style={{ color: '#facc15', fontSize: 18, marginTop: 5 }}>- Cashback: {formatarMoeda(cashbackUsado)}</Text>
+                               <Text style={{ color: '#38bdf8', fontSize: 18, marginTop: 5 }}>✨ Ganhando +{pts} Springs</Text>
+                               
+                               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'flex-end' }}>
+                                 <Text style={{ color: '#10b981', fontSize: 72, fontWeight: '900' }}>{formatarMoeda(aPagar)}</Text>
+                                 <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold' }}>VALOR FINAL</Text>
+                               </View>
+                             </>
+                           );
+                        })()}
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ color: '#64748b', fontSize: 18, textAlign: 'center' }}>Digite um valor para ver o resumo da venda...</Text>
+                    </View>
+                  )}
+               </View>
+            </View>
+
+            {/* BÔNUS E PRÊMIOS DA FILA (Dinâmico) */}
+            {fila.length > 0 && (
+              fila.slice(0, 1).map(c => {
+                const temBonus = bonusPendentes[c.cliente_cpf];
+                const brindes = brindesPendentes[c.cliente_cpf] || [];
+                if (temBonus > 0 || brindes.length > 0) {
+                  return (
+                    <View key={c.id} style={{ flexDirection: 'row', gap: 10 }}>
+                      {temBonus > 0 && (
+                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#facc1515', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#facc1530' }}>
+                          <Switch value={usarBonus[c.id] !== false} onValueChange={(v) => setUsarBonus((prev: any) => ({ ...prev, [c.id]: v }))} />
+                          <Text style={{ color: '#facc15', marginLeft: 12, fontWeight: 'bold', fontSize: 16 }}>🎁 APLICAR BÔNUS: +{temBonus} SPG</Text>
+                        </View>
+                      )}
+                      {brindes.map((b: any) => (
+                        <View key={b.id} style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ec489915', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#ec489930' }}>
+                          <Text style={{ color: '#ec4899', fontWeight: 'bold', fontSize: 15 }}>🏆 Brinde: {b.nome_brinde}</Text>
+                          <TouchableOpacity style={{ backgroundColor: '#ec4899', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10 }} onPress={() => entregarBrinde(b.id, c.cliente_cpf)}>
+                            <Text style={{ color: '#fff', fontWeight: 'bold' }}>ENTREGAR</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  );
+                }
+                return null;
               })
             )}
           </View>
