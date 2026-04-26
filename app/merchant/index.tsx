@@ -579,34 +579,26 @@ export default function Merchant() {
               {stats.npsHistory.length > 0 && (
                 <View style={{ height: 100, marginVertical: 15 }}>
                    <View style={{ height: 80, borderLeftWidth: 1, borderBottomWidth: 1, borderColor: '#334155', position: 'relative' }}>
-                      {stats.npsHistory.map((line: any, idx: number) => {
-                        const points = line.pontos.map((p: any, i: number) => {
-                          const x = (i / (line.pontos.length - 1 || 1)) * 100;
-                          const y = 80 - (p.media / 5) * 80;
-                          return `${x}% ${y}`;
-                        }).join(' L ');
-                        
-                        return (
-                          <View key={idx} style={{ position: 'absolute', width: '100%', height: '100%' }}>
-                            <svg width="100%" height="80" style={{ position: 'absolute' }}>
-                              <polyline
-                                fill="none"
-                                stroke={line.cor}
-                                strokeWidth="2"
-                                points={line.pontos.map((p: any, i: number) => {
-                                  const x = (i / (line.pontos.length - 1 || 1)) * 100;
-                                  const y = 80 - (p.media / 5) * 80;
-                                  return `${x},${y}`;
-                                }).join(' ')}
-                                strokeLinejoin="round"
-                              />
-                              {line.pontos.map((p: any, i: number) => (
-                                <circle key={i} cx={`${(i / (line.pontos.length - 1 || 1)) * 100}%`} cy={80 - (p.media / 5) * 80} r="3" fill={line.cor} />
-                              ))}
-                            </svg>
-                          </View>
-                        );
-                      })}
+                      {stats.npsHistory.map((line: any, idx: number) => (
+                        <View key={idx} style={{ position: 'absolute', width: '100%', height: '100%' }}>
+                          <svg width="100%" height="80" viewBox="0 0 100 80" preserveAspectRatio="none" style={{ position: 'absolute' }}>
+                            <polyline
+                              fill="none"
+                              stroke={line.cor}
+                              strokeWidth="2"
+                              points={line.pontos.map((p: any, i: number) => {
+                                const x = line.pontos.length > 1 ? (i / (line.pontos.length - 1)) * 100 : 50;
+                                const y = 80 - (p.media / 5) * 80;
+                                return `${x},${y}`;
+                              }).join(' ')}
+                              strokeLinejoin="round"
+                            />
+                            {line.pontos.map((p: any, i: number) => (
+                              <circle key={i} cx={line.pontos.length > 1 ? (i / (line.pontos.length - 1)) * 100 : 50} cy={80 - (p.media / 5) * 80} r="2" fill={line.cor} />
+                            ))}
+                          </svg>
+                        </View>
+                      ))}
                    </View>
                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
                       <Text style={{ fontSize: 8, color: '#64748b' }}>Início</Text>
