@@ -553,7 +553,7 @@ export default function Merchant() {
                   <View key={i} style={styles.topItem}>
                     <View style={{flex: 1}}>
                       <Text style={{color: '#facc15', fontWeight: 'bold', fontSize: 12}}>{"⭐".repeat(av.nota)}</Text>
-                      {av.comentario && <Text style={{color: '#cbd5e1', fontSize: 12, marginTop: 4, fontStyle: 'italic'}}>"{av.comentario}"</Text>}
+                      {av.comentario && <Text style={{color: '#cbd5e1', fontSize: 12, marginTop: 4, fontStyle: 'italic'}}>&quot;{av.comentario}&quot;</Text>}
                     </View>
                     <Text style={{color: '#64748b', fontSize: 10}}>{new Date(av.created_at).toLocaleDateString()}</Text>
                   </View>
