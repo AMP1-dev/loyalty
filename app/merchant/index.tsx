@@ -406,21 +406,54 @@ export default function Merchant() {
               <Text style={styles.label}>NOME DA LOJA:</Text>
               <TextInput value={config.nome_loja} onChangeText={(t) => setConfig({ ...config, nome_loja: t })} style={styles.input} />
 
+              <Text style={styles.label}>CONTATO E ENDEREÇO:</Text>
+              <TextInput value={config.telefone} onChangeText={(t) => setConfig({ ...config, telefone: t })} placeholder="WhatsApp da Loja" placeholderTextColor="#475569" style={styles.input} />
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TextInput value={config.endereco} onChangeText={(t) => setConfig({ ...config, endereco: t })} placeholder="Rua / Av" placeholderTextColor="#475569" style={[styles.input, { flex: 3 }]} />
+                <TextInput value={config.numero} onChangeText={(t) => setConfig({ ...config, numero: t })} placeholder="Nº" placeholderTextColor="#475569" style={[styles.input, { flex: 1 }]} />
+              </View>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TextInput value={config.bairro} onChangeText={(t) => setConfig({ ...config, bairro: t })} placeholder="Bairro" placeholderTextColor="#475569" style={[styles.input, { flex: 1 }]} />
+                <TextInput value={config.cidade} onChangeText={(t) => setConfig({ ...config, cidade: t })} placeholder="Cidade" placeholderTextColor="#475569" style={[styles.input, { flex: 1 }]} />
+              </View>
+
+              <Text style={styles.label}>REGRAS DE FIDELIDADE:</Text>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>CASHBACK (%):</Text>
+                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>CASHBACK (%)</Text>
                   <TextInput value={config.cashback_percent} onChangeText={(t) => setConfig({ ...config, cashback_percent: t })} style={styles.input} keyboardType="numeric" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>REAIS POR PONTO:</Text>
+                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>REAIS POR PONTO</Text>
                   <TextInput value={config.reais_por_ponto} onChangeText={(t) => setConfig({ ...config, reais_por_ponto: t })} style={styles.input} keyboardType="numeric" />
                 </View>
               </View>
 
-              <Text style={styles.label}>BÔNUS DE RETORNO (SPRINGS):</Text>
-              <TextInput value={config.bonus_retorno_pontos} onChangeText={(t) => setConfig({ ...config, bonus_retorno_pontos: t })} style={styles.input} keyboardType="numeric" />
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>LIMITE USO CB (%)</Text>
+                  <TextInput value={config.cashback_limite_uso_percent} onChangeText={(t) => setConfig({ ...config, cashback_limite_uso_percent: t })} style={styles.input} keyboardType="numeric" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>EXPIRAÇÃO CB (DIAS)</Text>
+                  <TextInput value={config.cashback_expiracao_dias} onChangeText={(t) => setConfig({ ...config, cashback_expiracao_dias: t })} style={styles.input} keyboardType="numeric" />
+                </View>
+              </View>
 
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 20, gap: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 15, gap: 10 }}>
+                <Switch value={config.pontos_sobre_valor_bruto} onValueChange={(v) => setConfig({ ...config, pontos_sobre_valor_bruto: v })} />
+                <Text style={{ color: '#fff', fontSize: 12 }}>Pontos sobre Valor Bruto (Sem descontar cashback)</Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 10 }}>
+                <Switch value={config.usar_cashback_total} onValueChange={(v) => setConfig({ ...config, usar_cashback_total: v })} />
+                <Text style={{ color: '#fff', fontSize: 12 }}>Usar Saldo Total de Cashback (Acumulativo)</Text>
+              </View>
+
+              <Text style={styles.label}>BÔNUS E ROLETA:</Text>
+              <TextInput value={config.bonus_retorno_pontos} onChangeText={(t) => setConfig({ ...config, bonus_retorno_pontos: t })} placeholder="Pontos de Bônus de Retorno" style={styles.input} keyboardType="numeric" />
+              
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 15, gap: 10 }}>
                 <Switch value={config.roleta_ativa} onValueChange={(v) => setConfig({ ...config, roleta_ativa: v })} />
                 <Text style={{ color: '#fff', fontWeight: 'bold' }}>🎡 ROLETA DA SORTE ATIVA</Text>
               </View>
@@ -499,7 +532,8 @@ export default function Merchant() {
                     onChangeText={(t) => {
                       if (fila.length > 0) setValorVenda({ ...valorVenda, [fila[0].id]: t.replace(/\D/g, '') });
                     }}
-                    style={{ color: '#10b981', fontSize: 56, fontWeight: '900', textAlign: 'right', width: '100%', height: '100%', outlineStyle: 'none', borderWidth: 0 } as any}
+                    onSubmitEditing={() => { if (fila.length > 0) atender(fila[0].id); }}
+                    style={{ color: '#10b981', fontSize: 64, fontWeight: '900', textAlign: 'right', width: '100%', height: '100%', outlineStyle: 'none', borderWidth: 0 } as any}
                   />
                </View>
 
@@ -538,33 +572,47 @@ export default function Merchant() {
                <View style={[styles.card, { flex: 1, padding: 25, backgroundColor: '#1e293b', minHeight: 200 }]}>
                   {fila.length > 0 && valorVenda[fila[0].id] ? (
                     <View style={{ height: '100%', justifyContent: 'space-between' }}>
-                      <View>
-                        <Text style={{ color: '#facc15', fontSize: 12, fontWeight: 'bold', marginBottom: 10 }}>💡 DETALHES DA COMPRA:</Text>
-                        <Text style={{ color: '#cbd5e1', fontSize: 20 }}>Venda: {formatarMoeda(parseInt(valorVenda[fila[0].id], 10) / 100)}</Text>
-                        {(() => {
-                           const cpf = fila[0].cliente_cpf;
-                           const valorReal = parseInt(valorVenda[fila[0].id], 10) / 100;
-                           const cb_total = cashbacks[cpf]?.total || 0;
-                           const cb_proximo = cashbacks[cpf]?.proximo || 0;
-                           const usarCb = config.usar_cashback_total ? cb_total : cb_proximo;
-                           const limiteCb = valorReal * (Number(config.cashback_limite_uso_percent) / 100);
-                           const cashbackUsado = Math.min(Math.min(valorReal, limiteCb), usarCb);
-                           const aPagar = valorReal - cashbackUsado;
-                           const base = config.pontos_sobre_valor_bruto ? valorReal : aPagar;
-                           const pts = Math.floor(base / (Number(config.reais_por_ponto) || 1));
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: '#facc15', fontSize: 12, fontWeight: 'bold', marginBottom: 15 }}>💡 DETALHES DA COMPRA:</Text>
+                        
+                        <View style={{ gap: 12 }}>
+                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Text style={{ color: '#94a3b8', fontSize: 16 }}>Valor da Venda:</Text>
+                              <Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>{formatarMoeda(parseInt(valorVenda[fila[0].id], 10) / 100)}</Text>
+                           </View>
 
-                           return (
-                             <>
-                               <Text style={{ color: '#facc15', fontSize: 18, marginTop: 5 }}>- Cashback: {formatarMoeda(cashbackUsado)}</Text>
-                               <Text style={{ color: '#38bdf8', fontSize: 18, marginTop: 5 }}>✨ Ganhando +{pts} Springs</Text>
-                               
-                               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'flex-end' }}>
-                                 <Text style={{ color: '#10b981', fontSize: 72, fontWeight: '900' }}>{formatarMoeda(aPagar)}</Text>
-                                 <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold' }}>VALOR FINAL</Text>
-                               </View>
-                             </>
-                           );
-                        })()}
+                           {(() => {
+                              const cpf = fila[0].cliente_cpf;
+                              const valorReal = parseInt(valorVenda[fila[0].id], 10) / 100;
+                              const cb_total = cashbacks[cpf]?.total || 0;
+                              const cb_proximo = cashbacks[cpf]?.proximo || 0;
+                              const usarCb = config.usar_cashback_total ? cb_total : cb_proximo;
+                              const limiteCb = valorReal * (Number(config.cashback_limite_uso_percent) / 100);
+                              const cashbackUsado = Math.min(Math.min(valorReal, limiteCb), usarCb);
+                              const aPagar = valorReal - cashbackUsado;
+                              const base = config.pontos_sobre_valor_bruto ? valorReal : aPagar;
+                              const pts = Math.floor(base / (Number(config.reais_por_ponto) || 1));
+
+                              return (
+                                <>
+                                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                     <Text style={{ color: '#facc15', fontSize: 16 }}>Cashback Utilizado:</Text>
+                                     <Text style={{ color: '#facc15', fontSize: 24, fontWeight: 'bold' }}>- {formatarMoeda(cashbackUsado)}</Text>
+                                  </View>
+
+                                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#38bdf815', padding: 10, borderRadius: 10 }}>
+                                     <Text style={{ color: '#38bdf8', fontSize: 16 }}>Você ganha nesta compra:</Text>
+                                     <Text style={{ color: '#38bdf8', fontSize: 24, fontWeight: '900' }}>+ {pts} Springs</Text>
+                                  </View>
+                                  
+                                  <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'flex-end', marginTop: 10 }}>
+                                    <Text style={{ color: '#10b981', fontSize: 84, fontWeight: '900', lineHeight: 84 }}>{formatarMoeda(aPagar)}</Text>
+                                    <Text style={{ color: '#94a3b8', fontSize: 14, fontWeight: 'bold' }}>VALOR FINAL A PAGAR</Text>
+                                  </View>
+                                </>
+                              );
+                           })()}
+                        </View>
                       </View>
                     </View>
                   ) : (
@@ -606,8 +654,8 @@ export default function Merchant() {
           {/* 📊 ÁREA 2: INDICADORES (LINHA 3) */}
           <View style={{ flexDirection: 'row', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
              <TouchableOpacity onPress={baixarQRCode} style={[styles.card, { flex: 1, minWidth: 160, alignItems: 'center', justifyContent: 'center', paddingVertical: 25 }]}>
-                <QRCode value={linkQR} size={90} />
-                <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold', marginTop: 12 }}>QR DO BALCÃO</Text>
+                <QRCode value={linkQR} size={150} getRef={(c) => (qrRef.current = c)} />
+                <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold', marginTop: 12 }}>QR DO BALCÃO (CLIQUE P/ BAIXAR)</Text>
              </TouchableOpacity>
 
              <View style={[styles.card, { flex: 1.2, minWidth: 180, paddingVertical: 25 }]}>
