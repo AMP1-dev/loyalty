@@ -1108,9 +1108,7 @@ export default function Merchant() {
           )}
 
           </View>
-
-        </View>
-      </ScrollView>
+        </ScrollView>
     </View>
   );
 }
