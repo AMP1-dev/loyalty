@@ -570,34 +570,15 @@ export default function Merchant() {
              </View>
           </View>
 
-          {/* 📈 ÁREA 3: GRÁFICO NPS (LINHA 4) */}
+          {/* 📈 ÁREA 3: SATISFAÇÃO (LINHA 4) */}
           <View style={[styles.card, { width: '100%', marginBottom: 25, borderColor: '#facc15', padding: 20 }]}>
-              <Text style={[styles.title, { color: '#facc15' }]}>⭐ Evolução de Satisfação (NPS)</Text>
-              {stats.npsHistory.length > 0 ? (
-                <View style={{ height: 180, marginVertical: 20 }}>
-                   <View style={{ height: 120, borderLeftWidth: 1, borderBottomWidth: 1, borderColor: '#334155' }}>
-                      {stats.npsHistory.map((line: any, idx: number) => (
-                        <View key={idx} style={{ position: 'absolute', width: '100%', height: '100%' }}>
-                          <svg width="100%" height="120" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute' }}>
-                            <polyline fill="none" stroke={line.cor} strokeWidth="3" points={line.pontos.map((p: any, i: number) => {
-                                const x = line.pontos.length > 1 ? (i / (line.pontos.length - 1)) * 100 : 50;
-                                const y = 100 - (p.media / 5) * 100;
-                                return `${x},${y}`;
-                            }).join(' ')} strokeLinejoin="round" />
-                          </svg>
-                        </View>
-                      ))}
-                   </View>
-                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 15, marginTop: 20 }}>
-                      {stats.npsHistory.map((line: any, i: number) => (
-                        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                           <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: line.cor }} />
-                           <Text style={{ fontSize: 12, color: '#cbd5e1' }}>{line.nome}</Text>
-                        </View>
-                      ))}
-                   </View>
+              <Text style={[styles.title, { color: '#facc15' }]}>⭐ Avaliações e Satisfação</Text>
+              {avaliacoes.length > 0 ? (
+                <View style={{ marginTop: 10 }}>
+                   <Text style={{ color: '#fff', fontSize: 16 }}>Média Geral: {mediaEstrelas.toFixed(1)} estrelas</Text>
+                   <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 5 }}>Baseado nas últimas avaliações dos clientes.</Text>
                 </View>
-              ) : <Text style={{ color: '#64748b', textAlign: 'center', padding: 40 }}>Aguardando avaliações...</Text>}
+              ) : <Text style={{ color: '#64748b', textAlign: 'center', padding: 20 }}>Nenhuma avaliação recebida ainda.</Text>}
           </View>
 
           {/* ⌨️ ÁREA 4: LANÇAMENTO MANUAL E CRM */}
