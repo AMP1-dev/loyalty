@@ -133,7 +133,7 @@ export default function LoginScreen() {
 
       <View style={{ marginTop: 40, alignItems: 'center', opacity: 0.3 }}>
         <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold' }}>SPRING NETWORK © 2026</Text>
-        <Text style={{ color: '#94a3b8', fontSize: 9, marginTop: 4 }}>v1.1.3 - SEGURANÇA CRIPTOGRAFADA</Text>
+        <Text style={{ color: '#94a3b8', fontSize: 9, marginTop: 4 }}>v1.1.4 - SEGURANÇA CRIPTOGRAFADA</Text>
       </View>
     </View>
   );
