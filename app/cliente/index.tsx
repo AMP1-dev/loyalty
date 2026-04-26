@@ -760,7 +760,6 @@ export default function Cliente() {
 
                 <Text style={{ color: '#facc15', marginTop: 40, fontWeight: '900', fontSize: 18, letterSpacing: 2 }}>BOA SORTE! 🍀</Text>
               </View>
-              </View>
             )}
 
             {etapaRoleta === 'resultado' && (
