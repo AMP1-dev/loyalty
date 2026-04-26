@@ -554,101 +554,124 @@ export default function Merchant() {
         <View style={styles.wrapper}>
           <View style={styles.header}>
             <TouchableOpacity onPress={() => setMostrarConfig(!mostrarConfig)}><Text style={styles.headerButton}>⚙️ Configurações</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => { localStorage.removeItem('@loja_id_merchant'); router.replace('/login'); }}><Text style={styles.closeText}>✕ SAIR</Text></TouchableOpacity>
-          </View>
-
-          {/* 🚀 LINHA 1: OPERAÇÃO PRIORITÁRIA */}
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 15, flexWrap: 'wrap' }}>
-             {/* FILA */}
-             <View style={[styles.card, { flex: 2, minWidth: 250, borderColor: '#facc15', backgroundColor: '#020617', alignItems: 'center', justifyContent: 'center', paddingVertical: 25 }]}>
-                <View style={{ position: 'absolute', top: 10, right: 10, backgroundColor: '#facc15', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 }}>
-                   <Text style={{ color: '#020617', fontWeight: 'bold', fontSize: 10 }}>FILA ATIVA</Text>
+            <TouchableOpacity onPress={() => { localStorage.removeItem('@loja_id_merchant'); router.re          {/* 🚀 LINHA 1: OPERAÇÃO PRIORITÁRIA (COMPONENTES ORIGINAIS MOVIDOS) */}
+          <View style={{ flexDirection: 'row', gap: 15, marginBottom: 20, flexWrap: 'wrap' }}>
+             
+             {/* FILA - DESTAQUE GIGANTE (ESQUERDA) */}
+             <View style={[styles.card, { flex: 2, minWidth: 250, borderColor: '#facc15', backgroundColor: '#020617', alignItems: 'center', justifyContent: 'center', paddingVertical: 40 }]}>
+                <View style={{ position: 'absolute', top: 15, right: 15, backgroundColor: '#facc15', paddingHorizontal: 15, paddingVertical: 6, borderRadius: 20 }}>
+                   <Text style={{ color: '#020617', fontWeight: 'bold', fontSize: 12 }}>FILA ATIVA</Text>
                 </View>
-                <Text style={{ color: '#94a3b8', fontSize: 14, fontWeight: 'bold' }}>CLIENTES NA FILA</Text>
-                <Text style={{ color: '#facc15', fontSize: 64, fontWeight: '900' }}>{fila.length}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 16, fontWeight: 'bold', marginBottom: 10 }}>CLIENTES ESPERANDO</Text>
+                <Text style={{ color: '#facc15', fontSize: 100, fontWeight: '900', lineHeight: 110 }}>{fila.length}</Text>
              </View>
 
-             {/* R$ VENDA E ATENDER */}
-             <View style={[styles.card, { flex: 3, minWidth: 300, backgroundColor: '#1e293b', padding: 20 }]}>
-                <Text style={{ color: '#10b981', fontSize: 12, fontWeight: 'bold', marginBottom: 5 }}>R$ VALOR DA VENDA</Text>
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                   <TextInput 
-                     placeholder="0,00" 
-                     placeholderTextColor="#475569" 
-                     value={fila.length > 0 ? (valorVenda[fila[0]?.id] || '') : valorManual} 
-                     onChangeText={(t) => {
-                       const clean = t.replace(/\D/g, '');
-                       if (fila.length > 0) setValorVenda({ ...valorVenda, [fila[0].id]: clean });
-                       else setValorManual(clean);
-                     }}
-                     style={{ flex: 1, backgroundColor: '#020617', color: '#10b981', fontSize: 42, fontWeight: '900', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#10b981' }} 
-                     keyboardType="numeric"
-                   />
-                   <TouchableOpacity 
-                     onPress={() => fila.length > 0 ? atender(fila[0].id) : atenderManual()}
-                     style={{ width: 120, backgroundColor: '#10b981', borderRadius: 12, justifyContent: 'center', alignItems: 'center', elevation: 5 }}
-                   >
-                      <Text style={{ color: '#020617', fontWeight: '900', fontSize: 16 }}>ATENDER</Text>
-                   </TouchableOpacity>
-                </View>
+             {/* VALOR DA VENDA E ATENDER (DIREITA) */}
+             <View style={[styles.card, { flex: 4, minWidth: 400, backgroundColor: '#0f172a', padding: 25 }]}>
                 {fila.length > 0 ? (
-                   <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 10 }}>Atendendo agora: <Text style={{ color: '#fff', fontWeight: 'bold' }}>{formatarTelefone(fila[0].cliente_cpf)}</Text></Text>
+                  <>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 15 }}>
+                       <View>
+                          <Text style={{ color: '#10b981', fontSize: 28, fontWeight: '900' }}>{formatarTelefone(fila[0].cliente_cpf)}</Text>
+                          <View style={{ flexDirection: 'row', gap: 15, marginTop: 5 }}>
+                             <Text style={{ color: '#10b981', fontSize: 14, fontWeight: 'bold' }}>✨ {Math.floor(cashbacks[fila[0].cliente_cpf]?.pontos || 0)} Springs</Text>
+                             <Text style={{ color: '#facc15', fontSize: 14, fontWeight: 'bold' }}>💰 R$ {(cashbacks[fila[0].cliente_cpf]?.total || 0).toFixed(2)} Cashback</Text>
+                          </View>
+                       </View>
+                       <TouchableOpacity style={{ backgroundColor: '#ef444420', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#ef444450' }} onPress={() => removerFila(fila[0].id)}>
+                          <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>✕ REMOVER</Text>
+                       </TouchableOpacity>
+                    </View>
+
+                    <TextInput 
+                      placeholder="R$ 0,00" 
+                      placeholderTextColor="#475569" 
+                      keyboardType="numeric" 
+                      value={valorVenda[fila[0].id] ? (parseInt(valorVenda[fila[0].id], 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : ''} 
+                      onChangeText={(t) => setValorVenda((p: any) => ({ ...p, [fila[0].id]: t.replace(/\D/g, '') }))} 
+                      style={[styles.inputValor, { height: 90, fontSize: 54 }]} 
+                      onSubmitEditing={() => atender(fila[0].id)} 
+                    />
+
+                    <TouchableOpacity 
+                      onPress={() => atender(fila[0].id)}
+                      style={{ backgroundColor: '#10b981', borderRadius: 16, padding: 25, alignItems: 'center', marginTop: 15, shadowColor: '#10b981', shadowOpacity: 0.4, shadowRadius: 15, elevation: 10 }}
+                    >
+                       <Text style={{ color: '#020617', fontWeight: '900', fontSize: 22 }}>ATENDER E FINALIZAR</Text>
+                    </TouchableOpacity>
+
+                    {/* RESUMO RÁPIDO */}
+                    {valorVenda[fila[0].id] && (
+                       <View style={{ marginTop: 15, padding: 15, backgroundColor: '#1e293b', borderRadius: 12, borderWidth: 1, borderColor: '#334155' }}>
+                          <Text style={{ color: '#10b981', fontWeight: 'bold' }}>🎯 +{Math.floor((parseInt(valorVenda[fila[0].id], 10) / 100) / (Number(config.reais_por_ponto) || 1))} Springs nesta compra</Text>
+                       </View>
+                    )}
+                  </>
                 ) : (
-                   <Text style={{ color: '#64748b', fontSize: 11, marginTop: 10 }}>Digite o telefone acima se o cliente não estiver na fila.</Text>
+                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                     <Text style={{ color: '#475569', fontSize: 18, textAlign: 'center' }}>Aguardando próximo cliente...</Text>
+                     <TouchableOpacity onPress={buscarFila} style={{ marginTop: 20, backgroundColor: '#334155', padding: 15, borderRadius: 12 }}>
+                        <Text style={{ color: '#fff', fontWeight: 'bold' }}>🔄 ATUALIZAR FILA</Text>
+                     </TouchableOpacity>
+                  </View>
                 )}
              </View>
           </View>
 
-          {/* 📊 LINHA 2: INDICADORES (Cards Menores) */}
-          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 15, flexWrap: 'wrap' }}>
+          {/* 📊 LINHA 2: INDICADORES (Cards MAIORES e PROPORCIONAIS) */}
+          <View style={{ flexDirection: 'row', gap: 15, marginBottom: 20, flexWrap: 'wrap' }}>
              {/* QR */}
-             <TouchableOpacity onPress={baixarQRCode} style={[styles.cardSmall, { flex: 1, minWidth: 120, alignItems: 'center' }]}>
-                <QRCode value={linkQR} size={40} />
-                <Text style={styles.cardSmallTitle}>QR BALCÃO</Text>
+             <TouchableOpacity onPress={baixarQRCode} style={[styles.card, { flex: 1, minWidth: 160, alignItems: 'center', justifyContent: 'center', paddingVertical: 20 }]}>
+                <QRCode value={linkQR} size={80} />
+                <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold', marginTop: 10 }}>QR BALCÃO</Text>
              </TouchableOpacity>
 
-             {/* CX */}
-             <View style={[styles.cardSmall, { flex: 1, minWidth: 120 }]}>
-                <Text style={{ color: '#10b981', fontSize: 16, fontWeight: '900' }}>{formatarMoeda(stats.totalDia)}</Text>
-                <Text style={styles.cardSmallTitle}>CAIXA HOJE</Text>
+             {/* CAIXA HOJE */}
+             <View style={[styles.card, { flex: 1.5, minWidth: 180, paddingVertical: 20 }]}>
+                <Text style={{ color: '#10b981', fontSize: 32, fontWeight: '900' }}>{formatarMoeda(stats.totalDia)}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold', marginTop: 5 }}>CAIXA HOJE</Text>
+                <Text style={{ color: '#64748b', fontSize: 10, marginTop: 4 }}>Mês: {formatarMoeda(stats.totalMes)}</Text>
              </View>
 
-             {/* TP5 */}
-             <View style={[styles.cardSmall, { flex: 1, minWidth: 120 }]}>
-                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>{stats.top5.length}</Text>
-                <Text style={styles.cardSmallTitle}>TOP CLIENTES</Text>
+             {/* TOP CLIENTES */}
+             <View style={[styles.card, { flex: 1.5, minWidth: 180, paddingVertical: 20 }]}>
+                <Text style={{ color: '#fff', fontSize: 32, fontWeight: '900' }}>{stats.top5.length}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold', marginTop: 5 }}>TOP CLIENTES</Text>
+                <Text style={{ color: '#64748b', fontSize: 10, marginTop: 4 }}>Ativos hoje</Text>
              </View>
 
              {/* ESTOQUE */}
-             <TouchableOpacity style={[styles.cardSmall, { flex: 1, minWidth: 120 }]}>
-                <Text style={{ color: '#38bdf8', fontSize: 16, fontWeight: '900' }}>{rewards.length}</Text>
-                <Text style={styles.cardSmallTitle}>ESTOQUE</Text>
+             <TouchableOpacity onPress={() => setMostrarCatalogo(true)} style={[styles.card, { flex: 1.2, minWidth: 160, paddingVertical: 20 }]}>
+                <Text style={{ color: '#38bdf8', fontSize: 32, fontWeight: '900' }}>{rewards.length}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold', marginTop: 5 }}>ESTOQUE</Text>
+                <Text style={{ color: '#64748b', fontSize: 10, marginTop: 4 }}>Prêmios</Text>
              </TouchableOpacity>
 
-             {/* RESGATE */}
-             <View style={[styles.cardSmall, { flex: 1, minWidth: 120 }]}>
-                <Text style={{ color: '#ec4899', fontSize: 16, fontWeight: '900' }}>{stats.ultimosResgates.length}</Text>
-                <Text style={styles.cardSmallTitle}>RESGATES</Text>
+             {/* RESGATES */}
+             <View style={[styles.card, { flex: 1.2, minWidth: 160, paddingVertical: 20 }]}>
+                <Text style={{ color: '#ec4899', fontSize: 32, fontWeight: '900' }}>{stats.ultimosResgates.length}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold', marginTop: 5 }}>RESGATES</Text>
+                <Text style={{ color: '#64748b', fontSize: 10, marginTop: 4 }}>Brindes hoje</Text>
              </View>
           </View>
 
           {/* 📈 LINHA 3: GRÁFICO (Largura Total) */}
-          <View style={[styles.card, { width: '100%', marginBottom: 15, borderColor: '#facc15' }]}>
-              <Text style={[styles.title, {color: '#facc15'}]}>⭐ Evolução de Avaliações (NPS)</Text>
+          <View style={[styles.card, { width: '100%', marginBottom: 20, borderColor: '#facc15' }]}>
+              <Text style={[styles.title, {color: '#facc15'}]}>⭐ Evolução de Satisfação (NPS)</Text>
               
               {stats.npsHistory.length > 0 ? (
-                <View style={{ height: 120, marginVertical: 15 }}>
-                   <View style={{ height: 80, borderLeftWidth: 1, borderBottomWidth: 1, borderColor: '#334155', position: 'relative' }}>
+                <View style={{ height: 150, marginVertical: 20 }}>
+                   <View style={{ height: 100, borderLeftWidth: 1, borderBottomWidth: 1, borderColor: '#334155', position: 'relative' }}>
                       {stats.npsHistory.map((line: any, idx: number) => (
                         <View key={idx} style={{ position: 'absolute', width: '100%', height: '100%' }}>
-                          <svg width="100%" height="80" viewBox="0 0 100 80" preserveAspectRatio="none" style={{ position: 'absolute' }}>
+                          <svg width="100%" height="100" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute' }}>
                             <polyline
                               fill="none"
                               stroke={line.cor}
                               strokeWidth="2"
                               points={line.pontos.map((p: any, i: number) => {
                                 const x = line.pontos.length > 1 ? (i / (line.pontos.length - 1)) * 100 : 50;
-                                const y = 80 - (p.media / 5) * 80;
+                                const y = 100 - (p.media / 5) * 100;
                                 return `${x},${y}`;
                               }).join(' ')}
                               strokeLinejoin="round"
@@ -657,49 +680,54 @@ export default function Merchant() {
                         </View>
                       ))}
                    </View>
-                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 }}>
+                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 15, marginTop: 15 }}>
                       {stats.npsHistory.map((line: any, i: number) => (
-                        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                           <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: line.cor }} />
-                           <Text style={{ fontSize: 10, color: '#cbd5e1' }}>{line.nome}</Text>
+                        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                           <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: line.cor }} />
+                           <Text style={{ fontSize: 12, color: '#cbd5e1' }}>{line.nome}</Text>
                         </View>
                       ))}
                    </View>
                 </View>
-              ) : <Text style={{color: '#64748b', fontSize: 12, padding: 20, textAlign: 'center'}}>Aguardando avaliações para gerar o gráfico...</Text>}
+              ) : <Text style={{color: '#64748b', fontSize: 14, padding: 30, textAlign: 'center'}}>Aguardando respostas para gerar o gráfico panorâmico...</Text>}
           </View>
 
-          {/* 🛠️ LINHA 4: FERRAMENTAS */}
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 15, flexWrap: 'wrap' }}>
-             <View style={[styles.card, { flex: 2, minWidth: 250, backgroundColor: '#020617', borderColor: '#10b981' }]}>
-                <Text style={[styles.title, { color: '#10b981', fontSize: 14 }]}>📈 Lucratividade</Text>
-                <Text style={{ color: '#e2e8f0', fontSize: 13 }}>Retorno hoje: <Text style={{ color: '#10b981', fontWeight: 'bold' }}>{formatarMoeda(roiEmReais || 0)}</Text></Text>
+          {/* 🛠️ LINHA 4: FERRAMENTAS E ROI */}
+          <View style={{ flexDirection: 'row', gap: 15, marginBottom: 20, flexWrap: 'wrap' }}>
+             <View style={[styles.card, { flex: 3, minWidth: 300, backgroundColor: '#020617', borderColor: '#10b981', padding: 20 }]}>
+                <Text style={[styles.title, { color: '#10b981', fontSize: 16 }]}>📈 Lucratividade (ROI)</Text>
+                <Text style={{ color: '#e2e8f0', fontSize: 15 }}>Retorno em faturamento hoje: <Text style={{ color: '#10b981', fontWeight: '900', fontSize: 18 }}>{formatarMoeda(roiEmReais || 0)}</Text></Text>
+                <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 5 }}>Calculado sobre os {stats.pontosResgatadosHoje || 0} Springs resgatados.</Text>
              </View>
 
-             <TouchableOpacity onPress={() => setMostrarManual(!mostrarManual)} style={[styles.card, { flex: 1, minWidth: 150, backgroundColor: '#334155', alignItems: 'center', justifyContent: 'center' }]}>
-                <Text style={{ color: '#fff', fontWeight: 'bold' }}>⌨️ LANÇAMENTO MANUAL</Text>
+             <TouchableOpacity onPress={() => setMostrarManual(!mostrarManual)} style={[styles.card, { flex: 1, minWidth: 200, backgroundColor: '#334155', alignItems: 'center', justifyContent: 'center' }]}>
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>⌨️ LANÇAMENTO MANUAL</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 10, marginTop: 5 }}>Cliente fora da fila</Text>
              </TouchableOpacity>
           </View>
 
-          {/* 📣 LINHA 5: ENGAJAMENTO (CRM) */}
-          <View style={[styles.card, { width: '100%', marginBottom: 30 }]}>
-             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                <Text style={styles.title}>📣 Engajamento (Clientes Sumidos)</Text>
-                <View style={{ backgroundColor: '#ef4444', paddingHorizontal: 10, paddingVertical: 2, borderRadius: 10 }}>
-                   <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>{clientesAtrasados} ALERTAS</Text>
+          {/* 📣 LINHA 5: CRM (Engajamento) */}
+          <View style={[styles.card, { width: '100%', marginBottom: 40 }]}>
+             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <Text style={styles.title}>📣 Engajamento de Clientes (Remarketing)</Text>
+                <View style={{ backgroundColor: '#ef4444', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 }}>
+                   <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>{clientesAtrasados} ALERTAS</Text>
                 </View>
              </View>
              
-             <ScrollView style={{ maxHeight: 200 }}>
+             <ScrollView style={{ maxHeight: 250 }}>
                 {historicoCRM.length > 0 ? historicoCRM.map((c, i) => (
                   <TouchableOpacity key={i} onPress={() => setModalCRM(c)} style={styles.crmItem}>
                     <View>
                       <Text style={styles.crmTelefone}>{formatarTelefone(c.cpf)}</Text>
                       <Text style={styles.crmDetalhe}>Última compra: {c.ultimaCompraFormatada}</Text>
                     </View>
-                    <Text style={[styles.crmRetorno, { color: '#facc15' }]}>Sugestão: {c.sugestao}</Text>
+                    <Text style={[styles.crmRetorno, { color: '#facc15' }]}>Estratégia: {c.sugestao}</Text>
                   </TouchableOpacity>
-                )) : <Text style={{ color: '#64748b', fontSize: 12, textAlign: 'center', padding: 20 }}>Todos os seus clientes estão em dia! 🎉</Text>}
+                )) : <Text style={{ color: '#64748b', fontSize: 14, textAlign: 'center', padding: 30 }}>Todos os seus clientes estão ativos! Parabéns! 🎉</Text>}
+             </ScrollView>
+          </View>
+4748b', fontSize: 12, textAlign: 'center', padding: 20 }}>Todos os seus clientes estão em dia! 🎉</Text>}
              </ScrollView>
           </View>
 
@@ -774,80 +802,8 @@ export default function Merchant() {
             </View>
           )}
 
-          <View style={styles.card}>
-            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, backgroundColor: '#1e293b', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#334155'}}>
-              <Text style={[styles.title, { marginBottom: 0 }]}>📋 Fila do QR Code</Text>
-              <TouchableOpacity onPress={buscarFila} style={{backgroundColor: '#10b981', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, shadowColor: '#10b981', shadowOpacity: 0.3, shadowRadius: 5}}><Text style={{color: '#fff', fontSize: 13, fontWeight: '900'}}>🔄 ATUALIZAR FILA</Text></TouchableOpacity>
-            </View>
-            {fila.length === 0 && <Text style={{color: '#64748b', fontStyle: 'italic', marginTop: 5}}>Nenhum cliente aguardando na fila.</Text>}
-            {(fila ||[]).map((c) => {
-              const valorRaw = valorVenda[c.id] || '';
-              const valorFormatado = valorRaw ? (parseInt(valorRaw, 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
-              const temBonus = bonusPendentes[c.cliente_cpf];
-
-              return (
-                <View key={c.id} style={styles.filaItem}>
-                  <View style={styles.filaHeader}>
-                    <View>
-                      <Text style={styles.filaTelefone}>{formatarTelefone(c.cliente_cpf || '')}</Text>
-                      <View style={{flexDirection: 'row', gap: 10, marginTop: 4}}>
-                        <Text style={{color: '#10b981', fontSize: 11, fontWeight: 'bold'}}>✨ {Math.floor(cashbacks[c.cliente_cpf]?.pontos || 0)} SPG</Text>
-                        <Text style={{color: '#facc15', fontSize: 11, fontWeight: 'bold'}}>💰 R$ {(cashbacks[c.cliente_cpf]?.total || 0).toFixed(2)} CB</Text>
-                      </View>
-                    </View>
-                    <View style={{flexDirection: 'row', gap: 12, alignItems: 'center'}}>
-                      <TouchableOpacity onPress={() => buscarFinanceiroDetalhado(c.cliente_cpf, c.id)} style={{backgroundColor: '#3b82f6', padding: 12, borderRadius: 10}}><Text style={{fontSize: 16}}>🔄</Text></TouchableOpacity>
-                      <TouchableOpacity style={styles.removeBtnTop} onPress={() => removerFila(c.id)}><Text style={styles.removeText}>✕</Text></TouchableOpacity>
-                    </View>
-                  </View>
-
-                  <TextInput placeholder="R$ 0,00" placeholderTextColor="#94A3B8" keyboardType="numeric" value={valorFormatado} onChangeText={(t) => setValorVenda((p: any) => ({ ...p,[c.id]: t.replace(/\D/g, '') }))} style={styles.inputValor} returnKeyType="done" onSubmitEditing={() => atender(c.id)} onKeyPress={(e) => { if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter') atender(c.id); }} />
-
-                  {temBonus > 0 && (
-                    <View style={{flexDirection: 'row', alignItems: 'center', backgroundColor: '#facc1520', padding: 15, borderRadius: 12, marginTop: 10, borderWidth: 1, borderColor: '#facc1550'}}>
-                      <Switch value={usarBonus[c.id] !== false} onValueChange={(v) => setUsarBonus((prev: any) => ({...prev, [c.id]: v}))} />
-                      <Text style={{color: '#facc15', marginLeft: 12, fontWeight: 'bold', fontSize: 16}}>🎁 BÔNUS DE RETORNO: +{temBonus} SPG</Text>
-                    </View>
-                  )}
-                  
-                  {brindesPendentes[c.cliente_cpf] && brindesPendentes[c.cliente_cpf].length > 0 && (
-                    <View style={{backgroundColor: '#ec489920', padding: 15, borderRadius: 12, marginTop: 10, borderWidth: 1, borderColor: '#ec489950'}}>
-                      <Text style={{color: '#ec4899', fontWeight: 'bold', fontSize: 16, marginBottom: 10}}>🏆 BRINDES DA ROLETA PENDENTES</Text>
-                      {brindesPendentes[c.cliente_cpf].map((b: any) => (
-                        <View key={b.id} style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5}}>
-                           <Text style={{color: '#fff', fontSize: 15}}>• {b.nome_brinde}</Text>
-                           <TouchableOpacity style={{backgroundColor: '#ec4899', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6}} onPress={() => entregarBrinde(b.id, c.cliente_cpf)}>
-                              <Text style={{color: '#fff', fontWeight: 'bold', fontSize: 12}}>MARCAR ENTREGUE</Text>
-                           </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                  
-                  {valorRaw && (
-                    <View style={styles.simulacaoCard}>
-                      <View style={{ marginTop: 12 }}><Text style={styles.simulacaoTitulo}>💡 Resumo da venda</Text></View>
-                      {(() => {
-                        const valorReal = parseInt(valorRaw, 10) / 100;
-                        if (valorReal <= 0 && (!usarBonus[c.id] && usarBonus[c.id] !== undefined)) return <Text style={{color: '#ef4444'}}>Digite o valor da venda.</Text>;
-                        const cb_total = cashbacks[c.cliente_cpf]?.total || 0;
-                        const cb_proximo = cashbacks[c.cliente_cpf]?.proximo || 0;
-                        const usarCb = config.usar_cashback_total ? cb_total : cb_proximo;
-                        const limiteCb = valorReal * (Number(config.cashback_limite_uso_percent) / 100);
-                        const cashbackUsado = Math.min(Math.min(valorReal, limiteCb), usarCb);
-                        const base = config.pontos_sobre_valor_bruto ? valorReal : (valorReal - cashbackUsado);
-                        const reaisPorPonto = Number(config.reais_por_ponto) || 1;
-                        const pontosCompra = Math.floor(base / reaisPorPonto);
-                        const pontosExtra = (usarBonus[c.id] !== false && temBonus) ? temBonus : 0;
-                        const aPagar = valorReal - cashbackUsado;
-
-                        return (
-                          <>
-                            <Text style={styles.simulacaoValorBruto}>💵 Venda: {formatarMoeda(valorReal)}</Text>
-                            {cb_total > 0 && <Text style={styles.simulacaoCashback}>💰 Saldo total: {formatarMoeda(cb_total)} {'\n'}⚡ Usado na compra: {formatarMoeda(cashbackUsado)}</Text>}
-                            <Text style={styles.simulacaoPontos}>🎯 +{pontosCompra} Springs (da compra)</Text>
-                            {pontosExtra > 0 && <Text style={{color: '#facc15', fontSize: 16, fontWeight: 'bold', marginTop: 4}}>🎁 +{pontosExtra} Springs (Bônus de Retorno)</Text>}
-                            {pontosExtra > 0 && <Text style={{color: '#fff', fontSize: 16, fontWeight: 'bold', marginTop: 8}}>✨ TOTAL A CREDITAR: {pontosCompra + pontosExtra} Springs</Text>}
+          {/* BLOCO DE CONFIGURAÇÕES (Removido o card duplicado da fila daqui) */}
+          {mostrarConfig && (
                             {cb_total > 0 && <Text style={{ color: '#22c55e', marginTop: 10, fontSize: 18, fontWeight: 'bold' }}>💳 A PAGAR: {formatarMoeda(aPagar)}</Text>}
                           </>
                         );
