@@ -418,16 +418,34 @@ export default function Merchant() {
               <TextInput value={config.nome_loja} onChangeText={(t) => setConfig({ ...config, nome_loja: t })} style={styles.input} />
               <Text style={[styles.label, { color: '#facc15', marginTop: 10 }]}>📍 LOCALIZAÇÃO E CONTATO:</Text>
               <TextInput value={config.telefone} onChangeText={(t) => setConfig({ ...config, telefone: t })} placeholder="WhatsApp da Loja" placeholderTextColor="#475569" style={styles.input} />
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <TextInput value={config.endereco} onChangeText={(t) => setConfig({ ...config, endereco: t })} placeholder="Rua / Av" placeholderTextColor="#475569" style={[styles.input, { flex: 3 }]} />
-                <TextInput value={config.numero} onChangeText={(t) => setConfig({ ...config, numero: t })} placeholder="Nº" placeholderTextColor="#475569" style={[styles.input, { flex: 1 }]} />
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                <View style={{ flex: 3 }}>
+                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>RUA / AV</Text>
+                  <TextInput value={config.endereco} onChangeText={(t) => setConfig({ ...config, endereco: t })} placeholder="Endereço" placeholderTextColor="#475569" style={styles.input} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>Nº</Text>
+                  <TextInput value={config.numero} onChangeText={(t) => setConfig({ ...config, numero: t })} placeholder="Nº" placeholderTextColor="#475569" style={styles.input} />
+                </View>
               </View>
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <TextInput value={config.bairro} onChangeText={(t) => setConfig({ ...config, bairro: t })} placeholder="Bairro" placeholderTextColor="#475569" style={[styles.input, { flex: 2 }]} />
-                <TextInput value={config.cidade} onChangeText={(t) => setConfig({ ...config, cidade: t })} placeholder="Cidade" placeholderTextColor="#475569" style={[styles.input, { flex: 2 }]} />
-                <TextInput value={config.estado} onChangeText={(t) => setConfig({ ...config, estado: t })} placeholder="UF" placeholderTextColor="#475569" style={[styles.input, { flex: 1 }]} />
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                <View style={{ flex: 2 }}>
+                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>BAIRRO</Text>
+                  <TextInput value={config.bairro} onChangeText={(t) => setConfig({ ...config, bairro: t })} placeholder="Bairro" placeholderTextColor="#475569" style={styles.input} />
+                </View>
+                <View style={{ flex: 2 }}>
+                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>CIDADE</Text>
+                  <TextInput value={config.cidade} onChangeText={(t) => setConfig({ ...config, cidade: t })} placeholder="Cidade" placeholderTextColor="#475569" style={styles.input} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>UF</Text>
+                  <TextInput value={config.estado} onChangeText={(t) => setConfig({ ...config, estado: t })} placeholder="UF" placeholderTextColor="#475569" style={styles.input} />
+                </View>
               </View>
-              <TextInput value={config.cep} onChangeText={(t) => setConfig({ ...config, cep: t })} placeholder="CEP" placeholderTextColor="#475569" style={styles.input} />
+              <View style={{ marginTop: 10 }}>
+                <Text style={{ color: '#94a3b8', fontSize: 10 }}>CEP</Text>
+                <TextInput value={config.cep} onChangeText={(t) => setConfig({ ...config, cep: t })} placeholder="CEP" placeholderTextColor="#475569" style={styles.input} />
+              </View>
 
               <Text style={[styles.label, { color: '#facc15', marginTop: 20 }]}>💰 REGRAS DE CASHBACK E PONTOS:</Text>
               <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -622,8 +640,12 @@ export default function Merchant() {
                         <Text style={{ color: '#38bdf8', fontSize: 32, fontWeight: '900' }}>{stats.vendasCount}</Text>
                         <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>ATENDIDOS HOJE</Text>
                       </View>
+                      <View style={{ flex: 1.5, alignItems: 'center' }}>
+                        <Text style={{ color: '#10b981', fontSize: 32, fontWeight: '900' }}>{formatarMoeda(stats.totalDia)}</Text>
+                        <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>TOTAL DO DIA</Text>
+                      </View>
                       <View style={{ flex: 1.5, alignItems: 'flex-end' }}>
-                        <Text style={{ color: '#38bdf8', fontSize: 32, fontWeight: '900' }}>{formatarMoeda(stats.totalDia / (stats.vendasCount || 1))}</Text>
+                        <Text style={{ color: '#38bdf8', fontSize: 32, fontWeight: '900' }}>{formatarMoeda(stats.ticketMedio)}</Text>
                         <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>TICKET MÉDIO</Text>
                       </View>
                   </View>
@@ -950,7 +972,7 @@ const styles = StyleSheet.create({
   simulacaoCashback: { color: '#facc15', fontSize: 14, fontWeight: 'bold', marginTop: 6 },
   simulacaoPontos: { color: '#a78bfa', fontSize: 18, fontWeight: 'bold', marginTop: 6 },
   container: { flex: 1, backgroundColor: '#0F172A' },
-  wrapper: { padding: 20 },
+  wrapper: { padding: 20, paddingBottom: 120 },
   header: { flexDirection: 'row', justifyContent: 'space-between' },
   headerButton: { color: '#94A3B8', fontWeight: '600' },
   closeBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: '#334155', alignItems: 'center', justifyContent: 'center' },
