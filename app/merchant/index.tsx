@@ -76,14 +76,17 @@ export default function Merchant() {
   const [avaliacoes, setAvaliacoes] = useState<any[]>([]);
   const [mediaEstrelas, setMediaEstrelas] = useState(0);
 
-  const [config, setConfig] = useState({
+  const [config, setConfig] = useState<any>({
     nome_loja: '', cor_primaria: '#10b981', cashback_percent: '0', cashback_expiracao_dias: '30',
     cashback_limite_uso_percent: '100', reais_por_ponto: '1', pontos_expiracao_dias: '365',
     limite_resgates_diario_cliente: '', tempo_bloqueio_minutos: '',
     telefone: '', endereco: '', numero: '', bairro: '', cidade: '', estado: '', cep: '',
     pontos_sobre_valor_bruto: true, usar_cashback_total: false, senha: '', bonus_retorno_pontos: '50', bonus_retorno_validade_dias: '3',
-    roleta_ativa: false, roleta_intervalo_dias: '1' // 🔥 ROLETA CONFIG
+    roleta_ativa: false, roleta_intervalo_dias: '1'
   });
+
+  const scrollRef = useRef<ScrollView>(null);
+  const manualRef = useRef<View>(null);
 
   const [stats, setStats] = useState({
     totalMes: 0, totalDia: 0, vendasCount: 0, ticketMedio: 0, top5: [], resgatesHojeLista: [], resgatesAgrupados: [], pontosResgatadosHoje: 0, ultimosResgates: []
