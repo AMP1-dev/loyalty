@@ -161,9 +161,25 @@ export default function Merchant() {
       agrupadosMap[nome]++; pontosResgatados += Number(r.pontos_usados);
     });
 
-    const resgatesAgrupados = Object.keys(agrupadosMap).map(k => ({ nome: k, qtde: agrupadosMap[k] }));
     const totalDia = vendasDiaHoje.reduce((s, v) => s + Number(v.valor), 0);
     const clientesUnicosDia = new Set(vendasDiaHoje.map(v => v.cliente_cpf)).size;
+
+    const vendasDiaFormatada = vendasDiaHoje.map(v => ({
+      cpf: v.cliente_cpf,
+      valor: v.valor,
+      hora: parseDataSupabase(v.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    }));
+
+    const resgatesSumarizados = Object.keys(agrupadosMap).map(nome => {
+       let pts = 0;
+       resgatesHojeLista.forEach(r => { if (recompensasMap[r.recompensa_id] === nome) pts += Number(r.pontos_usados); });
+       return { nome, qtde: agrupadosMap[nome], pontos: pts };
+    });
+
+    const resgatesListados = resgatesHojeLista.map(r => ({
+      nome: recompensasMap[r.recompensa_id] || 'Prêmio',
+      hora: parseDataSupabase(r.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    }));
 
     const crmMap = new Map();
     (vendasData || []).forEach(v => { if (!crmMap.has(v.cliente_cpf)) crmMap.set(v.cliente_cpf, v); });
@@ -191,6 +207,9 @@ export default function Merchant() {
       resgatesHojeLista: resgatesHojeLista as any, 
       resgatesAgrupados: resgatesAgrupados as any,
       pontosResgatadosHoje: pontosResgatados, 
+      vendasDiaFormatada: vendasDiaFormatada as any,
+      resgatesSumarizados: resgatesSumarizados as any,
+      resgatesListados: resgatesListados as any,
       ultimosResgates: resgatesHojeLista.map(r => ({ cliente_cpf: r.cliente_cpf, nome_premio: recompensasMap[r.recompensa_id] || 'Prêmio' })) as any
     });
   };
@@ -734,28 +753,54 @@ export default function Merchant() {
           </View>
 
           <View style={{ flexDirection: 'row', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
-             <TouchableOpacity onPress={baixarQRCode} style={[styles.card, { flex: 1, minWidth: 160, alignItems: 'center', justifyContent: 'center', paddingVertical: 25 }]}>
-                <QRCode value={linkQR} size={250} getRef={(c) => (qrRef.current = c)} />
-                <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold', marginTop: 12 }}>QR DO BALCÃO (CLIQUE P/ BAIXAR)</Text>
-             </TouchableOpacity>
-
-             <View style={[styles.card, { flex: 1.2, minWidth: 180, paddingVertical: 25 }]}>
-                <Text style={{ color: '#fff', fontSize: 36, fontWeight: '900' }}>{stats.totalClientesDia || 0}</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 13, fontWeight: 'bold', marginTop: 5 }}>CLIENTES HOJE</Text>
-                <Text style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>Pessoas únicas</Text>
+             <View style={[styles.card, { flex: 1, minWidth: 200, height: 280 }]}>
+                <Text style={{ color: '#fff', fontSize: 32, fontWeight: '900' }}>{stats.totalClientesDia || 0}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold', marginBottom: 10 }}>CLIENTES HOJE</Text>
+                <ScrollView nestedScrollEnabled={true}>
+                   {(stats as any).vendasDiaFormatada?.map((v: any, i: number) => (
+                     <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 6 }}>
+                        <Text style={{ color: '#fff', fontSize: 11 }}>{formatarTelefone(v.cpf)} <Text style={{ color: '#64748b' }}>• {v.hora}</Text></Text>
+                        <Text style={{ color: '#10b981', fontSize: 13, fontWeight: 'bold' }}>{formatarMoeda(Number(v.valor))}</Text>
+                     </View>
+                   ))}
+                </ScrollView>
              </View>
 
-             <TouchableOpacity onPress={() => setMostrarCatalogo(true)} style={[styles.card, { flex: 1.2, minWidth: 180, paddingVertical: 25 }]}>
-                <Text style={{ color: '#38bdf8', fontSize: 36, fontWeight: '900' }}>{rewards.length}</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 13, fontWeight: 'bold', marginTop: 5 }}>ESTOQUE</Text>
-                <Text style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>Itens no catálogo</Text>
-             </TouchableOpacity>
-
-             <View style={[styles.card, { flex: 1.2, minWidth: 180, paddingVertical: 25 }]}>
-                <Text style={{ color: '#ec4899', fontSize: 36, fontWeight: '900' }}>{stats.resgatesHojeLista?.length || 0}</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 13, fontWeight: 'bold', marginTop: 5 }}>RESGATES</Text>
-                <Text style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>Brindes do dia</Text>
+             <View style={[styles.card, { flex: 1, minWidth: 200, height: 280 }]}>
+                <Text style={{ color: '#38bdf8', fontSize: 32, fontWeight: '900' }}>{stats.resgatesHojeLista?.length || 0}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold', marginBottom: 10 }}>SAÍDAS ESTOQUE</Text>
+                <ScrollView nestedScrollEnabled={true}>
+                   {(stats as any).resgatesSumarizados?.map((s: any, i: number) => (
+                     <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 6 }}>
+                        <Text style={{ color: '#fff', fontSize: 11 }}>{s.qtde}x {s.nome}</Text>
+                        <Text style={{ color: '#38bdf8', fontSize: 13, fontWeight: 'bold' }}>{s.pontos} Springs</Text>
+                     </View>
+                   ))}
+                </ScrollView>
              </View>
+
+             <View style={[styles.card, { flex: 1, minWidth: 200, height: 280 }]}>
+                <Text style={{ color: '#ec4899', fontSize: 32, fontWeight: '900' }}>{stats.resgatesHojeLista?.length || 0}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold', marginBottom: 10 }}>RESGATES (HORA)</Text>
+                <ScrollView nestedScrollEnabled={true}>
+                   {(stats as any).resgatesListados?.map((r: any, i: number) => (
+                     <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 6 }}>
+                        <Text style={{ color: '#fff', fontSize: 11 }}>{r.hora} <Text style={{ color: '#64748b' }}>•</Text> {r.nome}</Text>
+                     </View>
+                   ))}
+                </ScrollView>
+             </View>
+
+             <TouchableOpacity onPress={() => setMostrarCRM(true)} style={[styles.card, { flex: 1, minWidth: 200, height: 280, borderColor: '#8b5cf6', borderWidth: 1 }]}>
+                <Text style={{ color: '#8b5cf6', fontSize: 48, fontWeight: '900' }}>{clientesAtrasados}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold' }}>REMARKETING</Text>
+                <Text style={{ color: '#fff', fontSize: 13, marginTop: 15, lineHeight: 20 }}>
+                   Temos <Text style={{ color: '#8b5cf6', fontWeight: 'bold' }}>{clientesAtrasados}</Text> clientes que não aparecem há mais de 15 dias.
+                </Text>
+                <View style={{ flex: 1, justifyContent: 'flex-end', marginTop: 10 }}>
+                   <Text style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: 12 }}>CLIQUE PARA VER LISTA ➔</Text>
+                </View>
+             </TouchableOpacity>
           </View>
 
           <View style={{ flexDirection: 'row', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
