@@ -144,18 +144,24 @@ export default function Merchant() {
 
   const buscarStats = async () => {
     if (!lojaId) return;
-    // Busca total na tabela correta (transacoes)
-    const { data: vendasData } = await supabase.from('transacoes').select('*').eq('loja_id', lojaId);
-    const { data: resgatesRaw } = await supabase.from('resgates').select('*').eq('loja_id', lojaId);
+    const mesAtual = new Date().getMonth(); 
+    const anoAtual = new Date().getFullYear();
 
     const recompensasMap: any = {}; 
     const { data: recompensasData } = await supabase.from('recompensas').select('id, nome').eq('loja_id', lojaId);
     (recompensasData || []).forEach(r => recompensasMap[r.id] = r.nome);
-    
-    const mesAtual = new Date().getMonth(); const anoAtual = new Date().getFullYear();
+
+    const { data: vendasData, error: vErr } = await supabase.from('transacoes').select('*').eq('loja_id', lojaId);
+    const { data: resgatesRaw, error: rErr } = await supabase.from('resgates').select('*').eq('loja_id', lojaId);
+
+    if (vErr) console.error('Erro Vendas:', vErr.message);
+    if (rErr) console.error('Erro Resgates:', rErr.message);
 
     const vendasDiaHoje = (vendasData || []).filter(t => eHoje(t.created_at));
-    const vendasMes = (vendasData || []).filter(t => { const d = parseDataSupabase(t.created_at); return d.getMonth() === mesAtual && d.getFullYear() === anoAtual; });
+    const vendasMes = (vendasData || []).filter(t => { 
+      const d = parseDataSupabase(t.created_at); 
+      return d.getMonth() === mesAtual && d.getFullYear() === anoAtual; 
+    });
     const resgatesHojeLista = (resgatesRaw || []).filter(r => eHoje(r.created_at));
 
     const agrupadosMap: any = {}; let pontosResgatados = 0;
