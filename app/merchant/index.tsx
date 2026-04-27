@@ -192,7 +192,6 @@ export default function Merchant() {
     });
   };
 
-  // 🔥 BUSCA AVALIAÇÕES E PREMIOS DA ROLETA
   const buscarAvaliacoesERoleta = async () => {
     if (!lojaId) return;
     const { data: avData } = await supabase.from('avaliacoes').select('*').eq('loja_id', lojaId).order('created_at', { ascending: false }).limit(20);
@@ -215,7 +214,7 @@ export default function Merchant() {
         limite_resgates_diario_cliente: data.limite_resgates_diario_cliente !== null && data.limite_resgates_diario_cliente !== undefined ? String(data.limite_resgates_diario_cliente) : '',
         tempo_bloqueio_minutos: data.tempo_bloqueio_minutos !== null && data.tempo_bloqueio_minutos !== undefined ? String(data.tempo_bloqueio_minutos) : '',
         bonus_retorno_pontos: String(data.bonus_retorno_pontos || 50), bonus_retorno_validade_dias: String(data.bonus_retorno_validade_dias || 3),
-        roleta_ativa: data.roleta_ativa || false, roleta_intervalo_dias: String(data.roleta_intervalo_dias || 1) // 🔥 ATUALIZA CONFIG DA ROLETA
+        roleta_ativa: data.roleta_ativa || false, roleta_intervalo_dias: String(data.roleta_intervalo_dias || 1) 
       });
     } else { setConfig(prev => ({ ...prev, senha: lojaData?.senha || '' })); }
   };
@@ -286,8 +285,6 @@ export default function Merchant() {
     }
   };
 
-  const removerFila = async (id: string) => { await supabase.from('checkins').delete().eq('id', id); buscarFila(); };
-
   const iniciarCRM = (cpf: string) => {
     const pontos = Number(config.bonus_retorno_pontos) || 50;
     const dias = Number(config.bonus_retorno_validade_dias) || 3;
@@ -314,7 +311,6 @@ export default function Merchant() {
     }, 500);
   };
 
-  // 🔥 FUNÇÕES DA ROLETA
   const salvarRoleta = async () => {
     if (!editandoRoletaId) return;
     if (!formRoleta.nome || !formRoleta.tipo || !formRoleta.probabilidade) { mostrarToast("Preencha Nome, Tipo e Probabilidade.", 'erro'); return; }
@@ -363,7 +359,7 @@ export default function Merchant() {
       bonus_retorno_pontos: Number(config.bonus_retorno_pontos) || 50, bonus_retorno_validade_dias: Number(config.bonus_retorno_validade_dias) || 3,
       usar_cashback_total: config.usar_cashback_total, telefone: config.telefone, endereco: config.endereco, numero: config.numero,
       bairro: config.bairro, cidade: config.cidade, estado: config.estado, cep: config.cep,
-      roleta_ativa: config.roleta_ativa, roleta_intervalo_dias: Number(config.roleta_intervalo_dias) || 1 // 🔥 SALVA ROLETA
+      roleta_ativa: config.roleta_ativa, roleta_intervalo_dias: Number(config.roleta_intervalo_dias) || 1
     }, { onConflict: 'loja_id' });
 
     if (config.senha && config.senha.trim() !== '') await supabase.from('lojas').update({ senha: config.senha }).eq('id', lojaId);
@@ -404,7 +400,6 @@ export default function Merchant() {
   const linkQR = `https://springs.amp.ia.br/cliente?loja_id=${lojaId}`;
 
   if (!lojaId) return <View style={styles.center}><Text style={{ color: '#fff' }}>Carregando Loja...</Text></View>;
-  const roiEmReais = stats.pontosResgatadosHoje * (Number(config.reais_por_ponto) || 1);
 
   return (
     <View style={{ flex: 1 }}>
@@ -419,8 +414,7 @@ export default function Merchant() {
               
               <Text style={styles.label}>NOME DA LOJA:</Text>
               <TextInput value={config.nome_loja} onChangeText={(t) => setConfig({ ...config, nome_loja: t })} style={styles.input} />
-
-              <Text style={styles.label}>CONTATO E ENDEREÇO:</Text>
+              <Text style={[styles.label, { color: '#facc15', marginTop: 10 }]}>📍 LOCALIZAÇÃO E CONTATO:</Text>
               <TextInput value={config.telefone} onChangeText={(t) => setConfig({ ...config, telefone: t })} placeholder="WhatsApp da Loja" placeholderTextColor="#475569" style={styles.input} />
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <TextInput value={config.endereco} onChangeText={(t) => setConfig({ ...config, endereco: t })} placeholder="Rua / Av" placeholderTextColor="#475569" style={[styles.input, { flex: 3 }]} />
@@ -433,7 +427,7 @@ export default function Merchant() {
               </View>
               <TextInput value={config.cep} onChangeText={(t) => setConfig({ ...config, cep: t })} placeholder="CEP" placeholderTextColor="#475569" style={styles.input} />
 
-              <Text style={styles.label}>REGRAS DE FIDELIDADE:</Text>
+              <Text style={[styles.label, { color: '#facc15', marginTop: 20 }]}>💰 REGRAS DE CASHBACK E PONTOS:</Text>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: '#94a3b8', fontSize: 10 }}>CASHBACK (%)</Text>
@@ -458,11 +452,15 @@ export default function Merchant() {
                   <Text style={{ color: '#94a3b8', fontSize: 10 }}>EXPIRAÇÃO CB (DIAS)</Text>
                   <TextInput value={config.cashback_expiracao_dias} onChangeText={(t) => setConfig({ ...config, cashback_expiracao_dias: t })} style={styles.input} keyboardType="numeric" />
                 </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>EXPIRAÇÃO PONTOS</Text>
+                  <TextInput value={config.pontos_expiracao_dias} onChangeText={(t) => setConfig({ ...config, pontos_expiracao_dias: t })} style={styles.input} keyboardType="numeric" />
+                </View>
               </View>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 15, gap: 10 }}>
                 <Switch value={config.pontos_sobre_valor_bruto} onValueChange={(v) => setConfig({ ...config, pontos_sobre_valor_bruto: v })} />
-                <Text style={{ color: '#fff', fontSize: 12 }}>Pontos sobre Valor Bruto (Sem descontar cashback)</Text>
+                <Text style={{ color: '#fff', fontSize: 12 }}>Pontos sobre Valor Bruto (Sem desconto de cashback)</Text>
               </View>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 10 }}>
@@ -470,42 +468,39 @@ export default function Merchant() {
                 <Text style={{ color: '#fff', fontSize: 12 }}>Usar Saldo Total de Cashback (Acumulativo)</Text>
               </View>
 
-              <Text style={styles.label}>BÔNUS E ROLETA:</Text>
+              <Text style={[styles.label, { color: '#facc15', marginTop: 20 }]}>🎡 FIDELIDADE E ROLETA:</Text>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                  <View style={{ flex: 2 }}>
-                    <Text style={{ color: '#94a3b8', fontSize: 10 }}>PONTOS BÔNUS</Text>
+                    <Text style={{ color: '#94a3b8', fontSize: 10 }}>PONTOS BÔNUS (RETORNO)</Text>
                     <TextInput value={config.bonus_retorno_pontos} onChangeText={(t) => setConfig({ ...config, bonus_retorno_pontos: t })} style={styles.input} keyboardType="numeric" />
                  </View>
                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: '#94a3b8', fontSize: 10 }}>VALIDADE (DIAS)</Text>
+                    <Text style={{ color: '#94a3b8', fontSize: 10 }}>VALIDADE BÔNUS</Text>
                     <TextInput value={config.bonus_retorno_validade_dias} onChangeText={(t) => setConfig({ ...config, bonus_retorno_validade_dias: t })} style={styles.input} keyboardType="numeric" />
                  </View>
               </View>
+
               <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>EXPIRAÇÃO PONTOS (DIAS)</Text>
-                  <TextInput value={config.pontos_expiracao_dias} onChangeText={(t) => setConfig({ ...config, pontos_expiracao_dias: t })} style={styles.input} keyboardType="numeric" />
-                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: '#94a3b8', fontSize: 10 }}>INTERVALO ROLETA (DIAS)</Text>
                   <TextInput value={config.roleta_intervalo_dias} onChangeText={(t) => setConfig({ ...config, roleta_intervalo_dias: t })} style={styles.input} keyboardType="numeric" />
                 </View>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 15 }}>
+                  <Switch value={config.roleta_ativa} onValueChange={(v) => setConfig({ ...config, roleta_ativa: v })} />
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>🎡 ATIVA</Text>
+                </View>
               </View>
 
-              <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+              <Text style={[styles.label, { color: '#facc15', marginTop: 20 }]}>🚫 LIMITES DE SEGURANÇA:</Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>LIMITE RESGATES / DIA</Text>
+                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>LIMITE RESGATES / DIA / CLIENTE</Text>
                   <TextInput value={config.limite_resgates_diario_cliente} onChangeText={(t) => setConfig({ ...config, limite_resgates_diario_cliente: t })} style={styles.input} keyboardType="numeric" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>BLOQUEIO NPS (MIN)</Text>
+                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>BLOQUEIO NPS (MINUTOS)</Text>
                   <TextInput value={config.tempo_bloqueio_minutos} onChangeText={(t) => setConfig({ ...config, tempo_bloqueio_minutos: t })} style={styles.input} keyboardType="numeric" />
                 </View>
-              </View>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 15, gap: 10 }}>
-                <Switch value={config.roleta_ativa} onValueChange={(v) => setConfig({ ...config, roleta_ativa: v })} />
-                <Text style={{ color: '#fff', fontWeight: 'bold' }}>🎡 ROLETA DA SORTE ATIVA</Text>
               </View>
 
               <TouchableOpacity 
@@ -527,9 +522,18 @@ export default function Merchant() {
               <TouchableOpacity style={[styles.buttonCenter, { backgroundColor: '#facc15' }]} onPress={() => confirmarCRM(true)}>
                 <Text style={[styles.buttonText, { color: '#0f172a' }]}>🎁 SIM, ENVIAR BÔNUS</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.buttonCenter, { backgroundColor: '#334155' }]} onPress={() => confirmarCRM(false)}>
-                <Text style={styles.buttonText}>NÃO, APENAS MENSAGEM</Text>
-              </TouchableOpacity>
+              <TouchableOpacity 
+               style={[styles.button, { backgroundColor: '#334155', height: 50 }]} 
+               onPress={() => {
+                 setMostrarManual(!mostrarManual);
+                 if (!mostrarManual) {
+                   setTimeout(() => {
+                     scrollRef.current?.scrollTo({ y: 800, animated: true });
+                   }, 100);
+                 }
+               }}>
+               <Text style={styles.buttonText}>⌨️ LANÇAMENTO MANUAL</Text>
+             </TouchableOpacity>
               <TouchableOpacity style={{ alignItems: 'center', marginTop: 15 }} onPress={() => setModalCRM(null)}>
                 <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>CANCELAR</Text>
               </TouchableOpacity>
@@ -538,7 +542,7 @@ export default function Merchant() {
         </View>
       )}
 
-      <ScrollView style={styles.container}>
+      <ScrollView ref={scrollRef} style={styles.container}>
         <Animated.View style={[styles.toastContainer, { transform: [{ translateY: toastAnim as any }], backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444' }]}>
           <Text style={{ fontSize: 24, marginRight: 12 }}>{toast.tipo === 'sucesso' ? '✅' : '⚠️'}</Text><Text style={styles.toastText}>{toast.message}</Text>
         </Animated.View>
@@ -557,11 +561,8 @@ export default function Merchant() {
             </View>
           </View>
 
-          {/* 🚀 ÁREA 1: OPERAÇÃO (ENTRADA E STATUS) */}
           <View style={{ gap: 15, marginBottom: 25 }}>
-            {/* LINHA 1: ENTRADA GIGANTE */}
             <View style={{ flexDirection: 'row', gap: 15, alignItems: 'stretch' }}>
-               {/* CARD DE TELEFONE (Dinâmico) */}
                <View style={[styles.card, { flex: 3, backgroundColor: '#020617', padding: 20, height: 130, justifyContent: 'center', borderColor: '#10b981', borderWidth: 2 }]}>
                   {fila.length > 0 ? (
                     <>
@@ -577,7 +578,6 @@ export default function Merchant() {
                   )}
                </View>
 
-               {/* CARD DE VALOR (GIGANTE) */}
                <View style={[styles.card, { flex: 2.5, backgroundColor: '#020617', padding: 15, height: 130, justifyContent: 'center', borderColor: '#10b981', borderWidth: 1 }]}>
                   <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 'bold', position: 'absolute', top: 15, left: 15 }}>VALOR DA VENDA (R$):</Text>
                   <TextInput
@@ -593,7 +593,6 @@ export default function Merchant() {
                   />
                </View>
 
-               {/* BOTÃO ATENDER */}
                <TouchableOpacity 
                  onPress={() => fila.length > 0 && atender(fila[0].id)}
                  style={[styles.card, { flex: 1.2, backgroundColor: fila.length > 0 ? '#10b981' : '#334155', height: 130, alignItems: 'center', justifyContent: 'center' }]}>
@@ -601,9 +600,7 @@ export default function Merchant() {
                </TouchableOpacity>
             </View>
 
-            {/* LINHA 2: CAIXA E RESUMO (SEMPRE VISÍVEIS) */}
             <View style={{ flexDirection: 'row', gap: 15, alignItems: 'stretch' }}>
-               {/* CARD DE CAIXA */}
                <View style={[styles.card, { flex: 1, padding: 25, backgroundColor: '#1e293b', minHeight: 200, justifyContent: 'space-between' }]}>
                   <View>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -618,19 +615,18 @@ export default function Merchant() {
                   
                   <View style={{ height: 1, backgroundColor: '#334155', marginVertical: 15 }} />
                   
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                    <View>
-                      <Text style={{ color: '#fff', fontSize: 38, fontWeight: '900' }}>{formatarMoeda(stats.totalDia)}</Text>
-                      <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold' }}>TOTAL HOJE</Text>
-                    </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={{ color: '#38bdf8', fontSize: 38, fontWeight: '900' }}>{formatarMoeda(stats.ticketMedio)}</Text>
-                      <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold' }}>TICKET MÉDIO</Text>
-                    </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: '#38bdf8', fontSize: 32, fontWeight: '900' }}>{stats.vendasCount}</Text>
+                        <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>ATENDIDOS HOJE</Text>
+                      </View>
+                      <View style={{ flex: 1.5, alignItems: 'flex-end' }}>
+                        <Text style={{ color: '#38bdf8', fontSize: 32, fontWeight: '900' }}>{formatarMoeda(stats.totalDia / (stats.vendasCount || 1))}</Text>
+                        <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>TICKET MÉDIO</Text>
+                      </View>
                   </View>
                </View>
 
-               {/* CARD DE RESUMO */}
                <View style={[styles.card, { flex: 1, padding: 25, backgroundColor: '#1e293b', minHeight: 200 }]}>
                   {fila.length > 0 && valorVenda[fila[0].id] ? (
                     <View style={{ height: '100%', justifyContent: 'space-between' }}>
@@ -685,7 +681,6 @@ export default function Merchant() {
                </View>
             </View>
 
-            {/* BÔNUS E PRÊMIOS DA FILA (Dinâmico) */}
             {fila.length > 0 && fila.slice(0, 1).map((c) => {
                 const temBonus = bonusPendentes[c.cliente_cpf];
                 const brindes = brindesPendentes[c.cliente_cpf] || [];
@@ -701,7 +696,7 @@ export default function Merchant() {
                       {brindes.map((b: any) => (
                         <View key={b.id} style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ec489915', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#ec489930' }}>
                           <Text style={{ color: '#ec4899', fontWeight: 'bold', fontSize: 15 }}>🏆 Brinde: {b.nome_brinde}</Text>
-                          <TouchableOpacity style={{ backgroundColor: '#ec4899', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10 }} onPress={() => entregarBrinde(b.id, c.cliente_cpf)}>
+                          <TouchableOpacity style={{ backgroundColor: '#ec4899', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10 }}>
                             <Text style={{ color: '#fff', fontWeight: 'bold' }}>ENTREGAR</Text>
                           </TouchableOpacity>
                         </View>
@@ -713,7 +708,6 @@ export default function Merchant() {
             })}
           </View>
 
-          {/* 📊 ÁREA 2: INDICADORES (LINHA 3) */}
           <View style={{ flexDirection: 'row', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
              <TouchableOpacity onPress={baixarQRCode} style={[styles.card, { flex: 1, minWidth: 160, alignItems: 'center', justifyContent: 'center', paddingVertical: 25 }]}>
                 <QRCode value={linkQR} size={250} getRef={(c) => (qrRef.current = c)} />
@@ -739,7 +733,6 @@ export default function Merchant() {
              </View>
           </View>
 
-          {/* 📊 ÁREA 2.5: AVALIAÇÕES E LUCRATIVIDADE (RESTAURADOS) */}
           <View style={{ flexDirection: 'row', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
              <View style={[styles.card, { flex: 1, minWidth: 280, borderColor: '#facc15' }]}>
                 <Text style={[styles.title, { color: '#facc15' }]}>⭐ Últimas Avaliações ({mediaEstrelas.toFixed(1)})</Text>
@@ -763,18 +756,6 @@ export default function Merchant() {
              </View>
           </View>
 
-          {/* 📈 ÁREA 3: SATISFAÇÃO (LINHA 4) */}
-          <View style={[styles.card, { width: '100%', marginBottom: 25, borderColor: '#facc15', padding: 20 }]}>
-              <Text style={[styles.title, { color: '#facc15' }]}>⭐ Avaliações e Satisfação</Text>
-              {avaliacoes.length > 0 ? (
-                <View style={{ marginTop: 10 }}>
-                   <Text style={{ color: '#fff', fontSize: 16 }}>Média Geral: {mediaEstrelas.toFixed(1)} estrelas</Text>
-                   <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 5 }}>Baseado nas últimas avaliações dos clientes.</Text>
-                </View>
-              ) : <Text style={{ color: '#64748b', textAlign: 'center', padding: 20 }}>Nenhuma avaliação recebida ainda.</Text>}
-          </View>
-
-          {/* ⌨️ ÁREA 4: LANÇAMENTO MANUAL E CRM */}
           <View style={{ flexDirection: 'row', gap: 15, marginBottom: 40, flexWrap: 'wrap' }}>
              <TouchableOpacity onPress={() => setMostrarManual(!mostrarManual)} style={[styles.card, { flex: 1, minWidth: 250, backgroundColor: '#334155', alignItems: 'center', justifyContent: 'center', height: 80 }]}>
                 <Text style={{ color: '#fff', fontWeight: 'bold' }}>⌨️ LANÇAMENTO MANUAL</Text>
@@ -784,10 +765,8 @@ export default function Merchant() {
              </TouchableOpacity>
           </View>
 
-
-
           {mostrarManual && (
-            <View style={styles.card}>
+            <View style={styles.card} ref={manualRef}>
               <Text style={styles.title}>✍️ Lançamento Manual</Text>
               <TextInput placeholder="WhatsApp do Cliente" placeholderTextColor="#94A3B8" keyboardType="numeric" value={formatarTelefone(telefoneManual)}
                 onChangeText={(t) => {
@@ -845,8 +824,6 @@ export default function Merchant() {
             </View>
           )}
 
-
-
           {mostrarCRM && (
             <View style={styles.card}>
               <Text style={styles.title}>📲 Clientes para Contato</Text>
@@ -866,8 +843,6 @@ export default function Merchant() {
               ))}
             </View>
           )}
-
-
 
           {mostrarCatalogo && (
             <View>
@@ -908,9 +883,6 @@ export default function Merchant() {
             </View>
           )}
 
-          {/* 🔥 NOVO: GERENCIAR A ROLETA */}
-
-
           {mostrarRoleta && (
             <View>
               <Text style={{ color: '#94a3b8', fontSize: 12, marginBottom: 15 }}>Cadastre os prêmios (fatias) que o cliente pode ganhar ao avaliar a loja. A soma das probabilidades não precisa ser 100%.</Text>
@@ -921,24 +893,16 @@ export default function Merchant() {
               {editandoRoletaId === 'novo' && (
                 <View style={[styles.editBox, { marginBottom: 20, borderColor: '#ec4899', borderWidth: 1, backgroundColor: '#020617' }]}>
                   <Text style={{ color: '#ec4899', fontWeight: 'bold', marginBottom: 15, fontSize: 16 }}>✨ Nova Fatia da Roleta</Text>
-
-                  <Text style={{ color: '#94A3B8', fontSize: 12, marginLeft: 4, marginBottom: 4 }}>O que vai aparecer escrito na roleta?</Text>
                   <TextInput placeholder="Ex: Ganhou 10 Springs" placeholderTextColor="#475569" value={formRoleta.nome || ''} onChangeText={(t) => setFormRoleta({ ...formRoleta, nome: t })} style={[styles.input, { marginBottom: 15 }]} />
-
-                  <Text style={{ color: '#94A3B8', fontSize: 12, marginLeft: 4, marginBottom: 4 }}>Tipo de Prêmio (pontos, cashback, brinde, nada)</Text>
-                  <TextInput placeholder="Digite o tipo" placeholderTextColor="#475569" value={formRoleta.tipo || ''} onChangeText={(t) => setFormRoleta({ ...formRoleta, tipo: t })} style={[styles.input, { marginBottom: 15 }]} />
-
+                  <TextInput placeholder="Tipo: pontos, cashback, brinde" placeholderTextColor="#475569" value={formRoleta.tipo || ''} onChangeText={(t) => setFormRoleta({ ...formRoleta, tipo: t })} style={[styles.input, { marginBottom: 15 }]} />
                   <View style={{ flexDirection: 'row', gap: 10, marginBottom: 5 }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ color: '#94A3B8', fontSize: 12, marginLeft: 4, marginBottom: 4 }}>Quantidade</Text>
-                      <TextInput placeholder="Ex: 10 ou 5.00" placeholderTextColor="#475569" value={formRoleta.valor || ''} onChangeText={(t) => setFormRoleta({ ...formRoleta, valor: t })} style={styles.input} keyboardType="numeric" />
+                      <TextInput placeholder="Qtd" placeholderTextColor="#475569" value={formRoleta.valor || ''} onChangeText={(t) => setFormRoleta({ ...formRoleta, valor: t })} style={styles.input} keyboardType="numeric" />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ color: '#94A3B8', fontSize: 12, marginLeft: 4, marginBottom: 4 }}>Chance / Pesos</Text>
-                      <TextInput placeholder="Ex: 40" placeholderTextColor="#475569" value={formRoleta.probabilidade || ''} onChangeText={(t) => setFormRoleta({ ...formRoleta, probabilidade: t })} style={styles.input} keyboardType="numeric" />
+                      <TextInput placeholder="Chance" placeholderTextColor="#475569" value={formRoleta.probabilidade || ''} onChangeText={(t) => setFormRoleta({ ...formRoleta, probabilidade: t })} style={styles.input} keyboardType="numeric" />
                     </View>
                   </View>
-
                   <View style={{ flexDirection: 'row', gap: 10, marginTop: 15 }}>
                     <TouchableOpacity style={[styles.button, { flex: 1, backgroundColor: '#ec4899' }]} onPress={salvarRoleta}>
                       <Text style={styles.buttonText}>SALVAR FATIA</Text>
