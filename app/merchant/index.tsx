@@ -163,6 +163,7 @@ export default function Merchant() {
 
     const resgatesAgrupados = Object.keys(agrupadosMap).map(k => ({ nome: k, qtde: agrupadosMap[k] }));
     const totalDia = vendasDiaHoje.reduce((s, v) => s + Number(v.valor), 0);
+    const clientesUnicosDia = new Set(vendasDiaHoje.map(v => v.cliente_cpf)).size;
 
     const crmMap = new Map();
     (vendasData || []).forEach(v => { if (!crmMap.has(v.cliente_cpf)) crmMap.set(v.cliente_cpf, v); });
@@ -186,11 +187,11 @@ export default function Merchant() {
       totalDia, 
       vendasCount: vendasDiaHoje.length,
       ticketMedio: vendasDiaHoje.length ? totalDia / vendasDiaHoje.length : 0,
-      top5: vendasDiaHoje.sort((a: any, b: any) => b.valor - a.valor).slice(0, 5) as any, 
+      totalClientesDia: clientesUnicosDia,
       resgatesHojeLista: resgatesHojeLista as any, 
       resgatesAgrupados: resgatesAgrupados as any,
       pontosResgatadosHoje: pontosResgatados, 
-      ultimosResgates: resgatesHojeLista.slice(0, 5).map(r => ({ cliente_cpf: r.cliente_cpf, nome_premio: recompensasMap[r.recompensa_id] || 'Prêmio' })) as any
+      ultimosResgates: resgatesHojeLista.map(r => ({ cliente_cpf: r.cliente_cpf, nome_premio: recompensasMap[r.recompensa_id] || 'Prêmio' })) as any
     });
   };
 
@@ -239,7 +240,7 @@ export default function Merchant() {
 
   useEffect(() => {
     if (!lojaId) return;
-    carregarConfig(); buscarFila(); buscarStats(); buscarAvaliacoesERoleta(); iniciarRealtime();
+    carregarConfig(); buscarFila(); buscarStats(); buscarAvaliacoesERoleta(); iniciarRealtime(); buscarRewards();
     return () => { if (channelRef.current) supabase.removeChannel(channelRef.current); if (channelResgateRef.current) supabase.removeChannel(channelResgateRef.current); };
   }, [lojaId]);
 
@@ -739,9 +740,9 @@ export default function Merchant() {
              </TouchableOpacity>
 
              <View style={[styles.card, { flex: 1.2, minWidth: 180, paddingVertical: 25 }]}>
-                <Text style={{ color: '#fff', fontSize: 36, fontWeight: '900' }}>{stats.top5.length}</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 13, fontWeight: 'bold', marginTop: 5 }}>TOP CLIENTES</Text>
-                <Text style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>Ativos no dia</Text>
+                <Text style={{ color: '#fff', fontSize: 36, fontWeight: '900' }}>{stats.totalClientesDia || 0}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 13, fontWeight: 'bold', marginTop: 5 }}>CLIENTES HOJE</Text>
+                <Text style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>Pessoas únicas</Text>
              </View>
 
              <TouchableOpacity onPress={() => setMostrarCatalogo(true)} style={[styles.card, { flex: 1.2, minWidth: 180, paddingVertical: 25 }]}>
@@ -751,9 +752,9 @@ export default function Merchant() {
              </TouchableOpacity>
 
              <View style={[styles.card, { flex: 1.2, minWidth: 180, paddingVertical: 25 }]}>
-                <Text style={{ color: '#ec4899', fontSize: 36, fontWeight: '900' }}>{stats.ultimosResgates.length}</Text>
+                <Text style={{ color: '#ec4899', fontSize: 36, fontWeight: '900' }}>{stats.resgatesHojeLista?.length || 0}</Text>
                 <Text style={{ color: '#94a3b8', fontSize: 13, fontWeight: 'bold', marginTop: 5 }}>RESGATES</Text>
-                <Text style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>Brindes entregues</Text>
+                <Text style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>Brindes do dia</Text>
              </View>
           </View>
 
