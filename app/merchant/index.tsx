@@ -136,6 +136,7 @@ export default function Merchant() {
   };
 
   const eHoje = (dataString: string) => {
+    if (!dataString) return false;
     const d = parseDataSupabase(dataString);
     const hoje = new Date();
     return d.getDate() === hoje.getDate() && d.getMonth() === hoje.getMonth() && d.getFullYear() === hoje.getFullYear();
@@ -259,7 +260,15 @@ export default function Merchant() {
 
   useEffect(() => {
     if (!lojaId) return;
-    carregarConfig(); buscarFila(); buscarStats(); buscarAvaliacoesERoleta(); iniciarRealtime(); buscarRewards();
+    const loadAll = async () => {
+      await carregarConfig();
+      await buscarFila();
+      await buscarStats();
+      await buscarAvaliacoesERoleta();
+      await buscarRewards();
+      iniciarRealtime();
+    };
+    loadAll();
     return () => { if (channelRef.current) supabase.removeChannel(channelRef.current); if (channelResgateRef.current) supabase.removeChannel(channelResgateRef.current); };
   }, [lojaId]);
 
@@ -753,6 +762,11 @@ export default function Merchant() {
           </View>
 
           <View style={{ flexDirection: 'row', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
+             <TouchableOpacity onPress={baixarQRCode} style={[styles.card, { flex: 1, minWidth: 200, height: 280, alignItems: 'center', justifyContent: 'center' }]}>
+                <QRCode value={linkQR} size={200} getRef={(c) => (qrRef.current = c)} />
+                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginTop: 12 }}>QR DO BALCÃO (CLIQUE P/ BAIXAR)</Text>
+             </TouchableOpacity>
+
              <View style={[styles.card, { flex: 1, minWidth: 200, height: 280 }]}>
                 <Text style={{ color: '#fff', fontSize: 32, fontWeight: '900' }}>{stats.totalClientesDia || 0}</Text>
                 <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold', marginBottom: 10 }}>CLIENTES HOJE</Text>
@@ -795,10 +809,10 @@ export default function Merchant() {
                 <Text style={{ color: '#8b5cf6', fontSize: 48, fontWeight: '900' }}>{clientesAtrasados}</Text>
                 <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold' }}>REMARKETING</Text>
                 <Text style={{ color: '#fff', fontSize: 13, marginTop: 15, lineHeight: 20 }}>
-                   Temos <Text style={{ color: '#8b5cf6', fontWeight: 'bold' }}>{clientesAtrasados}</Text> clientes que não aparecem há mais de 15 dias.
+                   Temos <Text style={{ color: '#8b5cf6', fontWeight: 'bold' }}>{clientesAtrasados}</Text> clientes sumidos.
                 </Text>
                 <View style={{ flex: 1, justifyContent: 'flex-end', marginTop: 10 }}>
-                   <Text style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: 12 }}>CLIQUE PARA VER LISTA ➔</Text>
+                   <Text style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: 12 }}>VER LISTA ➔</Text>
                 </View>
              </TouchableOpacity>
           </View>
