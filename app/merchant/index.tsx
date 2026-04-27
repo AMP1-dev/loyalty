@@ -761,58 +761,58 @@ export default function Merchant() {
             })}
           </View>
 
-          <View style={{ flexDirection: 'row', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
-             <TouchableOpacity onPress={baixarQRCode} style={[styles.card, { flex: 1, minWidth: 200, height: 280, alignItems: 'center', justifyContent: 'center' }]}>
-                <QRCode value={linkQR} size={200} getRef={(c) => (qrRef.current = c)} />
-                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginTop: 12 }}>QR DO BALCÃO (CLIQUE P/ BAIXAR)</Text>
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 25, flexWrap: 'wrap' }}>
+             <TouchableOpacity onPress={baixarQRCode} style={[styles.card, { flex: 1, minWidth: 150, height: 260, alignItems: 'center', justifyContent: 'center' }]}>
+                <QRCode value={linkQR} size={150} getRef={(c) => (qrRef.current = c)} />
+                <Text style={{ color: '#94a3b8', fontSize: 9, fontWeight: 'bold', marginTop: 10 }}>QR DO BALCÃO</Text>
              </TouchableOpacity>
 
-             <View style={[styles.card, { flex: 1, minWidth: 200, height: 280 }]}>
-                <Text style={{ color: '#fff', fontSize: 32, fontWeight: '900' }}>{stats.totalClientesDia || 0}</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold', marginBottom: 10 }}>CLIENTES HOJE</Text>
+             <View style={[styles.card, { flex: 1, minWidth: 150, height: 260 }]}>
+                <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900' }}>{stats.totalClientesDia || 0}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>CLIENTES HOJE</Text>
                 <ScrollView nestedScrollEnabled={true}>
                    {(stats as any).vendasDiaFormatada?.map((v: any, i: number) => (
-                     <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 6 }}>
-                        <Text style={{ color: '#fff', fontSize: 11 }}>{formatarTelefone(v.cpf)} <Text style={{ color: '#64748b' }}>• {v.hora}</Text></Text>
-                        <Text style={{ color: '#10b981', fontSize: 13, fontWeight: 'bold' }}>{formatarMoeda(Number(v.valor))}</Text>
+                     <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 4 }}>
+                        <Text style={{ color: '#fff', fontSize: 10 }}>{formatarTelefone(v.cpf)} <Text style={{ color: '#64748b' }}>• {v.hora}</Text></Text>
+                        <Text style={{ color: '#10b981', fontSize: 11, fontWeight: 'bold' }}>{formatarMoeda(Number(v.valor))}</Text>
                      </View>
                    ))}
                 </ScrollView>
              </View>
 
-             <View style={[styles.card, { flex: 1, minWidth: 200, height: 280 }]}>
-                <Text style={{ color: '#38bdf8', fontSize: 32, fontWeight: '900' }}>{stats.resgatesHojeLista?.length || 0}</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold', marginBottom: 10 }}>SAÍDAS ESTOQUE</Text>
+             <View style={[styles.card, { flex: 1, minWidth: 150, height: 260 }]}>
+                <Text style={{ color: '#38bdf8', fontSize: 24, fontWeight: '900' }}>{stats.resgatesHojeLista?.length || 0}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>SAÍDAS ESTOQUE</Text>
                 <ScrollView nestedScrollEnabled={true}>
                    {(stats as any).resgatesSumarizados?.map((s: any, i: number) => (
-                     <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 6 }}>
-                        <Text style={{ color: '#fff', fontSize: 11 }}>{s.qtde}x {s.nome}</Text>
-                        <Text style={{ color: '#38bdf8', fontSize: 13, fontWeight: 'bold' }}>{s.pontos} Springs</Text>
+                     <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 4 }}>
+                        <Text style={{ color: '#fff', fontSize: 10 }}>{s.qtde}x {s.nome}</Text>
+                        <Text style={{ color: '#38bdf8', fontSize: 11, fontWeight: 'bold' }}>{s.pontos} Springs</Text>
                      </View>
                    ))}
                 </ScrollView>
              </View>
 
-             <View style={[styles.card, { flex: 1, minWidth: 200, height: 280 }]}>
-                <Text style={{ color: '#ec4899', fontSize: 32, fontWeight: '900' }}>{stats.resgatesHojeLista?.length || 0}</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold', marginBottom: 10 }}>RESGATES (HORA)</Text>
+             <View style={[styles.card, { flex: 1, minWidth: 150, height: 260 }]}>
+                <Text style={{ color: '#ec4899', fontSize: 24, fontWeight: '900' }}>{stats.resgatesHojeLista?.length || 0}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>RESGATES (HORA)</Text>
                 <ScrollView nestedScrollEnabled={true}>
                    {(stats as any).resgatesListados?.map((r: any, i: number) => (
-                     <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 6 }}>
-                        <Text style={{ color: '#fff', fontSize: 11 }}>{r.hora} <Text style={{ color: '#64748b' }}>•</Text> {r.nome}</Text>
+                     <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 4 }}>
+                        <Text style={{ color: '#fff', fontSize: 10 }}>{r.hora} <Text style={{ color: '#64748b' }}>•</Text> {r.nome}</Text>
                      </View>
                    ))}
                 </ScrollView>
              </View>
 
-             <TouchableOpacity onPress={() => setMostrarCRM(true)} style={[styles.card, { flex: 1, minWidth: 200, height: 280, borderColor: '#8b5cf6', borderWidth: 1 }]}>
-                <Text style={{ color: '#8b5cf6', fontSize: 48, fontWeight: '900' }}>{clientesAtrasados}</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold' }}>REMARKETING</Text>
-                <Text style={{ color: '#fff', fontSize: 13, marginTop: 15, lineHeight: 20 }}>
+             <TouchableOpacity onPress={() => setMostrarCRM(true)} style={[styles.card, { flex: 1, minWidth: 150, height: 260, borderColor: '#8b5cf6', borderWidth: 1 }]}>
+                <Text style={{ color: '#8b5cf6', fontSize: 32, fontWeight: '900' }}>{clientesAtrasados}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>REMARKETING</Text>
+                <Text style={{ color: '#fff', fontSize: 11, marginTop: 10, lineHeight: 16 }}>
                    Temos <Text style={{ color: '#8b5cf6', fontWeight: 'bold' }}>{clientesAtrasados}</Text> clientes sumidos.
                 </Text>
-                <View style={{ flex: 1, justifyContent: 'flex-end', marginTop: 10 }}>
-                   <Text style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: 12 }}>VER LISTA ➔</Text>
+                <View style={{ flex: 1, justifyContent: 'flex-end', marginTop: 6 }}>
+                   <Text style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: 10 }}>VER LISTA ➔</Text>
                 </View>
              </TouchableOpacity>
           </View>
