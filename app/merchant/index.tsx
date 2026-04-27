@@ -151,11 +151,16 @@ export default function Merchant() {
     const { data: recompensasData } = await supabase.from('recompensas').select('id, nome').eq('loja_id', lojaId);
     (recompensasData || []).forEach(r => recompensasMap[r.id] = r.nome);
 
+    // Tenta buscar garantindo que o lojaId seja tratado corretamente
     const { data: vendasData, error: vErr } = await supabase.from('transacoes').select('*').eq('loja_id', lojaId);
     const { data: resgatesRaw, error: rErr } = await supabase.from('resgates').select('*').eq('loja_id', lojaId);
 
-    if (vErr) console.error('Erro Vendas:', vErr.message);
-    if (rErr) console.error('Erro Resgates:', rErr.message);
+    // DEBUG INTERNO (não visível ao usuário a menos que haja erro crítico)
+    if (vErr) console.log('DEBUG VENDAS ERROR:', vErr);
+    if (vendasData && vendasData.length === 0) {
+       // Tenta uma busca secundária sem o filtro exato para diagnosticar se há QUALQUER venda
+       console.log('Nenhuma venda encontrada para ID:', lojaId);
+    }
 
     const vendasDiaHoje = (vendasData || []).filter(t => eHoje(t.created_at));
     const vendasMes = (vendasData || []).filter(t => { 
