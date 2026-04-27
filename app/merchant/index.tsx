@@ -151,15 +151,16 @@ export default function Merchant() {
     const { data: recompensasData } = await supabase.from('recompensas').select('id, nome').eq('loja_id', lojaId);
     (recompensasData || []).forEach(r => recompensasMap[r.id] = r.nome);
 
-    // Tenta buscar garantindo que o lojaId seja tratado corretamente
-    const { data: vendasData, error: vErr } = await supabase.from('transacoes').select('*').eq('loja_id', lojaId);
-    const { data: resgatesRaw, error: rErr } = await supabase.from('resgates').select('*').eq('loja_id', lojaId);
+    // Multi-busca para garantir que pegamos os dados onde quer que estejam
+    const { data: vTrans } = await supabase.from('transacoes').select('*').eq('loja_id', lojaId);
+    const { data: vVendas } = await supabase.from('vendas').select('*').eq('loja_id', lojaId);
+    const vendasData = [...(vTrans || []), ...(vVendas || [])];
 
-    // DEBUG INTERNO (não visível ao usuário a menos que haja erro crítico)
-    if (vErr) console.log('DEBUG VENDAS ERROR:', vErr);
-    if (vendasData && vendasData.length === 0) {
-       // Tenta uma busca secundária sem o filtro exato para diagnosticar se há QUALQUER venda
-       console.log('Nenhuma venda encontrada para ID:', lojaId);
+    const { data: rResg } = await supabase.from('resgates').select('*').eq('loja_id', lojaId);
+    const resgatesRaw = rResg || [];
+
+    if (vendasData.length === 0) {
+       console.warn('⚠️ NENHUMA VENDA ENCONTRADA PARA ESTA LOJA NO BANCO.');
     }
 
     const vendasDiaHoje = (vendasData || []).filter(t => eHoje(t.created_at));
