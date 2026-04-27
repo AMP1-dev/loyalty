@@ -102,7 +102,21 @@ export default function Merchant() {
     if (!lojaId || !cpf) return;
     const { data: cb } = await supabase.from('cashbacks').select('valor, created_at').eq('cliente_cpf', cpf).eq('loja_id', lojaId).eq('usado', false).order('created_at', { ascending: true });
     const lista = cb || [];
-    setCashbacks((prev: any) => ({ ...prev, [cpf]: { total: lista.reduce((s, c) => s + Number(c.valor), 0), proximo: lista.length ? Number(lista[0].valor) : 0 } }));
+    const { data: trans } = await supabase.from('transacoes').select('pontos_gerados').eq('cliente_cpf', cpf).eq('loja_id', lojaId);
+    const { data: resg } = await supabase.from('resgates').select('pontos_usados').eq('cliente_cpf', cpf).eq('loja_id', lojaId);
+    
+    const totalLocal = (trans || []).reduce((s, t) => s + (t.pontos_gerados || 0), 0);
+    const usadosLocal = (resg || []).reduce((s, r) => s + (r.pontos_usados || 0), 0);
+    const saldoFinal = totalLocal - usadosLocal;
+
+    setCashbacks((prev: any) => ({ 
+      ...prev, 
+      [cpf]: { 
+        total: lista.reduce((s, c) => s + Number(c.valor), 0), 
+        proximo: lista.length ? Number(lista[0].valor) : 0,
+        pontos: saldoFinal
+      } 
+    }));
 
     const hojeIso = new Date().toISOString();
     const { data: bn } = await supabase.from('bonus_pendentes').select('*').eq('cliente_cpf', cpf).eq('loja_id', lojaId).eq('usado', false).gte('data_expiracao', hojeIso).order('created_at', { ascending: true }).limit(1);
@@ -451,8 +465,30 @@ export default function Merchant() {
               </View>
 
               <Text style={styles.label}>BÔNUS E ROLETA:</Text>
-              <TextInput value={config.bonus_retorno_pontos} onChangeText={(t) => setConfig({ ...config, bonus_retorno_pontos: t })} placeholder="Pontos de Bônus de Retorno" style={styles.input} keyboardType="numeric" />
+              <TextInput value={config.bonus_retorno_pontos} onChangeText={(t) => setConfig({ ...config, bonus_retorno_pontos: t })} placeholder="Pontos de Bônus" style={styles.input} keyboardType="numeric" />
               
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>EXPIRAÇÃO PONTOS (DIAS)</Text>
+                  <TextInput value={config.pontos_expiracao_dias} onChangeText={(t) => setConfig({ ...config, pontos_expiracao_dias: t })} style={styles.input} keyboardType="numeric" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>INTERVALO ROLETA (DIAS)</Text>
+                  <TextInput value={config.roleta_intervalo_dias} onChangeText={(t) => setConfig({ ...config, roleta_intervalo_dias: t })} style={styles.input} keyboardType="numeric" />
+                </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>LIMITE RESGATES / DIA</Text>
+                  <TextInput value={config.limite_resgates_diario_cliente} onChangeText={(t) => setConfig({ ...config, limite_resgates_diario_cliente: t })} style={styles.input} keyboardType="numeric" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>BLOQUEIO NPS (MIN)</Text>
+                  <TextInput value={config.tempo_bloqueio_minutos} onChangeText={(t) => setConfig({ ...config, tempo_bloqueio_minutos: t })} style={styles.input} keyboardType="numeric" />
+                </View>
+              </View>
+
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 15, gap: 10 }}>
                 <Switch value={config.roleta_ativa} onValueChange={(v) => setConfig({ ...config, roleta_ativa: v })} />
                 <Text style={{ color: '#fff', fontWeight: 'bold' }}>🎡 ROLETA DA SORTE ATIVA</Text>
@@ -495,11 +531,17 @@ export default function Merchant() {
 
         <View style={styles.wrapper}>
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => setMostrarConfig(!mostrarConfig)}><Text style={styles.headerButton}>⚙️ Configurações</Text></TouchableOpacity>
+            <View>
+              <TouchableOpacity onPress={() => setMostrarConfig(!mostrarConfig)}><Text style={styles.headerButton}>⚙️ Configurações</Text></TouchableOpacity>
+              <Text style={[styles.logo, { textAlign: 'left', marginBottom: 0, marginTop: 5, fontSize: 24 }]}>PALM SPRINGS</Text>
+            </View>
+            
+            <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center', pointerEvents: 'none' }}>
+               <Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>{config.nome_loja?.toUpperCase() || 'LOJA PARCEIRA'}</Text>
+            </View>
+
             <TouchableOpacity onPress={() => { localStorage.removeItem('@loja_id_merchant'); router.replace('/login'); }}><Text style={styles.closeText}>✕ SAIR</Text></TouchableOpacity>
           </View>
-
-          <Text style={styles.logo}>PALM SPRINGS</Text>
 
           {/* 🚀 ÁREA 1: OPERAÇÃO (ENTRADA E STATUS) */}
           <View style={{ gap: 15, marginBottom: 25 }}>
@@ -550,7 +592,13 @@ export default function Merchant() {
                {/* CARD DE CAIXA */}
                <View style={[styles.card, { flex: 1, padding: 25, backgroundColor: '#1e293b', minHeight: 200, justifyContent: 'space-between' }]}>
                   <View>
-                    <Text style={{ color: '#10b981', fontSize: 42, fontWeight: '900' }}>{formatarMoeda(stats.totalMes)}</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <Text style={{ color: '#10b981', fontSize: 42, fontWeight: '900' }}>{formatarMoeda(stats.totalMes)}</Text>
+                      <View style={{ alignItems: 'flex-end' }}>
+                         <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>{new Date().toLocaleDateString('pt-BR')}</Text>
+                         <Text style={{ color: '#fff', fontSize: 12 }}>{new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
+                      </View>
+                    </View>
                     <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold', marginTop: 4 }}>TOTAL DO MÊS</Text>
                   </View>
                   
@@ -654,7 +702,7 @@ export default function Merchant() {
           {/* 📊 ÁREA 2: INDICADORES (LINHA 3) */}
           <View style={{ flexDirection: 'row', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
              <TouchableOpacity onPress={baixarQRCode} style={[styles.card, { flex: 1, minWidth: 160, alignItems: 'center', justifyContent: 'center', paddingVertical: 25 }]}>
-                <QRCode value={linkQR} size={150} getRef={(c) => (qrRef.current = c)} />
+                <QRCode value={linkQR} size={250} getRef={(c) => (qrRef.current = c)} />
                 <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold', marginTop: 12 }}>QR DO BALCÃO (CLIQUE P/ BAIXAR)</Text>
              </TouchableOpacity>
 
