@@ -144,11 +144,14 @@ export default function Merchant() {
 
   const buscarStats = async () => {
     if (!lojaId) return;
-    const { data: vendasData } = await supabase.from('transacoes').select('id, cliente_cpf, valor, pontos_gerados, created_at').eq('loja_id', lojaId).order('created_at', { ascending: false }).limit(1000);
-    const { data: resgatesRaw } = await supabase.from('resgates').select('id, cliente_cpf, pontos_usados, recompensa_id, created_at').eq('loja_id', lojaId).order('created_at', { ascending: false }).limit(1000);
-    const { data: recompensasData } = await supabase.from('recompensas').select('id, nome').eq('loja_id', lojaId);
+    // Busca total na tabela correta (transacoes)
+    const { data: vendasData } = await supabase.from('transacoes').select('*').eq('loja_id', lojaId);
+    const { data: resgatesRaw } = await supabase.from('resgates').select('*').eq('loja_id', lojaId);
 
-    const recompensasMap: any = {}; (recompensasData || []).forEach(r => recompensasMap[r.id] = r.nome);
+    const recompensasMap: any = {}; 
+    const { data: recompensasData } = await supabase.from('recompensas').select('id, nome').eq('loja_id', lojaId);
+    (recompensasData || []).forEach(r => recompensasMap[r.id] = r.nome);
+    
     const mesAtual = new Date().getMonth(); const anoAtual = new Date().getFullYear();
 
     const vendasDiaHoje = (vendasData || []).filter(t => eHoje(t.created_at));
