@@ -427,9 +427,11 @@ export default function Merchant() {
                 <TextInput value={config.numero} onChangeText={(t) => setConfig({ ...config, numero: t })} placeholder="Nº" placeholderTextColor="#475569" style={[styles.input, { flex: 1 }]} />
               </View>
               <View style={{ flexDirection: 'row', gap: 10 }}>
-                <TextInput value={config.bairro} onChangeText={(t) => setConfig({ ...config, bairro: t })} placeholder="Bairro" placeholderTextColor="#475569" style={[styles.input, { flex: 1 }]} />
-                <TextInput value={config.cidade} onChangeText={(t) => setConfig({ ...config, cidade: t })} placeholder="Cidade" placeholderTextColor="#475569" style={[styles.input, { flex: 1 }]} />
+                <TextInput value={config.bairro} onChangeText={(t) => setConfig({ ...config, bairro: t })} placeholder="Bairro" placeholderTextColor="#475569" style={[styles.input, { flex: 2 }]} />
+                <TextInput value={config.cidade} onChangeText={(t) => setConfig({ ...config, cidade: t })} placeholder="Cidade" placeholderTextColor="#475569" style={[styles.input, { flex: 2 }]} />
+                <TextInput value={config.estado} onChangeText={(t) => setConfig({ ...config, estado: t })} placeholder="UF" placeholderTextColor="#475569" style={[styles.input, { flex: 1 }]} />
               </View>
+              <TextInput value={config.cep} onChangeText={(t) => setConfig({ ...config, cep: t })} placeholder="CEP" placeholderTextColor="#475569" style={styles.input} />
 
               <Text style={styles.label}>REGRAS DE FIDELIDADE:</Text>
               <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -440,6 +442,10 @@ export default function Merchant() {
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: '#94a3b8', fontSize: 10 }}>REAIS POR PONTO</Text>
                   <TextInput value={config.reais_por_ponto} onChangeText={(t) => setConfig({ ...config, reais_por_ponto: t })} style={styles.input} keyboardType="numeric" />
+                </View>
+                <View style={{ flex: 1 }}>
+                   <Text style={{ color: '#94a3b8', fontSize: 10 }}>COR (HEX)</Text>
+                   <TextInput value={config.cor_primaria} onChangeText={(t) => setConfig({ ...config, cor_primaria: t })} style={styles.input} />
                 </View>
               </View>
 
@@ -465,8 +471,16 @@ export default function Merchant() {
               </View>
 
               <Text style={styles.label}>BÔNUS E ROLETA:</Text>
-              <TextInput value={config.bonus_retorno_pontos} onChangeText={(t) => setConfig({ ...config, bonus_retorno_pontos: t })} placeholder="Pontos de Bônus" style={styles.input} keyboardType="numeric" />
-              
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                 <View style={{ flex: 2 }}>
+                    <Text style={{ color: '#94a3b8', fontSize: 10 }}>PONTOS BÔNUS</Text>
+                    <TextInput value={config.bonus_retorno_pontos} onChangeText={(t) => setConfig({ ...config, bonus_retorno_pontos: t })} style={styles.input} keyboardType="numeric" />
+                 </View>
+                 <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#94a3b8', fontSize: 10 }}>VALIDADE (DIAS)</Text>
+                    <TextInput value={config.bonus_retorno_validade_dias} onChangeText={(t) => setConfig({ ...config, bonus_retorno_validade_dias: t })} style={styles.input} keyboardType="numeric" />
+                 </View>
+              </View>
               <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: '#94a3b8', fontSize: 10 }}>EXPIRAÇÃO PONTOS (DIAS)</Text>
@@ -530,17 +544,17 @@ export default function Merchant() {
         </Animated.View>
 
         <View style={styles.wrapper}>
-          <View style={styles.header}>
-            <View>
-              <TouchableOpacity onPress={() => setMostrarConfig(!mostrarConfig)}><Text style={styles.headerButton}>⚙️ Configurações</Text></TouchableOpacity>
-              <Text style={[styles.logo, { textAlign: 'left', marginBottom: 0, marginTop: 5, fontSize: 24 }]}>PALM SPRINGS</Text>
-            </View>
+          <View style={[styles.header, { alignItems: 'center' }]}>
+            <Text style={[styles.logo, { textAlign: 'left', marginBottom: 0, fontSize: 24 }]}>PALM SPRINGS</Text>
             
-            <View style={{ position: 'absolute', left: 0, right: 0, alignItems: 'center', pointerEvents: 'none' }}>
+            <View style={{ flex: 1, alignItems: 'center' }}>
                <Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>{config.nome_loja?.toUpperCase() || 'LOJA PARCEIRA'}</Text>
             </View>
 
-            <TouchableOpacity onPress={() => { localStorage.removeItem('@loja_id_merchant'); router.replace('/login'); }}><Text style={styles.closeText}>✕ SAIR</Text></TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center' }}>
+               <TouchableOpacity onPress={() => setMostrarConfig(!mostrarConfig)}><Text style={styles.headerButton}>⚙️ Configurações</Text></TouchableOpacity>
+               <TouchableOpacity onPress={() => { localStorage.removeItem('@loja_id_merchant'); router.replace('/login'); }}><Text style={styles.closeText}>✕ SAIR</Text></TouchableOpacity>
+            </View>
           </View>
 
           {/* 🚀 ÁREA 1: OPERAÇÃO (ENTRADA E STATUS) */}
@@ -592,11 +606,11 @@ export default function Merchant() {
                {/* CARD DE CAIXA */}
                <View style={[styles.card, { flex: 1, padding: 25, backgroundColor: '#1e293b', minHeight: 200, justifyContent: 'space-between' }]}>
                   <View>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Text style={{ color: '#10b981', fontSize: 42, fontWeight: '900' }}>{formatarMoeda(stats.totalMes)}</Text>
                       <View style={{ alignItems: 'flex-end' }}>
-                         <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>{new Date().toLocaleDateString('pt-BR')}</Text>
-                         <Text style={{ color: '#fff', fontSize: 12 }}>{new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
+                         <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold' }}>{new Date().toLocaleDateString('pt-BR')} {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
+                         <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>DATA E HORA ATUAL</Text>
                       </View>
                     </View>
                     <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold', marginTop: 4 }}>TOTAL DO MÊS</Text>
