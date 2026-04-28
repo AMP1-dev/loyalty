@@ -123,6 +123,7 @@ export default function Merchant() {
 
   const [historicoCRM, setHistoricoCRM] = useState<any[]>([]);
   const [clientesAtrasados, setClientesAtrasados] = useState(0);
+  const [npsChart, setNpsChart] = useState<{ dias: any[], max: number }>({ dias: [], max: 1 });
 
   const buscarFila = async () => {
     if (!lojaId) return;
@@ -275,16 +276,46 @@ export default function Merchant() {
   const buscarAvaliacoesERoleta = async () => {
     if (!lojaId) return;
     
-    // Buscar da tabela 'avaliacoes' que confirmamos existir no banco
-    const { data: avData } = await supabase.from('avaliacoes').select('*').eq('loja_id', lojaId).order('created_at', { ascending: false }).limit(20);
+    // Buscar da tabela 'avaliacoes'
+    const { data: avData } = await supabase.from('avaliacoes').select('*').eq('loja_id', lojaId).order('created_at', { ascending: false });
     const avs = avData || [];
     
-    setAvaliacoes(avs.map(a => ({
+    setAvaliacoes(avs.slice(0, 20).map(a => ({
       nota: a.nota,
       comentario: a.comentario,
       data: a.created_at,
       cliente: a.cliente_cpf
     })));
+
+    const agrupadosPorDia: any = {};
+    const chartDataArray = [];
+    
+    // Iniciar últimos 14 dias
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const diaStr = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      agrupadosPorDia[diaStr] = { verde: 0, amarelo: 0, vermelho: 0, label: diaStr };
+      chartDataArray.push(agrupadosPorDia[diaStr]);
+    }
+
+    avs.forEach(av => {
+      const d = parseDataSupabase(av.created_at);
+      const diaStr = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      if (agrupadosPorDia[diaStr]) {
+        if (av.nota >= 4) agrupadosPorDia[diaStr].verde += 1;
+        else if (av.nota === 3) agrupadosPorDia[diaStr].amarelo += 1;
+        else agrupadosPorDia[diaStr].vermelho += 1;
+      }
+    });
+
+    let maxVal = 1;
+    chartDataArray.forEach(d => {
+      const total = d.verde + d.amarelo + d.vermelho;
+      if (total > maxVal) maxVal = total;
+    });
+
+    setNpsChart({ dias: chartDataArray, max: maxVal });
 
     if (avs.length > 0) setMediaEstrelas(avs.reduce((a, b) => a + b.nota, 0) / avs.length);
 
@@ -922,6 +953,27 @@ export default function Merchant() {
                     <View key={star} style={{ flex: 1, height: 6, backgroundColor: mediaEstrelas >= star ? '#facc15' : '#334155', borderRadius: 3 }} />
                   ))}
                 </View>
+
+                {npsChart.dias.length > 0 && (
+                  <View style={{ height: 120, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 20, paddingTop: 10, borderBottomWidth: 1, borderBottomColor: '#334155' }}>
+                     {npsChart.dias.map((d: any, idx: number) => {
+                       const total = d.verde + d.amarelo + d.vermelho;
+                       const pctVerde = total > 0 ? (d.verde / npsChart.max) * 100 : 0;
+                       const pctAmarelo = total > 0 ? (d.amarelo / npsChart.max) * 100 : 0;
+                       const pctVermelho = total > 0 ? (d.vermelho / npsChart.max) * 100 : 0;
+                       return (
+                         <View key={idx} style={{ flex: 1, alignItems: 'center', marginHorizontal: 2 }}>
+                            <View style={{ height: 100, width: '100%', justifyContent: 'flex-end', backgroundColor: '#0f172a', borderRadius: 4, overflow: 'hidden' }}>
+                               {pctVerde > 0 && <View style={{ height: `${pctVerde}%`, width: '100%', backgroundColor: '#10b981' }} />}
+                               {pctAmarelo > 0 && <View style={{ height: `${pctAmarelo}%`, width: '100%', backgroundColor: '#facc15' }} />}
+                               {pctVermelho > 0 && <View style={{ height: `${pctVermelho}%`, width: '100%', backgroundColor: '#ef4444' }} />}
+                            </View>
+                            <Text style={{ color: '#64748b', fontSize: 8, marginTop: 4, transform: [{ rotate: '-45deg' }], width: 30, textAlign: 'center' }}>{d.label}</Text>
+                         </View>
+                       )
+                     })}
+                  </View>
+                )}
                 <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled={true}>
                    {avaliacoes.length === 0 && <Text style={{ color: '#64748b', fontSize: 12, fontStyle: 'italic' }}>Nenhuma avaliação recebida.</Text>}
                    {avaliacoes.map((av, i) => (
