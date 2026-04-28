@@ -14,7 +14,8 @@ export default function Merchant() {
   const formatarMoeda = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const parseDataSupabase = (dateStr: string) => {
     if (!dateStr) return new Date();
-    const strUTC = dateStr.includes('Z') || dateStr.includes('+') ? dateStr : `${dateStr}Z`;
+    let strUTC = dateStr.includes('Z') || dateStr.includes('+') ? dateStr : `${dateStr}Z`;
+    strUTC = strUTC.replace(' ', 'T');
     return new Date(strUTC);
   };
 
@@ -43,9 +44,21 @@ export default function Merchant() {
   };
 
   useEffect(() => {
-    let id = typeof params.loja_id === 'string' ? params.loja_id : Array.isArray(params.loja_id) ? params.loja_id[0] : '';
-    if (!id) id = localStorage.getItem('@loja_id_merchant') || '';
-    if (id) { setLojaId(id); localStorage.setItem('@loja_id_merchant', id); } else router.replace('/login');
+    const getStoredId = () => {
+      try { return localStorage.getItem('@loja_id_merchant'); } catch (e) { return null; }
+    };
+
+    const urlId = typeof params.loja_id === 'string' ? params.loja_id : Array.isArray(params.loja_id) ? params.loja_id[0] : '';
+    const storedId = getStoredId() || '';
+    const id = urlId || storedId;
+    
+    if (id && id.trim().length > 5) {
+      const cleanId = id.trim();
+      setLojaId(cleanId);
+      try { localStorage.setItem('@loja_id_merchant', cleanId); } catch (e) {}
+    } else {
+      router.replace('/login');
+    }
   }, [params]);
 
   const [valorVenda, setValorVenda] = useState<any>({});
@@ -87,8 +100,25 @@ export default function Merchant() {
     roleta_ativa: false, roleta_intervalo_dias: '1'
   });
 
-  const [stats, setStats] = useState({
-    totalMes: 0, totalDia: 0, vendasCount: 0, ticketMedio: 0, top5: [], resgatesHojeLista: [], resgatesAgrupados: [], pontosResgatadosHoje: 0, ultimosResgates: []
+  interface DashboardStats {
+    totalMes: number;
+    totalDia: number;
+    vendasCount: number;
+    vendasCountTotal: number;
+    ticketMedio: number;
+    totalClientesDia: number;
+    resgatesHojeLista: any[];
+    resgatesMesLista: any[];
+    resgatesAgrupados: any[];
+    pontosResgatadosHoje: number;
+    ultimosResgates: any[];
+    vendasDiaFormatada: any[];
+    resgatesSumarizados: any[];
+    resgatesListados: any[];
+  }
+
+  const [stats, setStats] = useState<DashboardStats>({
+    totalMes: 0, totalDia: 0, vendasCount: 0, ticketMedio: 0, resgatesHojeLista: [], resgatesMesLista: [], resgatesAgrupados: [], pontosResgatadosHoje: 0, ultimosResgates: [], vendasDiaFormatada: [], resgatesSumarizados: [], resgatesListados: [], totalClientesDia: 0, vendasCountTotal: 0
   });
 
   const [historicoCRM, setHistoricoCRM] = useState<any[]>([]);
@@ -131,7 +161,7 @@ export default function Merchant() {
       if (idFila) setUsarBonus((prev: any) => ({ ...prev, [idFila]: false }));
     }
 
-    const { data: br } = await supabase.from('roleta_brindes_pendentes').select('*').eq('cliente_cpf', cpf).eq('loja_id', lojaId).eq('entregue', false);
+    const { data: br } = await supabase.from('brindes_pendentes').select('*').eq('cliente_cpf', cpf).eq('loja_id', lojaId).eq('resgatado', false);
     setBrindesPendentes((prev: any) => ({ ...prev, [cpf]: br || [] }));
   };
 
@@ -144,97 +174,118 @@ export default function Merchant() {
 
   const buscarStats = async () => {
     if (!lojaId) return;
-    const mesAtual = new Date().getMonth(); 
-    const anoAtual = new Date().getFullYear();
 
-    const recompensasMap: any = {}; 
-    const { data: recompensasData } = await supabase.from('recompensas').select('id, nome').eq('loja_id', lojaId);
-    (recompensasData || []).forEach(r => recompensasMap[r.id] = r.nome);
+    try {
+      const agora = new Date();
+      const inicioHoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 0, 0, 0, 0).toISOString();
+      const fimHoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 23, 59, 59, 999).toISOString();
+      const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1, 0, 0, 0, 0).toISOString();
+      const fimMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
 
-    // Multi-busca para garantir que pegamos os dados onde quer que estejam
-    const { data: vTrans } = await supabase.from('transacoes').select('*').eq('loja_id', lojaId);
-    const { data: vVendas } = await supabase.from('vendas').select('*').eq('loja_id', lojaId);
-    const vendasData = [...(vTrans || []), ...(vVendas || [])];
+      const { data: recompensasData } = await supabase.from('recompensas').select('id,nome').eq('loja_id', lojaId);
+      const recompensasMap: any = {};
+      (recompensasData || []).forEach((r: any) => { recompensasMap[r.id] = r.nome; });
 
-    const { data: rResg } = await supabase.from('resgates').select('*').eq('loja_id', lojaId);
-    const resgatesRaw = rResg || [];
+      const { data: vendasData, error: vendasError } = await supabase.from('transacoes').select('*').eq('loja_id', lojaId).order('created_at', { ascending: false });
+      if (vendasError) { console.log(vendasError); return; }
 
-    if (vendasData.length === 0) {
-       console.warn('⚠️ NENHUMA VENDA ENCONTRADA PARA ESTA LOJA NO BANCO.');
+      const vendas = vendasData || [];
+
+      // 🔥 CORREÇÃO: Usar parseDataSupabase para garantir que as datas sejam lidas corretamente
+      const vendasHoje = vendas.filter((v: any) => {
+        const dataVenda = parseDataSupabase(v.created_at).getTime();
+        return dataVenda >= new Date(inicioHoje).getTime() && dataVenda <= new Date(fimHoje).getTime();
+      });
+
+      const vendasMes = vendas.filter((v: any) => {
+        const dataVenda = parseDataSupabase(v.created_at).getTime();
+        return dataVenda >= new Date(inicioMes).getTime() && dataVenda <= new Date(fimMes).getTime();
+      });
+
+      const totalDia = vendasHoje.reduce((s: number, v: any) => s + Number(v.valor || 0), 0);
+      const totalMes = vendasMes.reduce((s: number, v: any) => s + Number(v.valor || 0), 0);
+      const ticketMedio = vendasHoje.length > 0 ? totalDia / vendasHoje.length : 0;
+      const clientesUnicosHoje = new Set(vendasHoje.map((v: any) => v.cliente_cpf)).size;
+
+      const vendasDiaFormatada = vendasHoje.slice(0, 30).map((v: any) => ({
+        cpf: v.cliente_cpf, valor: Number(v.valor || 0), dataHora: parseDataSupabase(v.created_at).toLocaleString('pt-BR')
+      }));
+
+      const { data: resgatesData } = await supabase.from('resgates').select('*').eq('loja_id', lojaId).order('created_at', { ascending: false });
+      const resgates = resgatesData || [];
+
+      const resgatesMesLista = resgates.filter((r: any) => {
+        const dataR = parseDataSupabase(r.created_at).getTime();
+        return dataR >= new Date(inicioMes).getTime() && dataR <= new Date(fimMes).getTime();
+      });
+
+      const resgatesHojeLista = resgates.filter((r: any) => {
+        const dataR = parseDataSupabase(r.created_at).getTime();
+        return dataR >= new Date(inicioHoje).getTime() && dataR <= new Date(fimHoje).getTime();
+      });
+
+      const agrupados: any = {};
+      let pontosResgatadosHoje = 0;
+
+      resgatesMesLista.forEach((r: any) => {
+        const nome = recompensasMap[r.recompensa_id] || 'Prêmio';
+        if (!agrupados[nome]) agrupados[nome] = { nome, qtde: 0, pontos: 0 };
+        agrupados[nome].qtde += 1;
+        agrupados[nome].pontos += Number(r.pontos_usados || 0);
+      });
+
+      resgatesHojeLista.forEach((r: any) => { pontosResgatadosHoje += Number(r.pontos_usados || 0); });
+
+      const resgatesSumarizados = Object.values(agrupados);
+      const resgatesListados = resgatesMesLista.slice(0, 50).map((r: any) => ({
+        nome: recompensasMap[r.recompensa_id] || 'Prêmio', telefone: r.cliente_cpf, dataHora: parseDataSupabase(r.created_at).toLocaleString('pt-BR')
+      }));
+
+      const ultimosResgates = resgates.slice(0, 5).map((r: any) => ({
+        cliente_cpf: r.cliente_cpf, nome_premio: recompensasMap[r.recompensa_id] || 'Prêmio'
+      }));
+
+      const ultimoPorCliente = new Map();
+      vendas.forEach((v: any) => {
+        if (!ultimoPorCliente.has(v.cliente_cpf)) ultimoPorCliente.set(v.cliente_cpf, v);
+      });
+
+      const crmLista = Array.from(ultimoPorCliente.values()).map((v: any) => {
+        const ultimaCompra = parseDataSupabase(v.created_at);
+        const retorno = new Date(ultimaCompra);
+        retorno.setDate(retorno.getDate() + 15);
+        return { ...v, atrasado: retorno.getTime() < Date.now(), dataRetorno: retorno };
+      });
+
+      const atrasados = crmLista.filter((c: any) => c.atrasado);
+      setHistoricoCRM(atrasados);
+      setClientesAtrasados(atrasados.length);
+
+      setStats({
+        totalMes, totalDia, vendasCount: vendasHoje.length, vendasCountTotal: vendas.length,
+        ticketMedio, totalClientesDia: clientesUnicosHoje, resgatesHojeLista, resgatesMesLista,
+        resgatesAgrupados: resgatesSumarizados, pontosResgatadosHoje, ultimosResgates, vendasDiaFormatada,
+        resgatesSumarizados, resgatesListados
+      });
+
+    } catch (error) {
+      console.log('ERRO buscarStats:', error);
     }
-
-    const vendasDiaHoje = (vendasData || []).filter(t => eHoje(t.created_at));
-    const vendasMes = (vendasData || []).filter(t => { 
-      const d = parseDataSupabase(t.created_at); 
-      return d.getMonth() === mesAtual && d.getFullYear() === anoAtual; 
-    });
-    const resgatesHojeLista = (resgatesRaw || []).filter(r => eHoje(r.created_at));
-
-    const agrupadosMap: any = {}; let pontosResgatados = 0;
-    resgatesHojeLista.forEach((r: any) => {
-      const nome = recompensasMap[r.recompensa_id] || 'Prêmio Excluído';
-      if (!agrupadosMap[nome]) agrupadosMap[nome] = 0;
-      agrupadosMap[nome]++; pontosResgatados += Number(r.pontos_usados);
-    });
-
-    const totalDia = vendasDiaHoje.reduce((s, v) => s + Number(v.valor), 0);
-    const clientesUnicosDia = new Set(vendasDiaHoje.map(v => v.cliente_cpf)).size;
-
-    const vendasDiaFormatada = vendasDiaHoje.map(v => ({
-      cpf: v.cliente_cpf,
-      valor: v.valor,
-      hora: parseDataSupabase(v.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-    }));
-
-    const resgatesSumarizados = Object.keys(agrupadosMap).map(nome => {
-       let pts = 0;
-       resgatesHojeLista.forEach(r => { if (recompensasMap[r.recompensa_id] === nome) pts += Number(r.pontos_usados); });
-       return { nome, qtde: agrupadosMap[nome], pontos: pts };
-    });
-
-    const resgatesListados = resgatesHojeLista.map(r => ({
-      nome: recompensasMap[r.recompensa_id] || 'Prêmio',
-      hora: parseDataSupabase(r.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-    }));
-
-    const crmMap = new Map();
-    (vendasData || []).forEach(v => { if (!crmMap.has(v.cliente_cpf)) crmMap.set(v.cliente_cpf, v); });
-
-    const crmListaFormatada = Array.from(crmMap.values()).map((v: any) => {
-      const dataVenda = parseDataSupabase(v.created_at);
-      const dataRetorno = new Date(dataVenda.getTime() + 15 * 24 * 60 * 60 * 1000);
-      const hojeObj = new Date(); hojeObj.setHours(0, 0, 0, 0);
-      const retornoObj = new Date(dataRetorno); retornoObj.setHours(0, 0, 0, 0);
-      const atrasado = hojeObj >= retornoObj;
-      return { ...v, dataVenda, dataRetorno, atrasado, timeRetorno: dataRetorno.getTime() };
-    });
-
-    crmListaFormatada.sort((a, b) => a.timeRetorno - b.timeRetorno);
-    const apenasAtrasados = crmListaFormatada.filter(c => c.atrasado);
-    setHistoricoCRM(apenasAtrasados);
-    setClientesAtrasados(apenasAtrasados.length);
-
-    setStats({
-      totalMes: vendasMes.reduce((s, v) => s + Number(v.valor), 0), 
-      totalDia, 
-      vendasCount: vendasDiaHoje.length,
-      ticketMedio: vendasDiaHoje.length ? totalDia / vendasDiaHoje.length : 0,
-      totalClientesDia: clientesUnicosDia,
-      resgatesHojeLista: resgatesHojeLista as any, 
-      resgatesAgrupados: resgatesAgrupados as any,
-      pontosResgatadosHoje: pontosResgatados, 
-      vendasDiaFormatada: vendasDiaFormatada as any,
-      resgatesSumarizados: resgatesSumarizados as any,
-      resgatesListados: resgatesListados as any,
-      ultimosResgates: resgatesHojeLista.map(r => ({ cliente_cpf: r.cliente_cpf, nome_premio: recompensasMap[r.recompensa_id] || 'Prêmio' })) as any
-    });
   };
-
   const buscarAvaliacoesERoleta = async () => {
     if (!lojaId) return;
+    
+    // Buscar da tabela 'avaliacoes' que confirmamos existir no banco
     const { data: avData } = await supabase.from('avaliacoes').select('*').eq('loja_id', lojaId).order('created_at', { ascending: false }).limit(20);
     const avs = avData || [];
-    setAvaliacoes(avs);
+    
+    setAvaliacoes(avs.map(a => ({
+      nota: a.nota,
+      comentario: a.comentario,
+      data: a.created_at,
+      cliente: a.cliente_cpf
+    })));
+
     if (avs.length > 0) setMediaEstrelas(avs.reduce((a, b) => a + b.nota, 0) / avs.length);
 
     const { data: rolData } = await supabase.from('roleta_premios').select('*').eq('loja_id', lojaId).order('probabilidade', { ascending: false });
@@ -247,14 +298,22 @@ export default function Merchant() {
     const { data: lojaData } = await supabase.from('lojas').select('senha').eq('id', lojaId).single();
 
     if (data) {
-      setConfig({
-        ...config, ...data, senha: lojaData?.senha || '', cashback_percent: String(data.cashback_percent || 0), reais_por_ponto: String(data.reais_por_ponto || 1),
+      setConfig((prev: any) => ({
+        ...prev,
+        ...data,
+        senha: lojaData?.senha || '',
+        cashback_percent: String(data.cashback_percent || 0),
+        reais_por_ponto: String(data.reais_por_ponto || 1),
         limite_resgates_diario_cliente: data.limite_resgates_diario_cliente !== null && data.limite_resgates_diario_cliente !== undefined ? String(data.limite_resgates_diario_cliente) : '',
         tempo_bloqueio_minutos: data.tempo_bloqueio_minutos !== null && data.tempo_bloqueio_minutos !== undefined ? String(data.tempo_bloqueio_minutos) : '',
-        bonus_retorno_pontos: String(data.bonus_retorno_pontos || 50), bonus_retorno_validade_dias: String(data.bonus_retorno_validade_dias || 3),
-        roleta_ativa: data.roleta_ativa || false, roleta_intervalo_dias: String(data.roleta_intervalo_dias || 1) 
-      });
-    } else { setConfig(prev => ({ ...prev, senha: lojaData?.senha || '' })); }
+        bonus_retorno_pontos: String(data.bonus_retorno_pontos || 50),
+        bonus_retorno_validade_dias: String(data.bonus_retorno_validade_dias || 3),
+        roleta_ativa: data.roleta_ativa || false,
+        roleta_intervalo_dias: String(data.roleta_intervalo_dias || 1)
+      }));
+    } else {
+      setConfig((prev: any) => ({ ...prev, senha: lojaData?.senha || '' }));
+    }
   };
 
   const iniciarRealtime = () => {
@@ -284,7 +343,19 @@ export default function Merchant() {
       iniciarRealtime();
     };
     loadAll();
-    return () => { if (channelRef.current) supabase.removeChannel(channelRef.current); if (channelResgateRef.current) supabase.removeChannel(channelResgateRef.current); };
+
+    // 🚀 SAFETY FALLBACK: Atualiza tudo a cada 30 segundos automaticamente
+    const interval = setInterval(() => {
+      buscarFila();
+      buscarStats();
+      buscarAvaliacoesERoleta();
+    }, 30000);
+
+    return () => { 
+      clearInterval(interval);
+      if (channelRef.current) supabase.removeChannel(channelRef.current); 
+      if (channelResgateRef.current) supabase.removeChannel(channelResgateRef.current); 
+    };
   }, [lojaId]);
 
   useEffect(() => {
@@ -309,11 +380,19 @@ export default function Merchant() {
       await supabase.from('checkins').delete().eq('id', id);
       Vibration.vibrate(200);
       setFila(prev => prev.filter(f => f.id !== id));
-      setValorVenda((prev: any) => ({ ...prev, [id]: '' }));
-      setUsarBonus((prev: any) => ({ ...prev, [id]: false }));
+      setValorVenda((prev: any) => { const n = { ...prev }; delete n[id]; return n; });
+      setUsarBonus((prev: any) => { const n = { ...prev }; delete n[id]; return n; });
       mostrarToast('✅ Venda registrada com sucesso!', 'sucesso');
       setTimeout(() => { buscarStats(); }, 1000);
     }
+  };
+
+  const entregarBrinde = async (idBrinde: string, cpf: string) => {
+    const { error } = await supabase.from('brindes_pendentes').update({ resgatado: true }).eq('id', idBrinde);
+    if (error) { mostrarToast('Erro ao entregar brinde.', 'erro'); return; }
+    mostrarToast('🎁 Brinde entregue!', 'sucesso');
+    buscarFinanceiroDetalhado(cpf);
+    buscarStats();
   };
 
   const atenderManual = async () => {
@@ -384,10 +463,15 @@ export default function Merchant() {
 
   const baixarQRCode = () => {
     if (qrRef.current) {
+      // Para o download, queremos uma resolução maior (aproximadamente 9cm x 9cm a 300DPI = 1063px)
+      // O react-native-qrcode-svg no web retorna o dataURL do canvas atual.
       qrRef.current.toDataURL((dataURL: string) => {
         if (Platform.OS === 'web') {
-          const link = document.createElement('a'); link.href = `data:image/png;base64,${dataURL}`; link.download = `QRCode_PalmSprings_${config.nome_loja ? config.nome_loja.replace(/\s+/g, '_') : 'Loja'}.png`; link.click();
-          mostrarToast('📥 QR Code baixado com sucesso!', 'sucesso');
+          const link = document.createElement('a'); 
+          link.href = `data:image/png;base64,${dataURL}`; 
+          link.download = `QRCode_Springs_9x9cm_${config.nome_loja ? config.nome_loja.replace(/\s+/g, '_') : 'Loja'}.png`; 
+          link.click();
+          mostrarToast('📥 QR Code pronto para impressão (9x9cm)!', 'sucesso');
         } else Alert.alert('Baixar Imagem', 'Por favor, acesse o painel pelo computador para baixar a imagem em alta qualidade.');
       });
     }
@@ -617,9 +701,13 @@ export default function Merchant() {
             
             <View style={{ flex: 1, alignItems: 'center' }}>
                <Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>{config.nome_loja?.toUpperCase() || 'LOJA PARCEIRA'}</Text>
+               <Text style={{ color: '#facc15', fontSize: 10 }}>DEBUG: ID {lojaId} | Transações: {stats.vendasCountTotal || 0} | Hoje: {stats.vendasCount}</Text>
             </View>
 
             <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center' }}>
+               <TouchableOpacity onPress={() => { buscarFila(); buscarStats(); buscarAvaliacoesERoleta(); mostrarToast('Dados Atualizados!', 'sucesso'); }} style={{ backgroundColor: '#1e293b', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#334155' }}>
+                 <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold' }}>🔄 SINCRONIZAR</Text>
+               </TouchableOpacity>
                <TouchableOpacity onPress={() => setMostrarConfig(!mostrarConfig)}><Text style={styles.headerButton}>⚙️ Configurações</Text></TouchableOpacity>
                <TouchableOpacity onPress={() => { localStorage.removeItem('@loja_id_merchant'); router.replace('/login'); }}><Text style={styles.closeText}>✕ SAIR</Text></TouchableOpacity>
             </View>
@@ -764,7 +852,9 @@ export default function Merchant() {
                       {brindes.map((b: any) => (
                         <View key={b.id} style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ec489915', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#ec489930' }}>
                           <Text style={{ color: '#ec4899', fontWeight: 'bold', fontSize: 15 }}>🏆 Brinde: {b.nome_brinde}</Text>
-                          <TouchableOpacity style={{ backgroundColor: '#ec4899', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10 }}>
+                          <TouchableOpacity 
+                            onPress={() => entregarBrinde(b.id, c.cliente_cpf)}
+                            style={{ backgroundColor: '#ec4899', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10 }}>
                             <Text style={{ color: '#fff', fontWeight: 'bold' }}>ENTREGAR</Text>
                           </TouchableOpacity>
                         </View>
@@ -778,17 +868,18 @@ export default function Merchant() {
 
           <View style={{ flexDirection: 'row', gap: 10, marginBottom: 25, flexWrap: 'wrap' }}>
              <TouchableOpacity onPress={baixarQRCode} style={[styles.card, { flex: 1, minWidth: 150, height: 260, alignItems: 'center', justifyContent: 'center' }]}>
-                <QRCode value={linkQR} size={150} getRef={(c) => (qrRef.current = c)} />
-                <Text style={{ color: '#94a3b8', fontSize: 9, fontWeight: 'bold', marginTop: 10 }}>QR DO BALCÃO</Text>
+                <QRCode value={linkQR} size={250} getRef={(c) => (qrRef.current = c)} />
+                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginTop: 15 }}>📥 BAIXAR QR DO BALCÃO (9x9cm)</Text>
              </TouchableOpacity>
 
              <View style={[styles.card, { flex: 1, minWidth: 150, height: 260 }]}>
                 <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900' }}>{stats.totalClientesDia || 0}</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>CLIENTES HOJE</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>TOP CLIENTES HOJE</Text>
                 <ScrollView nestedScrollEnabled={true}>
                    {(stats as any).vendasDiaFormatada?.map((v: any, i: number) => (
                      <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 4 }}>
-                        <Text style={{ color: '#fff', fontSize: 10 }}>{formatarTelefone(v.cpf)} <Text style={{ color: '#64748b' }}>• {v.hora}</Text></Text>
+                        <Text style={{ color: '#fff', fontSize: 10 }}>{formatarTelefone(v.cpf)}</Text>
+                        <Text style={{ color: '#64748b', fontSize: 9 }}>{v.dataHora}</Text>
                         <Text style={{ color: '#10b981', fontSize: 11, fontWeight: 'bold' }}>{formatarMoeda(Number(v.valor))}</Text>
                      </View>
                    ))}
@@ -796,8 +887,8 @@ export default function Merchant() {
              </View>
 
              <View style={[styles.card, { flex: 1, minWidth: 150, height: 260 }]}>
-                <Text style={{ color: '#38bdf8', fontSize: 24, fontWeight: '900' }}>{stats.resgatesHojeLista?.length || 0}</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>SAÍDAS ESTOQUE</Text>
+                <Text style={{ color: '#38bdf8', fontSize: 24, fontWeight: '900' }}>{stats.resgatesMesLista?.length || 0}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>ESTOQUE (MÊS)</Text>
                 <ScrollView nestedScrollEnabled={true}>
                    {(stats as any).resgatesSumarizados?.map((s: any, i: number) => (
                      <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 4 }}>
@@ -809,12 +900,13 @@ export default function Merchant() {
              </View>
 
              <View style={[styles.card, { flex: 1, minWidth: 150, height: 260 }]}>
-                <Text style={{ color: '#ec4899', fontSize: 24, fontWeight: '900' }}>{stats.resgatesHojeLista?.length || 0}</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>RESGATES (HORA)</Text>
+                <Text style={{ color: '#ec4899', fontSize: 24, fontWeight: '900' }}>{stats.resgatesMesLista?.length || 0}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>RESGATES (MÊS)</Text>
                 <ScrollView nestedScrollEnabled={true}>
                    {(stats as any).resgatesListados?.map((r: any, i: number) => (
                      <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 4 }}>
-                        <Text style={{ color: '#fff', fontSize: 10 }}>{r.hora} <Text style={{ color: '#64748b' }}>•</Text> {r.nome}</Text>
+                        <Text style={{ color: '#fff', fontSize: 10 }}>{r.nome}</Text>
+                        <Text style={{ color: '#64748b', fontSize: 9 }}>{formatarTelefone(r.telefone)} • {r.dataHora}</Text>
                      </View>
                    ))}
                 </ScrollView>
@@ -834,12 +926,21 @@ export default function Merchant() {
 
           <View style={{ flexDirection: 'row', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
              <View style={[styles.card, { flex: 1, minWidth: 280, borderColor: '#facc15' }]}>
-                <Text style={[styles.title, { color: '#facc15' }]}>⭐ Últimas Avaliações ({mediaEstrelas.toFixed(1)})</Text>
-                <ScrollView style={{ maxHeight: 120 }} nestedScrollEnabled={true}>
-                   {avaliacoes.slice(0, 5).map((av, i) => (
+                <Text style={[styles.title, { color: '#facc15' }]}>⭐ NPS & Avaliações ({mediaEstrelas.toFixed(1)})</Text>
+                <View style={{ flexDirection: 'row', gap: 4, marginBottom: 15 }}>
+                  {[1,2,3,4,5].map(star => (
+                    <View key={star} style={{ flex: 1, height: 6, backgroundColor: mediaEstrelas >= star ? '#facc15' : '#334155', borderRadius: 3 }} />
+                  ))}
+                </View>
+                <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled={true}>
+                   {avaliacoes.length === 0 && <Text style={{ color: '#64748b', fontSize: 12, fontStyle: 'italic' }}>Nenhuma avaliação recebida.</Text>}
+                   {avaliacoes.map((av, i) => (
                      <View key={i} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#334155' }}>
-                        <Text style={{ color: '#facc15', fontWeight: 'bold' }}>{"⭐".repeat(av.nota)}</Text>
-                        {av.comentario && <Text style={{ color: '#cbd5e1', fontSize: 12, fontStyle: 'italic' }}>"{av.comentario}"</Text>}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Text style={{ color: '#facc15', fontWeight: 'bold', fontSize: 12 }}>{"⭐".repeat(av.nota)}</Text>
+                          <Text style={{ color: '#64748b', fontSize: 10 }}>{formatarTelefone(av.cliente)}</Text>
+                        </View>
+                        {av.comentario && <Text style={{ color: '#cbd5e1', fontSize: 12, fontStyle: 'italic', marginTop: 4 }}>"{av.comentario}"</Text>}
                      </View>
                    ))}
                 </ScrollView>
