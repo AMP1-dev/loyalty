@@ -915,7 +915,7 @@ export default function Merchant() {
           </View>
 
           <View style={{ flexDirection: 'row', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
-             <TouchableOpacity onPress={() => setMostrarCRM(true)} style={[styles.card, { flex: 1, minWidth: 280, borderColor: '#8b5cf6', borderWidth: 1 }]}>
+             <TouchableOpacity onPress={() => setMostrarCRM(!mostrarCRM)} style={[styles.card, { flex: 1, minWidth: 280, borderColor: '#8b5cf6', borderWidth: 1 }]}>
                 <Text style={{ color: '#8b5cf6', fontSize: 32, fontWeight: '900' }}>{clientesAtrasados}</Text>
                 <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>REMARKETING</Text>
                 <Text style={{ color: '#fff', fontSize: 11, marginTop: 10, lineHeight: 16 }}>
