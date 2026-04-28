@@ -995,9 +995,9 @@ export default function Merchant() {
                              const ptsVermelho = npsChart.dias.map((d: any, i: number) => `${(i / (npsChart.dias.length - 1)) * 100},${100 - ((d.vermelho / max) * 100)}`).join(' ');
                              return (
                                <>
-                                 <Polyline points={ptsVermelho} fill="none" stroke="#ef4444" strokeWidth="2" />
-                                 <Polyline points={ptsAmarelo} fill="none" stroke="#facc15" strokeWidth="2" />
-                                 <Polyline points={ptsVerde} fill="none" stroke="#10b981" strokeWidth="2" />
+                                 <Polyline points={ptsVermelho} fill="none" stroke="#ef4444" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                                 <Polyline points={ptsAmarelo} fill="none" stroke="#facc15" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                                 <Polyline points={ptsVerde} fill="none" stroke="#10b981" strokeWidth="2" vectorEffect="non-scaling-stroke" />
                                </>
                              );
                            })()}
