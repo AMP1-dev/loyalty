@@ -701,7 +701,6 @@ export default function Merchant() {
             
             <View style={{ flex: 1, alignItems: 'center' }}>
                <Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>{config.nome_loja?.toUpperCase() || 'LOJA PARCEIRA'}</Text>
-               <Text style={{ color: '#facc15', fontSize: 10 }}>DEBUG: ID {lojaId} | Transações: {stats.vendasCountTotal || 0} | Hoje: {stats.vendasCount}</Text>
             </View>
 
             <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center' }}>
@@ -878,8 +877,8 @@ export default function Merchant() {
                 <ScrollView nestedScrollEnabled={true}>
                    {(stats as any).vendasDiaFormatada?.map((v: any, i: number) => (
                      <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 8 }}>
-                        <Text style={{ color: '#10b981', fontSize: 11, fontWeight: 'bold' }}>
-                          {formatarTelefone(v.cpf)} • {formatarMoeda(Number(v.valor))} <Text style={{ color: '#64748b', fontWeight: 'normal', fontSize: 10 }}>• {v.dataHora}</Text>
+                        <Text style={{ color: '#10b981', fontSize: 12, fontWeight: 'bold' }}>
+                          {formatarTelefone(v.cpf)} • {formatarMoeda(Number(v.valor))} <Text style={{ color: '#64748b', fontWeight: 'normal', fontSize: 11 }}>• {v.dataHora}</Text>
                         </Text>
                      </View>
                    ))}
@@ -892,7 +891,7 @@ export default function Merchant() {
                 <ScrollView nestedScrollEnabled={true}>
                    {(stats as any).resgatesSumarizados?.map((s: any, i: number) => (
                      <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 8 }}>
-                        <Text style={{ color: '#fff', fontSize: 11 }}>
+                        <Text style={{ color: '#fff', fontSize: 12 }}>
                           <Text style={{ fontWeight: 'bold', color: '#38bdf8' }}>{s.qtde}x</Text> {s.nome} • <Text style={{ color: '#94a3b8' }}>{s.pontos} SPG</Text>
                         </Text>
                      </View>
@@ -906,8 +905,8 @@ export default function Merchant() {
                 <ScrollView nestedScrollEnabled={true}>
                    {(stats as any).resgatesListados?.map((r: any, i: number) => (
                      <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 8 }}>
-                        <Text style={{ color: '#fff', fontSize: 11 }}>
-                          1x {r.nome} <Text style={{ color: '#64748b', fontSize: 10 }}>• {formatarTelefone(r.telefone)} • {r.dataHora}</Text>
+                        <Text style={{ color: '#fff', fontSize: 12 }}>
+                          1x {r.nome} <Text style={{ color: '#64748b', fontSize: 11 }}>• {formatarTelefone(r.telefone)} • {r.dataHora}</Text>
                         </Text>
                      </View>
                    ))}
