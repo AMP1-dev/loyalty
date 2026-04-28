@@ -879,9 +879,8 @@ export default function Merchant() {
                    {(stats as any).vendasDiaFormatada?.map((v: any, i: number) => (
                      <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 8 }}>
                         <Text style={{ color: '#10b981', fontSize: 11, fontWeight: 'bold' }}>
-                          {formatarTelefone(v.cpf)} • {formatarMoeda(Number(v.valor))}
+                          {formatarTelefone(v.cpf)} • {formatarMoeda(Number(v.valor))} <Text style={{ color: '#64748b', fontWeight: 'normal', fontSize: 10 }}>• {v.dataHora}</Text>
                         </Text>
-                        <Text style={{ color: '#64748b', fontSize: 10 }}>{v.dataHora}</Text>
                      </View>
                    ))}
                 </ScrollView>
@@ -908,9 +907,8 @@ export default function Merchant() {
                    {(stats as any).resgatesListados?.map((r: any, i: number) => (
                      <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 8 }}>
                         <Text style={{ color: '#fff', fontSize: 11 }}>
-                          1x {r.nome} • {r.dataHora}
+                          1x {r.nome} <Text style={{ color: '#64748b', fontSize: 10 }}>• {formatarTelefone(r.telefone)} • {r.dataHora}</Text>
                         </Text>
-                        <Text style={{ color: '#64748b', fontSize: 10 }}>{formatarTelefone(r.telefone)}</Text>
                      </View>
                    ))}
                 </ScrollView>
@@ -1037,7 +1035,7 @@ export default function Merchant() {
                 <View key={venda.id} style={styles.crmItem}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.crmTelefone}>{formatarTelefone(venda.cliente_cpf)}</Text>
-                    <Text style={styles.crmDetalhe}>Última Compra: {formatarMoeda(Number(venda.valor))} em {venda.dataVenda.toLocaleDateString('pt-BR')}</Text>
+                    <Text style={styles.crmDetalhe}>Última Compra: {formatarMoeda(Number(venda.valor))} em {parseDataSupabase(venda.created_at).toLocaleDateString('pt-BR')}</Text>
                     <Text style={[styles.crmRetorno, venda.atrasado ? { color: '#ef4444' } : { color: '#10b981' }]}>Retorno Esperado: {venda.dataRetorno.toLocaleDateString('pt-BR')}</Text>
                   </View>
                   <TouchableOpacity style={{ paddingLeft: 15 }} onPress={() => iniciarCRM(venda.cliente_cpf)}>

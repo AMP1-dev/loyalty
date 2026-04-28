@@ -39,8 +39,12 @@ export default function LoginScreen() {
       const senhaReal = lojaEncontrada.senha || '1234';
       if (senhaReal !== senha) { mostrarToast('Senha incorreta!', 'erro'); setLoading(false); return; }
 
-      if (typeof window !== 'undefined') localStorage.setItem('@loja_id_merchant', lojaEncontrada.id);
-      router.replace('/merchant');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('@loja_id_merchant', lojaEncontrada.id);
+        router.replace(`/merchant?loja_id=${lojaEncontrada.id}`);
+      } else {
+        router.replace('/merchant');
+      }
     } catch (err: any) {
       mostrarToast(`Erro: ${err.message}`, 'erro');
       setLoading(false);
