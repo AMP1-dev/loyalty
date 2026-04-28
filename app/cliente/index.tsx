@@ -37,6 +37,7 @@ export default function Cliente() {
   const[recompensas, setRecompensas] = useState<any[]>([]);
   const [recompensasRede, setRecompensasRede] = useState<any[]>([]); 
   const [resgatados, setResgatados] = useState<string[]>([]);
+  const [resgatesHoje, setResgatesHoje] = useState(0);
   const[banners, setBanners] = useState<any[]>([]); 
 
   const[mostrarExtrato, setMostrarExtrato] = useState(false);
@@ -180,6 +181,12 @@ export default function Cliente() {
     const usadosGlobal = (res ||[]).reduce((a, r) => a + (r.pontos_usados || 0), 0);
     setSaldo(totalGlobal - usadosGlobal);
     setResgatados((res ||[]).map((r) => String(r.recompensa_id)));
+    
+    // Contagem de resgates diários para limite
+    const hojeStr = new Date().toDateString();
+    const qtdHoje = (res ||[]).filter(r => new Date(r.created_at).toDateString() === hojeStr).length;
+    setResgatesHoje(qtdHoje);
+
     setCashback((cash ||[]).filter(c => c.usado === false).reduce((s, c) => s + Number(c.valor), 0));
 
     // 🔥 SALDO LOCAL (Apenas da Loja Logada)
@@ -294,7 +301,17 @@ export default function Cliente() {
   };
 
   const getEstado = (r: any) => {
-    if (resgatados.includes(String(r.id))) return { t: 'RESGATADO', d: true, c: c.borda }; 
+    // Validação de Limite por Cliente (Se existir limite e o cliente já atingiu)
+    if (r.limite_por_cliente > 0) {
+      const qtdResgatada = resgatados.filter(id => id === String(r.id)).length;
+      if (qtdResgatada >= r.limite_por_cliente) return { t: 'LIMITE ATINGIDO', d: true, c: c.borda };
+    }
+    
+    // Validação de Limite Diário Geral da Loja
+    if (configLoja?.limite_resgates_diario_cliente > 0 && resgatesHoje >= configLoja.limite_resgates_diario_cliente) {
+      return { t: 'LIMITE DIÁRIO', d: true, c: c.borda };
+    }
+
     // 🔥 VALIDAÇÃO PELO SALDO LOCAL DA LOJA (Regra atual da rede)
     if (saldoLocal < r.custo_pontos) return { t: 'SEM SALDO', d: true, c: c.borda }; 
     return { t: 'RESGATAR', d: false, c: '#10b981' }; 
