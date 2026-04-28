@@ -25,6 +25,7 @@ export default function Merchant() {
   const channelRef = useRef<any>(null);
   const channelResgateRef = useRef<any>(null);
   const qrRef = useRef<any>(null);
+  const qrDownloadRef = useRef<any>(null);
   const mainScrollRef = useRef<ScrollView>(null);
   const manualInputRef = useRef<View>(null);
 
@@ -493,16 +494,15 @@ export default function Merchant() {
   };
 
   const baixarQRCode = () => {
-    if (qrRef.current) {
-      // Para o download, queremos uma resolução maior (aproximadamente 9cm x 9cm a 300DPI = 1063px)
-      // O react-native-qrcode-svg no web retorna o dataURL do canvas atual.
-      qrRef.current.toDataURL((dataURL: string) => {
+    if (qrDownloadRef.current) {
+      // Usando o ref do QR Code oculto em alta resolução (1181px = 10x10cm a 300dpi)
+      qrDownloadRef.current.toDataURL((dataURL: string) => {
         if (Platform.OS === 'web') {
           const link = document.createElement('a'); 
           link.href = `data:image/png;base64,${dataURL}`; 
-          link.download = `QRCode_Springs_9x9cm_${config.nome_loja ? config.nome_loja.replace(/\s+/g, '_') : 'Loja'}.png`; 
+          link.download = `QRCode_Springs_10x10cm_${config.nome_loja ? config.nome_loja.replace(/\s+/g, '_') : 'Loja'}.png`; 
           link.click();
-          mostrarToast('📥 QR Code pronto para impressão (9x9cm)!', 'sucesso');
+          mostrarToast('📥 QR Code pronto para impressão (10x10cm)!', 'sucesso');
         } else Alert.alert('Baixar Imagem', 'Por favor, acesse o painel pelo computador para baixar a imagem em alta qualidade.');
       });
     }
@@ -899,8 +899,12 @@ export default function Merchant() {
           <View style={{ flexDirection: 'row', gap: 10, marginBottom: 25, flexWrap: 'wrap' }}>
              <TouchableOpacity onPress={baixarQRCode} style={[styles.card, { flex: 1, minWidth: 250, height: 260, alignItems: 'center', justifyContent: 'center' }]}>
                 <QRCode value={linkQR} size={250} getRef={(c) => (qrRef.current = c)} />
-                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginTop: 15 }}>📥 BAIXAR QR DO BALCÃO (9x9cm)</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginTop: 15 }}>📥 BAIXAR QR DO BALCÃO (10x10cm)</Text>
              </TouchableOpacity>
+
+             <View style={{ position: 'absolute', opacity: 0, left: -9999 }}>
+                <QRCode value={linkQR} size={1181} getRef={(c) => (qrDownloadRef.current = c)} />
+             </View>
 
              <View style={[styles.card, { flex: 1, minWidth: 250, height: 260 }]}>
                 <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900' }}>{stats.totalClientesDia || 0}</Text>
