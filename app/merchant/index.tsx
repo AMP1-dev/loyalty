@@ -308,9 +308,14 @@ export default function Merchant() {
       
       let nota = av.nota;
       if (!nota && av.resposta) {
-        if (av.resposta === 'Positivo') nota = 5;
-        else if (av.resposta === 'Neutro') nota = 3;
-        else if (av.resposta === 'Negativo') nota = 1;
+        if (!isNaN(Number(av.resposta))) {
+          nota = Number(av.resposta);
+        } else {
+          const rLow = av.resposta.toLowerCase();
+          if (rLow === 'sim' || rLow === 'positivo') nota = 5;
+          else if (rLow === 'neutro') nota = 3;
+          else if (rLow === 'nao' || rLow === 'negativo') nota = 1;
+        }
       }
 
       if (agrupadosPorDia[diaStr] && nota) {
@@ -334,9 +339,14 @@ export default function Merchant() {
     avs.forEach(av => {
       let nota = av.nota;
       if (!nota && av.resposta) {
-        if (av.resposta === 'Positivo') nota = 5;
-        else if (av.resposta === 'Neutro') nota = 3;
-        else if (av.resposta === 'Negativo') nota = 1;
+        if (!isNaN(Number(av.resposta))) {
+          nota = Number(av.resposta);
+        } else {
+          const rLow = av.resposta.toLowerCase();
+          if (rLow === 'sim' || rLow === 'positivo') nota = 5;
+          else if (rLow === 'neutro') nota = 3;
+          else if (rLow === 'nao' || rLow === 'negativo') nota = 1;
+        }
       }
       if (nota) { sumNotas += nota; countNotas++; }
     });
