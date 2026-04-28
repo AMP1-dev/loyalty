@@ -208,7 +208,7 @@ export default function Merchant() {
       const clientesUnicosHoje = new Set(vendasHoje.map((v: any) => v.cliente_cpf)).size;
 
       const vendasDiaFormatada = vendasHoje.slice(0, 30).map((v: any) => ({
-        cpf: v.cliente_cpf, valor: Number(v.valor || 0), dataHora: parseDataSupabase(v.created_at).toLocaleString('pt-BR')
+        cpf: v.cliente_cpf, valor: Number(v.valor || 0), dataHora: parseDataSupabase(v.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
       }));
 
       const { data: resgatesData } = await supabase.from('resgates').select('*').eq('loja_id', lojaId).order('created_at', { ascending: false });
@@ -237,8 +237,8 @@ export default function Merchant() {
       resgatesHojeLista.forEach((r: any) => { pontosResgatadosHoje += Number(r.pontos_usados || 0); });
 
       const resgatesSumarizados = Object.values(agrupados);
-      const resgatesListados = resgatesMesLista.slice(0, 50).map((r: any) => ({
-        nome: recompensasMap[r.recompensa_id] || 'Prêmio', telefone: r.cliente_cpf, dataHora: parseDataSupabase(r.created_at).toLocaleString('pt-BR')
+      const resgatesListados = resgatesHojeLista.slice(0, 50).map((r: any) => ({
+        nome: recompensasMap[r.recompensa_id] || 'Prêmio', telefone: r.cliente_cpf, dataHora: parseDataSupabase(r.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
       }));
 
       const ultimosResgates = resgates.slice(0, 5).map((r: any) => ({
@@ -874,13 +874,14 @@ export default function Merchant() {
 
              <View style={[styles.card, { flex: 1, minWidth: 150, height: 260 }]}>
                 <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900' }}>{stats.totalClientesDia || 0}</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>TOP CLIENTES HOJE</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>CLIENTES HOJE</Text>
                 <ScrollView nestedScrollEnabled={true}>
                    {(stats as any).vendasDiaFormatada?.map((v: any, i: number) => (
-                     <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 4 }}>
-                        <Text style={{ color: '#fff', fontSize: 10 }}>{formatarTelefone(v.cpf)}</Text>
-                        <Text style={{ color: '#64748b', fontSize: 9 }}>{v.dataHora}</Text>
-                        <Text style={{ color: '#10b981', fontSize: 11, fontWeight: 'bold' }}>{formatarMoeda(Number(v.valor))}</Text>
+                     <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 8 }}>
+                        <Text style={{ color: '#10b981', fontSize: 11, fontWeight: 'bold' }}>
+                          {formatarTelefone(v.cpf)} • {formatarMoeda(Number(v.valor))}
+                        </Text>
+                        <Text style={{ color: '#64748b', fontSize: 10 }}>{v.dataHora}</Text>
                      </View>
                    ))}
                 </ScrollView>
@@ -888,25 +889,28 @@ export default function Merchant() {
 
              <View style={[styles.card, { flex: 1, minWidth: 150, height: 260 }]}>
                 <Text style={{ color: '#38bdf8', fontSize: 24, fontWeight: '900' }}>{stats.resgatesMesLista?.length || 0}</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>ESTOQUE (MÊS)</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>SAÍDAS ESTOQUE (MÊS)</Text>
                 <ScrollView nestedScrollEnabled={true}>
                    {(stats as any).resgatesSumarizados?.map((s: any, i: number) => (
-                     <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 4 }}>
-                        <Text style={{ color: '#fff', fontSize: 10 }}>{s.qtde}x {s.nome}</Text>
-                        <Text style={{ color: '#38bdf8', fontSize: 11, fontWeight: 'bold' }}>{s.pontos} Springs</Text>
+                     <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 8 }}>
+                        <Text style={{ color: '#fff', fontSize: 11 }}>
+                          <Text style={{ fontWeight: 'bold', color: '#38bdf8' }}>{s.qtde}x</Text> {s.nome} • <Text style={{ color: '#94a3b8' }}>{s.pontos} SPG</Text>
+                        </Text>
                      </View>
                    ))}
                 </ScrollView>
              </View>
 
              <View style={[styles.card, { flex: 1, minWidth: 150, height: 260 }]}>
-                <Text style={{ color: '#ec4899', fontSize: 24, fontWeight: '900' }}>{stats.resgatesMesLista?.length || 0}</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>RESGATES (MÊS)</Text>
+                <Text style={{ color: '#ec4899', fontSize: 24, fontWeight: '900' }}>{stats.resgatesHojeLista?.length || 0}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>RESGATES (HOJE)</Text>
                 <ScrollView nestedScrollEnabled={true}>
                    {(stats as any).resgatesListados?.map((r: any, i: number) => (
-                     <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 4 }}>
-                        <Text style={{ color: '#fff', fontSize: 10 }}>{r.nome}</Text>
-                        <Text style={{ color: '#64748b', fontSize: 9 }}>{formatarTelefone(r.telefone)} • {r.dataHora}</Text>
+                     <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 8 }}>
+                        <Text style={{ color: '#fff', fontSize: 11 }}>
+                          1x {r.nome} • {r.dataHora}
+                        </Text>
+                        <Text style={{ color: '#64748b', fontSize: 10 }}>{formatarTelefone(r.telefone)}</Text>
                      </View>
                    ))}
                 </ScrollView>
