@@ -773,147 +773,152 @@ export default function Merchant() {
           </View>
 
            <View style={{ gap: 15, marginBottom: 25 }}>
-             <View style={{ flexDirection: 'row', gap: 15, alignItems: 'stretch' }}>
-                <View style={[styles.card, { flex: 3, backgroundColor: '#020617', padding: 20, height: 130, justifyContent: 'center', borderColor: '#10b981', borderWidth: 2 }]}>
-                   {clienteAtual ? (
-                     <>
-                       <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 4 }}>ATENDENDO AGORA:</Text>
-                       <Text style={{ color: '#fff', fontSize: 48, fontWeight: '900', letterSpacing: -1 }}>{formatarTelefone(clienteAtual.cliente_cpf)}</Text>
-                       <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
-                         <Text style={{ color: '#10b981', fontSize: 12, fontWeight: 'bold' }}>✨ {Math.floor(cashbacks[clienteAtual.cliente_cpf]?.pontos || 0)} SPG</Text>
-                         <Text style={{ color: '#facc15', fontSize: 12, fontWeight: 'bold' }}>💰 R$ {(cashbacks[clienteAtual.cliente_cpf]?.total || 0).toFixed(2)} CB</Text>
-                       </View>
-                     </>
-                   ) : (
-                     <Text style={{ color: '#64748b', fontSize: 24, textAlign: 'center', fontWeight: 'bold' }}>AGUARDANDO FILA...</Text>
-                   )}
+             <View style={{ flexDirection: 'row', gap: 15, alignItems: 'stretch', flexWrap: 'wrap' }}>
+                
+                {/* COLUNA 1: Atendimento e Fila */}
+                <View style={{ flex: 2, minWidth: 320, gap: 15 }}>
+                  <View style={[styles.card, { flex: 1, backgroundColor: '#020617', padding: 20, minHeight: 130, justifyContent: 'center', borderColor: '#10b981', borderWidth: 2 }]}>
+                     {clienteAtual ? (
+                       <>
+                         <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 4 }}>ATENDENDO AGORA:</Text>
+                         <Text style={{ color: '#fff', fontSize: 48, fontWeight: '900', letterSpacing: -1 }}>{formatarTelefone(clienteAtual.cliente_cpf)}</Text>
+                         <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                           <Text style={{ color: '#10b981', fontSize: 12, fontWeight: 'bold' }}>✨ {Math.floor(cashbacks[clienteAtual.cliente_cpf]?.pontos || 0)} SPG</Text>
+                           <Text style={{ color: '#facc15', fontSize: 12, fontWeight: 'bold' }}>💰 R$ {(cashbacks[clienteAtual.cliente_cpf]?.total || 0).toFixed(2)} CB</Text>
+                         </View>
+                       </>
+                     ) : (
+                       <Text style={{ color: '#64748b', fontSize: 24, textAlign: 'center', fontWeight: 'bold' }}>AGUARDANDO FILA...</Text>
+                     )}
+                  </View>
+                  <View style={[styles.card, { flex: 1, padding: 20, backgroundColor: '#0f172a', minHeight: 150, borderColor: '#334155', borderWidth: 1 }]}>
+                    <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold', marginBottom: 10 }}>👥 PRÓXIMOS DA FILA</Text>
+                    <ScrollView nestedScrollEnabled={true}>
+                      {fila.filter(c => c.id !== (clienteAtual?.id)).length === 0 ? (
+                         <Text style={{ color: '#334155', fontSize: 12, fontStyle: 'italic', marginTop: 10 }}>Ninguém aguardando...</Text>
+                      ) : (
+                         fila.filter(c => c.id !== (clienteAtual?.id)).map((c, i) => (
+                           <TouchableOpacity 
+                              key={c.id} 
+                              onPress={() => setClienteFocadoId(c.id)}
+                              style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1e293b', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Text style={{ color: '#cbd5e1', fontSize: 14, fontWeight: 'bold' }}>{i + 2}º • {formatarTelefone(c.cliente_cpf)}</Text>
+                              <Text style={{ color: '#38bdf8', fontSize: 10, fontWeight: 'bold' }}>PUXAR ⬆️</Text>
+                           </TouchableOpacity>
+                         ))
+                      )}
+                    </ScrollView>
+                  </View>
                 </View>
 
-                <View style={[styles.card, { flex: 2.5, backgroundColor: '#020617', padding: 15, height: 130, justifyContent: 'center', borderColor: '#10b981', borderWidth: 1 }]}>
-                   <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 'bold', position: 'absolute', top: 15, left: 15 }}>VALOR DA VENDA (R$):</Text>
-                   <TextInput
-                     placeholder="R$ 0,00"
-                     placeholderTextColor="#1e293b"
-                     keyboardType="numeric"
-                     value={clienteAtual ? (valorVenda[clienteAtual.id] ? (parseInt(valorVenda[clienteAtual.id], 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '') : ''}
-                     onChangeText={(t) => {
-                       if (clienteAtual) setValorVenda({ ...valorVenda, [clienteAtual.id]: t.replace(/\D/g, '') });
-                     }}
-                     onSubmitEditing={() => { if (clienteAtual) atender(clienteAtual.id); }}
-                     style={{ color: '#10b981', fontSize: 64, fontWeight: '900', textAlign: 'right', width: '100%', height: '100%', outlineStyle: 'none', borderWidth: 0 } as any}
-                   />
-                </View>
-
-                <TouchableOpacity 
-                  onPress={() => clienteAtual && atender(clienteAtual.id)}
-                  style={[styles.card, { flex: 1.2, minWidth: 150, backgroundColor: clienteAtual ? '#10b981' : '#334155', height: 130, alignItems: 'center', justifyContent: 'center' }]}>
-                   <Text style={{ color: '#0f172a', fontWeight: 'bold', fontSize: 20 }}>ATENDER</Text>
-                </TouchableOpacity>
-             </View>
-
-              <View style={{ flexDirection: 'row', gap: 15, alignItems: 'stretch', flexWrap: 'wrap' }}>
-                 <View style={[styles.card, { flex: 1.2, minWidth: 320, padding: 25, backgroundColor: '#1e293b', minHeight: 200, justifyContent: 'space-between' }]}>
-                  <View>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text style={{ color: '#10b981', fontSize: 42, fontWeight: '900' }}>{formatarMoeda(stats.totalMes)}</Text>
-                      <View style={{ alignItems: 'flex-end' }}>
-                         <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold' }}>{new Date().toLocaleDateString('pt-BR')} {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
-                         <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>DATA E HORA ATUAL</Text>
-                      </View>
-                    </View>
-                    <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold', marginTop: 4 }}>TOTAL DO MÊS</Text>
+                {/* COLUNA 2: Valor e Estatísticas */}
+                <View style={{ flex: 2, minWidth: 320, gap: 15 }}>
+                  <View style={[styles.card, { backgroundColor: '#020617', padding: 15, minHeight: 130, justifyContent: 'center', borderColor: '#10b981', borderWidth: 1 }]}>
+                     <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 'bold', position: 'absolute', top: 15, left: 15 }}>VALOR DA VENDA (R$):</Text>
+                     <TextInput
+                       placeholder="R$ 0,00"
+                       placeholderTextColor="#1e293b"
+                       keyboardType="numeric"
+                       value={clienteAtual ? (valorVenda[clienteAtual.id] ? (parseInt(valorVenda[clienteAtual.id], 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '') : ''}
+                       onChangeText={(t) => {
+                         if (clienteAtual) setValorVenda({ ...valorVenda, [clienteAtual.id]: t.replace(/\D/g, '') });
+                       }}
+                       onSubmitEditing={() => { if (clienteAtual) atender(clienteAtual.id); }}
+                       style={{ color: '#10b981', fontSize: 64, fontWeight: '900', textAlign: 'right', width: '100%', height: '100%', outlineStyle: 'none', borderWidth: 0 } as any}
+                     />
                   </View>
-                  
-                  <View style={{ height: 1, backgroundColor: '#334155', marginVertical: 15 }} />
-                  
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 15 }}>
-                      <View style={{ flex: 1, minWidth: 100 }}>
-                        <Text style={{ color: '#38bdf8', fontSize: 32, fontWeight: '900' }}>{stats.vendasCount}</Text>
-                        <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>ATENDIDOS HOJE</Text>
-                      </View>
-                      <View style={{ flex: 1.5, alignItems: 'center' }}>
-                        <Text style={{ color: '#10b981', fontSize: 32, fontWeight: '900' }}>{formatarMoeda(stats.totalDia)}</Text>
-                        <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>TOTAL DO DIA</Text>
-                      </View>
-                      <View style={{ flex: 1.5, alignItems: 'flex-end' }}>
-                        <Text style={{ color: '#38bdf8', fontSize: 32, fontWeight: '900' }}>{formatarMoeda(stats.ticketMedio)}</Text>
-                        <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>TICKET MÉDIO</Text>
-                      </View>
-                  </View>
-               </View>
-
-               {/* NOVO CARD DA FILA */}
-               <View style={[styles.card, { flex: 0.8, minWidth: 250, padding: 20, backgroundColor: '#0f172a', minHeight: 200, borderColor: '#334155', borderWidth: 1 }]}>
-                 <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold', marginBottom: 10 }}>👥 PRÓXIMOS DA FILA</Text>
-                 <ScrollView nestedScrollEnabled={true}>
-                   {fila.filter(c => c.id !== (clienteAtual?.id)).length === 0 ? (
-                      <Text style={{ color: '#334155', fontSize: 12, fontStyle: 'italic', marginTop: 10 }}>Ninguém aguardando...</Text>
-                   ) : (
-                      fila.filter(c => c.id !== (clienteAtual?.id)).map((c, i) => (
-                        <TouchableOpacity 
-                           key={c.id} 
-                           onPress={() => setClienteFocadoId(c.id)}
-                           style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1e293b', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                           <Text style={{ color: '#cbd5e1', fontSize: 14, fontWeight: 'bold' }}>{i + 2}º • {formatarTelefone(c.cliente_cpf)}</Text>
-                           <Text style={{ color: '#38bdf8', fontSize: 10, fontWeight: 'bold' }}>PUXAR ⬆️</Text>
-                        </TouchableOpacity>
-                      ))
-                   )}
-                 </ScrollView>
-               </View>
-
-               <View style={[styles.card, { flex: 1, minWidth: 320, padding: 25, backgroundColor: '#1e293b', minHeight: 200 }]}>
-                  {clienteAtual && valorVenda[clienteAtual.id] ? (
-                    <View style={{ height: '100%', justifyContent: 'space-between' }}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ color: '#facc15', fontSize: 12, fontWeight: 'bold', marginBottom: 15 }}>💡 DETALHES DA COMPRA:</Text>
-                        
-                        <View style={{ gap: 12 }}>
-                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Text style={{ color: '#94a3b8', fontSize: 16 }}>Valor da Venda:</Text>
-                              <Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>{formatarMoeda(parseInt(valorVenda[clienteAtual.id], 10) / 100)}</Text>
-                           </View>
-
-                           {(() => {
-                              const cpf = clienteAtual.cliente_cpf;
-                              const valorReal = parseInt(valorVenda[clienteAtual.id], 10) / 100;
-                              const cb_total = cashbacks[cpf]?.total || 0;
-                              const cb_proximo = cashbacks[cpf]?.proximo || 0;
-                              const usarCb = config.usar_cashback_total ? cb_total : cb_proximo;
-                              const limiteCb = valorReal * (Number(config.cashback_limite_uso_percent) / 100);
-                              const cashbackUsado = Math.min(Math.min(valorReal, limiteCb), usarCb);
-                              const aPagar = valorReal - cashbackUsado;
-                              const base = config.pontos_sobre_valor_bruto ? valorReal : aPagar;
-                              const pts = Math.floor(base / (Number(config.reais_por_ponto) || 1));
-
-                              return (
-                                <>
-                                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                     <Text style={{ color: '#facc15', fontSize: 16 }}>Cashback Utilizado:</Text>
-                                     <Text style={{ color: '#facc15', fontSize: 24, fontWeight: 'bold' }}>- {formatarMoeda(cashbackUsado)}</Text>
-                                  </View>
-
-                                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#38bdf815', padding: 10, borderRadius: 10 }}>
-                                     <Text style={{ color: '#38bdf8', fontSize: 16 }}>Você ganha nesta compra:</Text>
-                                     <Text style={{ color: '#38bdf8', fontSize: 24, fontWeight: '900' }}>+ {pts} Springs</Text>
-                                  </View>
-                                  
-                                  <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'flex-end', marginTop: 10 }}>
-                                    <Text style={{ color: '#10b981', fontSize: 84, fontWeight: '900', lineHeight: 84 }}>{formatarMoeda(aPagar)}</Text>
-                                    <Text style={{ color: '#94a3b8', fontSize: 14, fontWeight: 'bold' }}>VALOR FINAL A PAGAR</Text>
-                                  </View>
-                                </>
-                              );
-                           })()}
+                  <View style={[styles.card, { flex: 1, padding: 25, backgroundColor: '#1e293b', minHeight: 150, justifyContent: 'space-between' }]}>
+                    <View>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={{ color: '#10b981', fontSize: 32, fontWeight: '900' }}>{formatarMoeda(stats.totalMes)}</Text>
+                        <View style={{ alignItems: 'flex-end' }}>
+                           <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>{new Date().toLocaleDateString('pt-BR')} {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
+                           <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>ATUALIZAÇÃO</Text>
                         </View>
                       </View>
+                      <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold', marginTop: 4 }}>TOTAL DO MÊS</Text>
                     </View>
-                  ) : (
-                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ color: '#64748b', fontSize: 18, textAlign: 'center' }}>Digite um valor para ver o resumo da venda...</Text>
+                    
+                    <View style={{ height: 1, backgroundColor: '#334155', marginVertical: 15 }} />
+                    
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 15 }}>
+                        <View style={{ flex: 1, minWidth: 80 }}>
+                          <Text style={{ color: '#38bdf8', fontSize: 24, fontWeight: '900' }}>{stats.vendasCount}</Text>
+                          <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>HOJE</Text>
+                        </View>
+                        <View style={{ flex: 1.5, alignItems: 'center' }}>
+                          <Text style={{ color: '#10b981', fontSize: 24, fontWeight: '900' }}>{formatarMoeda(stats.totalDia)}</Text>
+                          <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>TOTAL DO DIA</Text>
+                        </View>
+                        <View style={{ flex: 1.5, alignItems: 'flex-end' }}>
+                          <Text style={{ color: '#38bdf8', fontSize: 24, fontWeight: '900' }}>{formatarMoeda(stats.ticketMedio)}</Text>
+                          <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>TICKET MÉDIO</Text>
+                        </View>
                     </View>
-                  )}
-               </View>
+                  </View>
+                </View>
+
+                {/* COLUNA 3: Botão Atender e Detalhes da Compra */}
+                <View style={{ flex: 1.5, minWidth: 250, gap: 15 }}>
+                  <TouchableOpacity 
+                    onPress={() => clienteAtual && atender(clienteAtual.id)}
+                    style={[styles.card, { backgroundColor: clienteAtual ? '#10b981' : '#334155', minHeight: 130, alignItems: 'center', justifyContent: 'center' }]}>
+                     <Text style={{ color: '#0f172a', fontWeight: 'bold', fontSize: 20 }}>ATENDER</Text>
+                  </TouchableOpacity>
+                  <View style={[styles.card, { flex: 1, padding: 25, backgroundColor: '#1e293b', minHeight: 150 }]}>
+                     {clienteAtual && valorVenda[clienteAtual.id] ? (
+                       <View style={{ height: '100%', justifyContent: 'space-between' }}>
+                         <View style={{ flex: 1 }}>
+                           <Text style={{ color: '#facc15', fontSize: 12, fontWeight: 'bold', marginBottom: 15 }}>💡 DETALHES DA COMPRA:</Text>
+                           
+                           <View style={{ gap: 12 }}>
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                 <Text style={{ color: '#94a3b8', fontSize: 14 }}>Valor da Venda:</Text>
+                                 <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{formatarMoeda(parseInt(valorVenda[clienteAtual.id], 10) / 100)}</Text>
+                              </View>
+   
+                              {(() => {
+                                 const cpf = clienteAtual.cliente_cpf;
+                                 const valorReal = parseInt(valorVenda[clienteAtual.id], 10) / 100;
+                                 const cb_total = cashbacks[cpf]?.total || 0;
+                                 const cb_proximo = cashbacks[cpf]?.proximo || 0;
+                                 const usarCb = config.usar_cashback_total ? cb_total : cb_proximo;
+                                 const limiteCb = valorReal * (Number(config.cashback_limite_uso_percent) / 100);
+                                 const cashbackUsado = Math.min(Math.min(valorReal, limiteCb), usarCb);
+                                 const aPagar = valorReal - cashbackUsado;
+                                 const base = config.pontos_sobre_valor_bruto ? valorReal : aPagar;
+                                 const pts = Math.floor(base / (Number(config.reais_por_ponto) || 1));
+   
+                                 return (
+                                   <>
+                                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <Text style={{ color: '#facc15', fontSize: 14 }}>Cashback:</Text>
+                                        <Text style={{ color: '#facc15', fontSize: 18, fontWeight: 'bold' }}>- {formatarMoeda(cashbackUsado)}</Text>
+                                     </View>
+   
+                                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#38bdf815', padding: 10, borderRadius: 10 }}>
+                                        <Text style={{ color: '#38bdf8', fontSize: 12 }}>Ganha agora:</Text>
+                                        <Text style={{ color: '#38bdf8', fontSize: 16, fontWeight: '900' }}>+ {pts} SPG</Text>
+                                     </View>
+                                     
+                                     <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'flex-end', marginTop: 10 }}>
+                                       <Text style={{ color: '#10b981', fontSize: 42, fontWeight: '900', lineHeight: 42 }}>{formatarMoeda(aPagar)}</Text>
+                                       <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold' }}>VALOR FINAL A PAGAR</Text>
+                                     </View>
+                                   </>
+                                 );
+                              })()}
+                           </View>
+                         </View>
+                       </View>
+                     ) : (
+                       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                         <Text style={{ color: '#64748b', fontSize: 16, textAlign: 'center' }}>Digite um valor para ver o resumo...</Text>
+                       </View>
+                     )}
+                  </View>
+                </View>
+
              </View>
 
              {clienteAtual && [clienteAtual].map((c) => {
