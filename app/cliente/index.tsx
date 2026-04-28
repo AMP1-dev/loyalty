@@ -295,8 +295,8 @@ export default function Cliente() {
 
   const getEstado = (r: any) => {
     if (resgatados.includes(String(r.id))) return { t: 'RESGATADO', d: true, c: c.borda }; 
-    // 🔥 VALIDAÇÃO PELO SALDO LOCAL DA LOJA
-    if (saldoLocal < r.custo_pontos) return { t: 'SEM SALDO', d: true, c: c.borda }; 
+    // 🔥 VALIDAÇÃO PELO SALDO GLOBAL DA REDE (Permite usar pontos de outras lojas)
+    if (saldo < r.custo_pontos) return { t: 'SEM SALDO', d: true, c: c.borda }; 
     return { t: 'RESGATAR', d: false, c: '#10b981' }; 
   };
 
