@@ -32,6 +32,7 @@ export default function Merchant() {
 
   const [lojaId, setLojaId] = useState<string>('');
   const [fila, setFila] = useState<any[]>([]);
+  const [clienteFocadoId, setClienteFocadoId] = useState<string | null>(null);
 
   const [toast, setToast] = useState({ visible: false, message: '', tipo: 'sucesso' });
   const toastAnim = useRef(new Animated.Value(-150)).current;
@@ -564,6 +565,8 @@ export default function Merchant() {
 
   const linkQR = `https://springs.amp.ia.br/cliente?loja_id=${lojaId}`;
 
+  const clienteAtual = clienteFocadoId ? fila.find(c => c.id === clienteFocadoId) || fila[0] : fila[0];
+
   if (!lojaId) return <View style={styles.center}><Text style={{ color: '#fff' }}>Carregando Loja...</Text></View>;
 
   return (
@@ -769,47 +772,47 @@ export default function Merchant() {
             </View>
           </View>
 
-          <View style={{ gap: 15, marginBottom: 25 }}>
-            <View style={{ flexDirection: 'row', gap: 15, alignItems: 'stretch' }}>
-               <View style={[styles.card, { flex: 3, backgroundColor: '#020617', padding: 20, height: 130, justifyContent: 'center', borderColor: '#10b981', borderWidth: 2 }]}>
-                  {fila.length > 0 ? (
-                    <>
-                      <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 4 }}>ATENDENDO AGORA:</Text>
-                      <Text style={{ color: '#fff', fontSize: 48, fontWeight: '900', letterSpacing: -1 }}>{formatarTelefone(fila[0].cliente_cpf)}</Text>
-                      <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
-                        <Text style={{ color: '#10b981', fontSize: 12, fontWeight: 'bold' }}>✨ {Math.floor(cashbacks[fila[0].cliente_cpf]?.pontos || 0)} SPG</Text>
-                        <Text style={{ color: '#facc15', fontSize: 12, fontWeight: 'bold' }}>💰 R$ {(cashbacks[fila[0].cliente_cpf]?.total || 0).toFixed(2)} CB</Text>
-                      </View>
-                    </>
-                  ) : (
-                    <Text style={{ color: '#64748b', fontSize: 24, textAlign: 'center', fontWeight: 'bold' }}>AGUARDANDO FILA...</Text>
-                  )}
-               </View>
+           <View style={{ gap: 15, marginBottom: 25 }}>
+             <View style={{ flexDirection: 'row', gap: 15, alignItems: 'stretch' }}>
+                <View style={[styles.card, { flex: 3, backgroundColor: '#020617', padding: 20, height: 130, justifyContent: 'center', borderColor: '#10b981', borderWidth: 2 }]}>
+                   {clienteAtual ? (
+                     <>
+                       <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 4 }}>ATENDENDO AGORA:</Text>
+                       <Text style={{ color: '#fff', fontSize: 48, fontWeight: '900', letterSpacing: -1 }}>{formatarTelefone(clienteAtual.cliente_cpf)}</Text>
+                       <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                         <Text style={{ color: '#10b981', fontSize: 12, fontWeight: 'bold' }}>✨ {Math.floor(cashbacks[clienteAtual.cliente_cpf]?.pontos || 0)} SPG</Text>
+                         <Text style={{ color: '#facc15', fontSize: 12, fontWeight: 'bold' }}>💰 R$ {(cashbacks[clienteAtual.cliente_cpf]?.total || 0).toFixed(2)} CB</Text>
+                       </View>
+                     </>
+                   ) : (
+                     <Text style={{ color: '#64748b', fontSize: 24, textAlign: 'center', fontWeight: 'bold' }}>AGUARDANDO FILA...</Text>
+                   )}
+                </View>
 
-               <View style={[styles.card, { flex: 2.5, backgroundColor: '#020617', padding: 15, height: 130, justifyContent: 'center', borderColor: '#10b981', borderWidth: 1 }]}>
-                  <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 'bold', position: 'absolute', top: 15, left: 15 }}>VALOR DA VENDA (R$):</Text>
-                  <TextInput
-                    placeholder="R$ 0,00"
-                    placeholderTextColor="#1e293b"
-                    keyboardType="numeric"
-                    value={fila.length > 0 ? (valorVenda[fila[0].id] ? (parseInt(valorVenda[fila[0].id], 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '') : ''}
-                    onChangeText={(t) => {
-                      if (fila.length > 0) setValorVenda({ ...valorVenda, [fila[0].id]: t.replace(/\D/g, '') });
-                    }}
-                    onSubmitEditing={() => { if (fila.length > 0) atender(fila[0].id); }}
-                    style={{ color: '#10b981', fontSize: 64, fontWeight: '900', textAlign: 'right', width: '100%', height: '100%', outlineStyle: 'none', borderWidth: 0 } as any}
-                  />
-               </View>
+                <View style={[styles.card, { flex: 2.5, backgroundColor: '#020617', padding: 15, height: 130, justifyContent: 'center', borderColor: '#10b981', borderWidth: 1 }]}>
+                   <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 'bold', position: 'absolute', top: 15, left: 15 }}>VALOR DA VENDA (R$):</Text>
+                   <TextInput
+                     placeholder="R$ 0,00"
+                     placeholderTextColor="#1e293b"
+                     keyboardType="numeric"
+                     value={clienteAtual ? (valorVenda[clienteAtual.id] ? (parseInt(valorVenda[clienteAtual.id], 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '') : ''}
+                     onChangeText={(t) => {
+                       if (clienteAtual) setValorVenda({ ...valorVenda, [clienteAtual.id]: t.replace(/\D/g, '') });
+                     }}
+                     onSubmitEditing={() => { if (clienteAtual) atender(clienteAtual.id); }}
+                     style={{ color: '#10b981', fontSize: 64, fontWeight: '900', textAlign: 'right', width: '100%', height: '100%', outlineStyle: 'none', borderWidth: 0 } as any}
+                   />
+                </View>
 
-               <TouchableOpacity 
-                 onPress={() => fila.length > 0 && atender(fila[0].id)}
-                 style={[styles.card, { flex: 1.2, minWidth: 150, backgroundColor: fila.length > 0 ? '#10b981' : '#334155', height: 130, alignItems: 'center', justifyContent: 'center' }]}>
-                  <Text style={{ color: '#0f172a', fontWeight: 'bold', fontSize: 20 }}>ATENDER</Text>
-               </TouchableOpacity>
-            </View>
+                <TouchableOpacity 
+                  onPress={() => clienteAtual && atender(clienteAtual.id)}
+                  style={[styles.card, { flex: 1.2, minWidth: 150, backgroundColor: clienteAtual ? '#10b981' : '#334155', height: 130, alignItems: 'center', justifyContent: 'center' }]}>
+                   <Text style={{ color: '#0f172a', fontWeight: 'bold', fontSize: 20 }}>ATENDER</Text>
+                </TouchableOpacity>
+             </View>
 
-             <View style={{ flexDirection: 'row', gap: 15, alignItems: 'stretch', flexWrap: 'wrap' }}>
-                <View style={[styles.card, { flex: 2, minWidth: 320, padding: 25, backgroundColor: '#1e293b', minHeight: 200, justifyContent: 'space-between' }]}>
+              <View style={{ flexDirection: 'row', gap: 15, alignItems: 'stretch', flexWrap: 'wrap' }}>
+                 <View style={[styles.card, { flex: 1.2, minWidth: 320, padding: 25, backgroundColor: '#1e293b', minHeight: 200, justifyContent: 'space-between' }]}>
                   <View>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Text style={{ color: '#10b981', fontSize: 42, fontWeight: '900' }}>{formatarMoeda(stats.totalMes)}</Text>
@@ -839,8 +842,28 @@ export default function Merchant() {
                   </View>
                </View>
 
+               {/* NOVO CARD DA FILA */}
+               <View style={[styles.card, { flex: 0.8, minWidth: 250, padding: 20, backgroundColor: '#0f172a', minHeight: 200, borderColor: '#334155', borderWidth: 1 }]}>
+                 <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: 'bold', marginBottom: 10 }}>👥 PRÓXIMOS DA FILA</Text>
+                 <ScrollView nestedScrollEnabled={true}>
+                   {fila.filter(c => c.id !== (clienteAtual?.id)).length === 0 ? (
+                      <Text style={{ color: '#334155', fontSize: 12, fontStyle: 'italic', marginTop: 10 }}>Ninguém aguardando...</Text>
+                   ) : (
+                      fila.filter(c => c.id !== (clienteAtual?.id)).map((c, i) => (
+                        <TouchableOpacity 
+                           key={c.id} 
+                           onPress={() => setClienteFocadoId(c.id)}
+                           style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1e293b', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                           <Text style={{ color: '#cbd5e1', fontSize: 14, fontWeight: 'bold' }}>{i + 2}º • {formatarTelefone(c.cliente_cpf)}</Text>
+                           <Text style={{ color: '#38bdf8', fontSize: 10, fontWeight: 'bold' }}>PUXAR ⬆️</Text>
+                        </TouchableOpacity>
+                      ))
+                   )}
+                 </ScrollView>
+               </View>
+
                <View style={[styles.card, { flex: 1, minWidth: 320, padding: 25, backgroundColor: '#1e293b', minHeight: 200 }]}>
-                  {fila.length > 0 && valorVenda[fila[0].id] ? (
+                  {clienteAtual && valorVenda[clienteAtual.id] ? (
                     <View style={{ height: '100%', justifyContent: 'space-between' }}>
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: '#facc15', fontSize: 12, fontWeight: 'bold', marginBottom: 15 }}>💡 DETALHES DA COMPRA:</Text>
@@ -848,12 +871,12 @@ export default function Merchant() {
                         <View style={{ gap: 12 }}>
                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                               <Text style={{ color: '#94a3b8', fontSize: 16 }}>Valor da Venda:</Text>
-                              <Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>{formatarMoeda(parseInt(valorVenda[fila[0].id], 10) / 100)}</Text>
+                              <Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>{formatarMoeda(parseInt(valorVenda[clienteAtual.id], 10) / 100)}</Text>
                            </View>
 
                            {(() => {
-                              const cpf = fila[0].cliente_cpf;
-                              const valorReal = parseInt(valorVenda[fila[0].id], 10) / 100;
+                              const cpf = clienteAtual.cliente_cpf;
+                              const valorReal = parseInt(valorVenda[clienteAtual.id], 10) / 100;
                               const cb_total = cashbacks[cpf]?.total || 0;
                               const cb_proximo = cashbacks[cpf]?.proximo || 0;
                               const usarCb = config.usar_cashback_total ? cb_total : cb_proximo;
@@ -891,9 +914,9 @@ export default function Merchant() {
                     </View>
                   )}
                </View>
-            </View>
+             </View>
 
-            {fila.length > 0 && fila.slice(0, 1).map((c) => {
+             {clienteAtual && [clienteAtual].map((c) => {
                 const temBonus = bonusPendentes[c.cliente_cpf];
                 const brindes = brindesPendentes[c.cliente_cpf] || [];
                 if (temBonus > 0 || brindes.length > 0) {
