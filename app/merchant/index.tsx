@@ -99,7 +99,7 @@ export default function Merchant() {
     limite_resgates_diario_cliente: '', tempo_bloqueio_minutos: '',
     telefone: '', endereco: '', numero: '', bairro: '', cidade: '', estado: '', cep: '',
     pontos_sobre_valor_bruto: true, usar_cashback_total: false, senha: '', bonus_retorno_pontos: '50', bonus_retorno_validade_dias: '3',
-    roleta_ativa: false, roleta_intervalo_dias: '1'
+    roleta_ativa: false, roleta_intervalo_dias: '1', link_google_review: '', qr_mesa_ativo: false, brinde_mesa: ''
   });
 
   interface DashboardStats {
@@ -523,7 +523,8 @@ export default function Merchant() {
       bonus_retorno_pontos: Number(config.bonus_retorno_pontos) || 50, bonus_retorno_validade_dias: Number(config.bonus_retorno_validade_dias) || 3,
       usar_cashback_total: config.usar_cashback_total, telefone: config.telefone, endereco: config.endereco, numero: config.numero,
       bairro: config.bairro, cidade: config.cidade, estado: config.estado, cep: config.cep,
-      roleta_ativa: config.roleta_ativa, roleta_intervalo_dias: Number(config.roleta_intervalo_dias) || 1
+      roleta_ativa: config.roleta_ativa, roleta_intervalo_dias: Number(config.roleta_intervalo_dias) || 1,
+      link_google_review: config.link_google_review || null, qr_mesa_ativo: config.qr_mesa_ativo, brinde_mesa: config.brinde_mesa || null
     }, { onConflict: 'loja_id' });
 
     if (config.senha && config.senha.trim() !== '') await supabase.from('lojas').update({ senha: config.senha }).eq('id', lojaId);
@@ -682,6 +683,28 @@ export default function Merchant() {
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: '#94a3b8', fontSize: 10 }}>BLOQUEIO NPS (MINUTOS)</Text>
                   <TextInput value={config.tempo_bloqueio_minutos} onChangeText={(t) => setConfig({ ...config, tempo_bloqueio_minutos: t })} style={styles.input} keyboardType="numeric" />
+                </View>
+              </View>
+
+              <Text style={[styles.label, { color: '#facc15', marginTop: 20 }]}>🔗 INTEGRAÇÕES E ACESSO:</Text>
+              <View style={{ marginBottom: 10, width: '100%' }}>
+                <Text style={{ color: '#94a3b8', fontSize: 10 }}>LINK DO GOOGLE MEU NEGÓCIO (Para Avaliações 4 e 5 Estrelas)</Text>
+                <TextInput value={config.link_google_review} onChangeText={(t) => setConfig({ ...config, link_google_review: t })} placeholder="https://g.page/r/..." placeholderTextColor="#475569" style={styles.input} />
+              </View>
+              <View style={{ marginBottom: 10, width: '100%' }}>
+                <Text style={{ color: '#94a3b8', fontSize: 10 }}>NOVA SENHA DO PAINEL (Deixe em branco para manter a atual)</Text>
+                <TextInput value={config.senha} onChangeText={(t) => setConfig({ ...config, senha: t })} placeholder="Digite a nova senha..." placeholderTextColor="#475569" secureTextEntry style={styles.input} />
+              </View>
+
+              <Text style={[styles.label, { color: '#facc15', marginTop: 20 }]}>📱 MÓDULO QR DE MESA:</Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Switch value={config.qr_mesa_ativo} onValueChange={(v) => setConfig({ ...config, qr_mesa_ativo: v })} />
+                  <Text style={{ color: '#fff', fontSize: 12 }}>Ativar QR na Mesa</Text>
+                </View>
+                <View style={{ flex: 2 }}>
+                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>BRINDE (Ex: 1 Sobremesa Grátis)</Text>
+                  <TextInput value={config.brinde_mesa} onChangeText={(t) => setConfig({ ...config, brinde_mesa: t })} placeholder="Qual o brinde?" placeholderTextColor="#475569" style={styles.input} />
                 </View>
               </View>
 
