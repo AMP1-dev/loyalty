@@ -276,8 +276,8 @@ export default function Merchant() {
   const buscarAvaliacoesERoleta = async () => {
     if (!lojaId) return;
     
-    // Buscar da tabela 'avaliacoes'
-    const { data: avData } = await supabase.from('avaliacoes').select('*').eq('loja_id', lojaId).order('created_at', { ascending: false });
+    // Buscar da tabela 'respostas_nps'
+    const { data: avData } = await supabase.from('respostas_nps').select('*').eq('loja_id', lojaId).order('created_at', { ascending: false });
     const avs = avData || [];
     
     setAvaliacoes(avs.slice(0, 20).map(a => ({
