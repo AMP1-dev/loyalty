@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Image, Linking, Platform, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, useWindowDimensions, Vibration, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import Svg, { Polyline } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
 
 export default function Merchant() {
@@ -295,14 +296,14 @@ export default function Merchant() {
     for (let i = 13; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const diaStr = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      const diaStr = d.toLocaleDateString('pt-BR', { day: '2-digit' });
       agrupadosPorDia[diaStr] = { verde: 0, amarelo: 0, vermelho: 0, label: diaStr };
       chartDataArray.push(agrupadosPorDia[diaStr]);
     }
 
     avs.forEach(av => {
       const d = parseDataSupabase(av.created_at);
-      const diaStr = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      const diaStr = d.toLocaleDateString('pt-BR', { day: '2-digit' });
       if (agrupadosPorDia[diaStr]) {
         if (av.nota >= 4) agrupadosPorDia[diaStr].verde += 1;
         else if (av.nota === 3) agrupadosPorDia[diaStr].amarelo += 1;
@@ -312,13 +313,15 @@ export default function Merchant() {
 
     let maxVal = 1;
     chartDataArray.forEach(d => {
-      const total = d.verde + d.amarelo + d.vermelho;
-      if (total > maxVal) maxVal = total;
+      if (d.verde > maxVal) maxVal = d.verde;
+      if (d.amarelo > maxVal) maxVal = d.amarelo;
+      if (d.vermelho > maxVal) maxVal = d.vermelho;
     });
 
     setNpsChart({ dias: chartDataArray, max: maxVal });
 
     if (avs.length > 0) setMediaEstrelas(avs.reduce((a, b) => a + b.nota, 0) / avs.length);
+    else setMediaEstrelas(0);
 
     const { data: rolData } = await supabase.from('roleta_premios').select('*').eq('loja_id', lojaId).order('probabilidade', { ascending: false });
     setPremiosRoleta(rolData || []);
@@ -950,47 +953,42 @@ export default function Merchant() {
           </View>
 
           <View style={{ flexDirection: 'row', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
-             <View style={[styles.card, { flex: 2, minWidth: 300, borderColor: '#facc15' }]}>
-                <Text style={[styles.title, { color: '#facc15' }]}>⭐ NPS & Avaliações ({mediaEstrelas.toFixed(1)})</Text>
-                <View style={{ flexDirection: 'row', gap: 4, marginBottom: 15 }}>
-                  {[1,2,3,4,5].map(star => (
-                    <View key={star} style={{ flex: 1, height: 6, backgroundColor: mediaEstrelas >= star ? '#facc15' : '#334155', borderRadius: 3 }} />
-                  ))}
-                </View>
-
-                {npsChart.dias.length > 0 && (
-                  <View style={{ height: 120, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 20, paddingTop: 10, borderBottomWidth: 1, borderBottomColor: '#334155' }}>
-                     {npsChart.dias.map((d: any, idx: number) => {
-                       const total = d.verde + d.amarelo + d.vermelho;
-                       const pctVerde = total > 0 ? (d.verde / npsChart.max) * 100 : 0;
-                       const pctAmarelo = total > 0 ? (d.amarelo / npsChart.max) * 100 : 0;
-                       const pctVermelho = total > 0 ? (d.vermelho / npsChart.max) * 100 : 0;
-                       return (
-                         <View key={idx} style={{ flex: 1, alignItems: 'center', marginHorizontal: 2 }}>
-                            <View style={{ height: 100, width: '100%', justifyContent: 'flex-end', backgroundColor: '#0f172a', borderRadius: 4, overflow: 'hidden' }}>
-                               {pctVerde > 0 && <View style={{ height: `${pctVerde}%`, width: '100%', backgroundColor: '#10b981' }} />}
-                               {pctAmarelo > 0 && <View style={{ height: `${pctAmarelo}%`, width: '100%', backgroundColor: '#facc15' }} />}
-                               {pctVermelho > 0 && <View style={{ height: `${pctVermelho}%`, width: '100%', backgroundColor: '#ef4444' }} />}
-                            </View>
-                            <Text style={{ color: '#64748b', fontSize: 8, marginTop: 4, transform: [{ rotate: '-45deg' }], width: 30, textAlign: 'center' }}>{d.label}</Text>
-                         </View>
-                       )
-                     })}
-                  </View>
-                )}
-                <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled={true}>
-                   {avaliacoes.length === 0 && <Text style={{ color: '#64748b', fontSize: 12, fontStyle: 'italic' }}>Nenhuma avaliação recebida.</Text>}
-                   {avaliacoes.map((av, i) => (
-                     <View key={i} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#334155' }}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Text style={{ color: '#facc15', fontWeight: 'bold', fontSize: 12 }}>{"⭐".repeat(av.nota)}</Text>
-                          <Text style={{ color: '#64748b', fontSize: 10 }}>{formatarTelefone(av.cliente)}</Text>
-                        </View>
-                        {av.comentario && <Text style={{ color: '#cbd5e1', fontSize: 12, fontStyle: 'italic', marginTop: 4 }}>"{av.comentario}"</Text>}
-                     </View>
+              <View style={[styles.card, { flex: 2, minWidth: 300, borderColor: '#facc15' }]}>
+                 <Text style={[styles.title, { color: '#facc15' }]}>⭐ NPS & Avaliações ({isNaN(mediaEstrelas) ? '0.0' : mediaEstrelas.toFixed(1)})</Text>
+                 <View style={{ flexDirection: 'row', gap: 4, marginBottom: 15 }}>
+                   {[1,2,3,4,5].map(star => (
+                     <View key={star} style={{ flex: 1, height: 6, backgroundColor: (!isNaN(mediaEstrelas) && mediaEstrelas >= star) ? '#facc15' : '#334155', borderRadius: 3 }} />
                    ))}
-                </ScrollView>
-             </View>
+                 </View>
+
+                 {npsChart.dias.length > 0 && (
+                   <View style={{ height: 150, width: '100%', marginBottom: 10 }}>
+                      <View style={{ flex: 1, position: 'relative' }}>
+                        <Svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+                           {(() => {
+                             const max = npsChart.max || 1;
+                             const ptsVerde = npsChart.dias.map((d: any, i: number) => `${(i / (npsChart.dias.length - 1)) * 100},${100 - ((d.verde / max) * 100)}`).join(' ');
+                             const ptsAmarelo = npsChart.dias.map((d: any, i: number) => `${(i / (npsChart.dias.length - 1)) * 100},${100 - ((d.amarelo / max) * 100)}`).join(' ');
+                             const ptsVermelho = npsChart.dias.map((d: any, i: number) => `${(i / (npsChart.dias.length - 1)) * 100},${100 - ((d.vermelho / max) * 100)}`).join(' ');
+                             return (
+                               <>
+                                 <Polyline points={ptsVermelho} fill="none" stroke="#ef4444" strokeWidth="2" />
+                                 <Polyline points={ptsAmarelo} fill="none" stroke="#facc15" strokeWidth="2" />
+                                 <Polyline points={ptsVerde} fill="none" stroke="#10b981" strokeWidth="2" />
+                               </>
+                             );
+                           })()}
+                        </Svg>
+                      </View>
+                      
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+                         {npsChart.dias.map((d: any, idx: number) => (
+                            <Text key={idx} style={{ color: '#64748b', fontSize: 10 }}>{d.label}</Text>
+                         ))}
+                      </View>
+                   </View>
+                 )}
+              </View>
 
              <TouchableOpacity onPress={() => setMostrarCRM(prev => !prev)} style={[styles.card, { flex: 1, minWidth: 200, borderColor: '#8b5cf6', borderWidth: 1 }]}>
                 <Text style={{ color: '#8b5cf6', fontSize: 32, fontWeight: '900' }}>{clientesAtrasados}</Text>
