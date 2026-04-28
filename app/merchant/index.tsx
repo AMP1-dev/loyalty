@@ -305,9 +305,17 @@ export default function Merchant() {
     avs.forEach(av => {
       const d = parseDataSupabase(av.created_at);
       const diaStr = d.toLocaleDateString('pt-BR', { day: '2-digit' });
-      if (agrupadosPorDia[diaStr]) {
-        if (av.nota >= 4) agrupadosPorDia[diaStr].verde += 1;
-        else if (av.nota === 3) agrupadosPorDia[diaStr].amarelo += 1;
+      
+      let nota = av.nota;
+      if (!nota && av.resposta) {
+        if (av.resposta === 'Positivo') nota = 5;
+        else if (av.resposta === 'Neutro') nota = 3;
+        else if (av.resposta === 'Negativo') nota = 1;
+      }
+
+      if (agrupadosPorDia[diaStr] && nota) {
+        if (nota >= 4) agrupadosPorDia[diaStr].verde += 1;
+        else if (nota === 3) agrupadosPorDia[diaStr].amarelo += 1;
         else agrupadosPorDia[diaStr].vermelho += 1;
       }
     });
@@ -321,8 +329,18 @@ export default function Merchant() {
 
     setNpsChart({ dias: chartDataArray, max: maxVal });
 
-    if (avs.length > 0) setMediaEstrelas(avs.reduce((a, b) => a + b.nota, 0) / avs.length);
-    else setMediaEstrelas(0);
+    let sumNotas = 0;
+    let countNotas = 0;
+    avs.forEach(av => {
+      let nota = av.nota;
+      if (!nota && av.resposta) {
+        if (av.resposta === 'Positivo') nota = 5;
+        else if (av.resposta === 'Neutro') nota = 3;
+        else if (av.resposta === 'Negativo') nota = 1;
+      }
+      if (nota) { sumNotas += nota; countNotas++; }
+    });
+    setMediaEstrelas(countNotas > 0 ? sumNotas / countNotas : 0);
 
     const { data: rolData } = await supabase.from('roleta_premios').select('*').eq('loja_id', lojaId).order('probabilidade', { ascending: false });
     setPremiosRoleta(rolData || []);
