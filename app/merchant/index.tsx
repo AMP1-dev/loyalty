@@ -746,13 +746,13 @@ export default function Merchant() {
 
                <TouchableOpacity 
                  onPress={() => fila.length > 0 && atender(fila[0].id)}
-                 style={[styles.card, { flex: 1.2, backgroundColor: fila.length > 0 ? '#10b981' : '#334155', height: 130, alignItems: 'center', justifyContent: 'center' }]}>
+                 style={[styles.card, { flex: 1.2, minWidth: 150, backgroundColor: fila.length > 0 ? '#10b981' : '#334155', height: 130, alignItems: 'center', justifyContent: 'center' }]}>
                   <Text style={{ color: '#0f172a', fontWeight: 'bold', fontSize: 20 }}>ATENDER</Text>
                </TouchableOpacity>
             </View>
 
-            <View style={{ flexDirection: 'row', gap: 15, alignItems: 'stretch' }}>
-               <View style={[styles.card, { flex: 1, padding: 25, backgroundColor: '#1e293b', minHeight: 200, justifyContent: 'space-between' }]}>
+             <View style={{ flexDirection: 'row', gap: 15, alignItems: 'stretch', flexWrap: 'wrap' }}>
+                <View style={[styles.card, { flex: 2, minWidth: 320, padding: 25, backgroundColor: '#1e293b', minHeight: 200, justifyContent: 'space-between' }]}>
                   <View>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Text style={{ color: '#10b981', fontSize: 42, fontWeight: '900' }}>{formatarMoeda(stats.totalMes)}</Text>
@@ -766,8 +766,8 @@ export default function Merchant() {
                   
                   <View style={{ height: 1, backgroundColor: '#334155', marginVertical: 15 }} />
                   
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 15 }}>
+                      <View style={{ flex: 1, minWidth: 100 }}>
                         <Text style={{ color: '#38bdf8', fontSize: 32, fontWeight: '900' }}>{stats.vendasCount}</Text>
                         <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>ATENDIDOS HOJE</Text>
                       </View>
@@ -782,7 +782,7 @@ export default function Merchant() {
                   </View>
                </View>
 
-               <View style={[styles.card, { flex: 1, padding: 25, backgroundColor: '#1e293b', minHeight: 200 }]}>
+               <View style={[styles.card, { flex: 1, minWidth: 320, padding: 25, backgroundColor: '#1e293b', minHeight: 200 }]}>
                   {fila.length > 0 && valorVenda[fila[0].id] ? (
                     <View style={{ height: '100%', justifyContent: 'space-between' }}>
                       <View style={{ flex: 1 }}>
@@ -915,18 +915,7 @@ export default function Merchant() {
           </View>
 
           <View style={{ flexDirection: 'row', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
-             <TouchableOpacity onPress={() => setMostrarCRM(!mostrarCRM)} style={[styles.card, { flex: 1, minWidth: 280, borderColor: '#8b5cf6', borderWidth: 1 }]}>
-                <Text style={{ color: '#8b5cf6', fontSize: 32, fontWeight: '900' }}>{clientesAtrasados}</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>REMARKETING</Text>
-                <Text style={{ color: '#fff', fontSize: 11, marginTop: 10, lineHeight: 16 }}>
-                   Temos <Text style={{ color: '#8b5cf6', fontWeight: 'bold' }}>{clientesAtrasados}</Text> clientes sumidos.
-                </Text>
-                <View style={{ flex: 1, justifyContent: 'flex-end', marginTop: 6 }}>
-                   <Text style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: 10 }}>VER LISTA ➔</Text>
-                </View>
-             </TouchableOpacity>
-
-             <View style={[styles.card, { flex: 1, minWidth: 280, borderColor: '#facc15' }]}>
+             <View style={[styles.card, { flex: 2, minWidth: 300, borderColor: '#facc15' }]}>
                 <Text style={[styles.title, { color: '#facc15' }]}>⭐ NPS & Avaliações ({mediaEstrelas.toFixed(1)})</Text>
                 <View style={{ flexDirection: 'row', gap: 4, marginBottom: 15 }}>
                   {[1,2,3,4,5].map(star => (
@@ -947,7 +936,18 @@ export default function Merchant() {
                 </ScrollView>
              </View>
 
-             <View style={[styles.card, { flex: 1, minWidth: 280, borderColor: '#10b981' }]}>
+             <TouchableOpacity onPress={() => setMostrarCRM(prev => !prev)} style={[styles.card, { flex: 1, minWidth: 200, borderColor: '#8b5cf6', borderWidth: 1 }]}>
+                <Text style={{ color: '#8b5cf6', fontSize: 32, fontWeight: '900' }}>{clientesAtrasados}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>REMARKETING</Text>
+                <Text style={{ color: '#fff', fontSize: 11, marginTop: 10, lineHeight: 16 }}>
+                   Temos <Text style={{ color: '#8b5cf6', fontWeight: 'bold' }}>{clientesAtrasados}</Text> clientes sumidos.
+                </Text>
+                <View style={{ flex: 1, justifyContent: 'flex-end', marginTop: 6 }}>
+                   <Text style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: 10 }}>VER LISTA ➔</Text>
+                </View>
+             </TouchableOpacity>
+
+             <View style={[styles.card, { flex: 1, minWidth: 200, borderColor: '#10b981' }]}>
                 <Text style={[styles.title, { color: '#10b981' }]}>📈 Lucratividade (ROI)</Text>
                 <Text style={{ color: '#e2e8f0', fontSize: 14, lineHeight: 22 }}>
                   Hoje os prêmios entregues geraram um retorno de 
