@@ -207,7 +207,7 @@ export default function Merchant() {
       const ticketMedio = vendasHoje.length > 0 ? totalDia / vendasHoje.length : 0;
       const clientesUnicosHoje = new Set(vendasHoje.map((v: any) => v.cliente_cpf)).size;
 
-      const vendasDiaFormatada = vendasHoje.slice(0, 30).map((v: any) => ({
+      const vendasDiaFormatada = [...vendasHoje].sort((a: any, b: any) => Number(b.valor || 0) - Number(a.valor || 0)).slice(0, 10).map((v: any) => ({
         cpf: v.cliente_cpf, valor: Number(v.valor || 0), dataHora: parseDataSupabase(v.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
       }));
 
@@ -236,7 +236,7 @@ export default function Merchant() {
 
       resgatesHojeLista.forEach((r: any) => { pontosResgatadosHoje += Number(r.pontos_usados || 0); });
 
-      const resgatesSumarizados = Object.values(agrupados);
+      const resgatesSumarizados = Object.values(agrupados).sort((a: any, b: any) => b.qtde - a.qtde);
       const resgatesListados = resgatesHojeLista.slice(0, 50).map((r: any) => ({
         nome: recompensasMap[r.recompensa_id] || 'Prêmio', telefone: r.cliente_cpf, dataHora: parseDataSupabase(r.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
       }));
@@ -866,14 +866,14 @@ export default function Merchant() {
           </View>
 
           <View style={{ flexDirection: 'row', gap: 10, marginBottom: 25, flexWrap: 'wrap' }}>
-             <TouchableOpacity onPress={baixarQRCode} style={[styles.card, { flex: 1, minWidth: 150, height: 260, alignItems: 'center', justifyContent: 'center' }]}>
+             <TouchableOpacity onPress={baixarQRCode} style={[styles.card, { flex: 1, minWidth: 250, height: 260, alignItems: 'center', justifyContent: 'center' }]}>
                 <QRCode value={linkQR} size={250} getRef={(c) => (qrRef.current = c)} />
                 <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginTop: 15 }}>📥 BAIXAR QR DO BALCÃO (9x9cm)</Text>
              </TouchableOpacity>
 
-             <View style={[styles.card, { flex: 1, minWidth: 150, height: 260 }]}>
+             <View style={[styles.card, { flex: 1, minWidth: 250, height: 260 }]}>
                 <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900' }}>{stats.totalClientesDia || 0}</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>CLIENTES HOJE</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>TOP CLIENTES HOJE</Text>
                 <ScrollView nestedScrollEnabled={true}>
                    {(stats as any).vendasDiaFormatada?.map((v: any, i: number) => (
                      <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 8 }}>
@@ -885,7 +885,7 @@ export default function Merchant() {
                 </ScrollView>
              </View>
 
-             <View style={[styles.card, { flex: 1, minWidth: 150, height: 260 }]}>
+             <View style={[styles.card, { flex: 1, minWidth: 250, height: 260 }]}>
                 <Text style={{ color: '#38bdf8', fontSize: 24, fontWeight: '900' }}>{stats.resgatesMesLista?.length || 0}</Text>
                 <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>SAÍDAS ESTOQUE (MÊS)</Text>
                 <ScrollView nestedScrollEnabled={true}>
@@ -899,7 +899,7 @@ export default function Merchant() {
                 </ScrollView>
              </View>
 
-             <View style={[styles.card, { flex: 1, minWidth: 150, height: 260 }]}>
+             <View style={[styles.card, { flex: 1, minWidth: 250, height: 260 }]}>
                 <Text style={{ color: '#ec4899', fontSize: 24, fontWeight: '900' }}>{stats.resgatesHojeLista?.length || 0}</Text>
                 <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>RESGATES (HOJE)</Text>
                 <ScrollView nestedScrollEnabled={true}>
@@ -912,8 +912,10 @@ export default function Merchant() {
                    ))}
                 </ScrollView>
              </View>
+          </View>
 
-             <TouchableOpacity onPress={() => setMostrarCRM(true)} style={[styles.card, { flex: 1, minWidth: 150, height: 260, borderColor: '#8b5cf6', borderWidth: 1 }]}>
+          <View style={{ flexDirection: 'row', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
+             <TouchableOpacity onPress={() => setMostrarCRM(true)} style={[styles.card, { flex: 1, minWidth: 280, borderColor: '#8b5cf6', borderWidth: 1 }]}>
                 <Text style={{ color: '#8b5cf6', fontSize: 32, fontWeight: '900' }}>{clientesAtrasados}</Text>
                 <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>REMARKETING</Text>
                 <Text style={{ color: '#fff', fontSize: 11, marginTop: 10, lineHeight: 16 }}>
@@ -923,9 +925,7 @@ export default function Merchant() {
                    <Text style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: 10 }}>VER LISTA ➔</Text>
                 </View>
              </TouchableOpacity>
-          </View>
 
-          <View style={{ flexDirection: 'row', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
              <View style={[styles.card, { flex: 1, minWidth: 280, borderColor: '#facc15' }]}>
                 <Text style={[styles.title, { color: '#facc15' }]}>⭐ NPS & Avaliações ({mediaEstrelas.toFixed(1)})</Text>
                 <View style={{ flexDirection: 'row', gap: 4, marginBottom: 15 }}>
@@ -961,8 +961,11 @@ export default function Merchant() {
              <TouchableOpacity onPress={() => setMostrarManual(!mostrarManual)} style={[styles.card, { flex: 1, minWidth: 250, backgroundColor: '#334155', alignItems: 'center', justifyContent: 'center', height: 80 }]}>
                 <Text style={{ color: '#fff', fontWeight: 'bold' }}>⌨️ LANÇAMENTO MANUAL</Text>
              </TouchableOpacity>
-             <TouchableOpacity onPress={() => setMostrarCRM(!mostrarCRM)} style={[styles.card, { flex: 1, minWidth: 250, backgroundColor: '#8b5cf6', alignItems: 'center', justifyContent: 'center', height: 80 }]}>
-                <Text style={{ color: '#fff', fontWeight: 'bold' }}>📲 LISTA DE REMARKETING</Text>
+             <TouchableOpacity onPress={() => setMostrarCatalogo(!mostrarCatalogo)} style={[styles.card, { flex: 1, minWidth: 250, backgroundColor: '#0ea5e9', alignItems: 'center', justifyContent: 'center', height: 80 }]}>
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>🎁 GERENCIAR CATÁLOGO</Text>
+             </TouchableOpacity>
+             <TouchableOpacity onPress={() => setMostrarRoleta(!mostrarRoleta)} style={[styles.card, { flex: 1, minWidth: 250, backgroundColor: '#db2777', alignItems: 'center', justifyContent: 'center', height: 80 }]}>
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>🎡 CONFIGURAR ROLETA</Text>
              </TouchableOpacity>
           </View>
 
