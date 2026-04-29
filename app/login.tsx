@@ -129,6 +129,8 @@ export default function LoginScreen() {
             autoCapitalize="none"
           />
         </View>
+        
+        <View style={styles.inputWrapper}>
           <Text style={styles.label}>SENHA DE ACESSO</Text>
           <TextInput
             style={[styles.input, focused === 'senha' && styles.inputFocused]}
@@ -156,7 +158,6 @@ export default function LoginScreen() {
           <Text style={styles.backButtonText}>← VOLTAR AO INÍCIO</Text>
         </TouchableOpacity>
       </View>
-
       <Text style={styles.footer}>Powered by AMP Tecnologia © 2026</Text>
     </View>
   );
