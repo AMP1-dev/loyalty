@@ -1171,7 +1171,7 @@ export default function Merchant() {
                 <Text style={{ color: '#e2e8f0', fontSize: 14, lineHeight: 22 }}>
                   Hoje os prêmios entregues geraram um retorno de 
                   <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 18 }}> {formatarMoeda(stats.pontosResgatadosHoje * (Number(config.reais_por_ponto) || 1))}</Text> 
-                  em faturamento fiel.
+                   em faturamento fiel.
                 </Text>
              </View>
           </View>
