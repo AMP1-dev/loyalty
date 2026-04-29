@@ -65,6 +65,7 @@ export default function Cliente() {
   const [premiosRoleta, setPremiosRoleta] = useState<any[]>([]);
   const [respostasNps, setRespostasNps] = useState<any>({});
   const [premioGanho, setPremioGanho] = useState<any>(null);
+  const [rodando, setRodando] = useState(false);
 
   const [slotItems, setSlotItems] = useState<any[]>([]);
   const slotAnim = useRef(new Animated.Value(0)).current;
@@ -377,6 +378,12 @@ export default function Cliente() {
     }
 
     setEtapaRoleta('girando');
+  };
+
+  const girarRoleta = async () => {
+    if (rodando) return;
+    setRodando(true);
+    const clean = cpf.replace(/\D/g, '');
     
     let somaProbs = 0;
     premiosRoleta.forEach(p => somaProbs += Number(p.probabilidade));
@@ -396,24 +403,16 @@ export default function Cliente() {
        premioSorteado = { nome: 'Nada desta vez! 😢', tipo: 'nada' };
     }
 
-    // 🔥 PREPARA O CAÇA-NÍQUEIS
-    const itensSlot = [];
-    const fallback = [{nome:'🎁'}, {nome:'⭐'}, {nome:'💰'}, {nome:'😢'}];
-    const source = premiosRoleta.length > 0 ? premiosRoleta : fallback;
-    for(let i=0; i<30; i++) {
-        itensSlot.push(source[Math.floor(Math.random() * source.length)]);
-    }
-    itensSlot.push(premioSorteado);
-    setSlotItems(itensSlot);
-    slotAnim.setValue(0);
-    
-    rotateAnim.setValue(0);
-    // Animação Roleta Circular (Gira 4 voltas + offset do prêmio)
+    // 🔥 PREPARA A ANIMAÇÃO
+    const source = premiosRoleta.length > 0 ? premiosRoleta : [{nome:'😢'}];
     const totalSlices = source.length || 8;
     const sliceAngle = 360 / totalSlices;
     const indexPremio = source.findIndex(p => p.id === premioSorteado.id);
-    const targetRotate = 1440 + (360 - (indexPremio * sliceAngle)) - (sliceAngle / 2); // Para no meio da fatia
+    
+    // O offset garante que a roleta pare no prêmio certo
+    const targetRotate = 1440 + (360 - (indexPremio * sliceAngle)) - (sliceAngle / 2);
 
+    rotateAnim.setValue(0);
     Animated.timing(rotateAnim, {
       toValue: 1, 
       duration: 5000,
@@ -421,19 +420,17 @@ export default function Cliente() {
       useNativeDriver: true
     }).start(async () => {
        setPremioGanho(premioSorteado);
+       setRodando(false);
        
        const isNada = premioSorteado.tipo === 'nada' || (premioSorteado.tipo !== 'brinde' && (!premioSorteado.valor || premioSorteado.valor <= 0));
        
         if (!isNada) {
           if (premioSorteado.tipo === 'pontos') {
              await supabase.from('transacoes').insert({ loja_id: String(loja_id), cliente_cpf: clean, valor: 0, pontos_gerados: premioSorteado.valor });
-             mostrarToast(`✨ +${premioSorteado.valor} Springs adicionados!`, 'sucesso');
           } else if (premioSorteado.tipo === 'cashback') {
              await supabase.from('cashbacks').insert({ loja_id: String(loja_id), cliente_cpf: clean, valor: premioSorteado.valor, usado: false });
-             mostrarToast(`💰 R$ ${premioSorteado.valor} de Cashback ganho!`, 'sucesso');
           } else {
              await supabase.from('brindes_pendentes').insert({ loja_id: String(loja_id), cliente_cpf: clean, nome_brinde: premioSorteado.nome });
-             mostrarToast(`🎁 Brinde: ${premioSorteado.nome} salvo!`, 'sucesso');
           }
         }
        setEtapaRoleta('resultado');
