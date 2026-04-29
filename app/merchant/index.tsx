@@ -282,6 +282,11 @@ export default function Merchant() {
     
     // Buscar da tabela 'respostas_nps'
     const { data: avData } = await supabase.from('respostas_nps').select('*').eq('loja_id', lojaId).order('created_at', { ascending: false });
+    const { data: pData } = await supabase.from('perguntas_nps').select('id, pergunta').eq('loja_id', lojaId);
+    
+    const pMap: any = {};
+    (pData || []).forEach(p => pMap[p.id] = p.pergunta);
+
     const avs = avData || [];
     
     setAvaliacoes(avs.filter(a => a.resposta !== 'JOGADA_ROLETA').slice(0, 50).map(a => {
@@ -300,7 +305,8 @@ export default function Merchant() {
         respostaStr: a.resposta,
         comentario: a.comentario,
         data: a.created_at,
-        cliente: a.cliente_cpf
+        cliente: a.cliente_cpf,
+        perguntaTexto: pMap[a.pergunta_id] || 'Pergunta Geral'
       };
     }).sort((a, b) => a.nota - b.nota));
 
@@ -795,7 +801,7 @@ export default function Merchant() {
       {/* MODAL DE AVALIAÇÕES (NPS) */}
       {mostrarAvaliacoesModal && (
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { maxWidth: 500 }]}>
+          <View style={[styles.modalCard, { maxWidth: 800, width: '90%' }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                <Text style={[styles.title, { marginBottom: 0, color: '#facc15' }]}>⭐ Lista de Avaliações</Text>
                <TouchableOpacity onPress={() => setMostrarAvaliacoesModal(false)} style={{ padding: 5 }}>
@@ -804,7 +810,7 @@ export default function Merchant() {
             </View>
             <Text style={{ color: '#94a3b8', fontSize: 12, marginBottom: 15 }}>As avaliações estão ordenadas das piores para as melhores.</Text>
             
-            <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={true}>
+            <ScrollView style={{ maxHeight: 500 }} showsVerticalScrollIndicator={true}>
                {avaliacoes.length === 0 ? (
                  <Text style={{ color: '#64748b', textAlign: 'center', marginTop: 20 }}>Nenhuma avaliação encontrada.</Text>
                ) : (
@@ -820,16 +826,31 @@ export default function Merchant() {
 
                    return (
                      <View key={idx} style={{ backgroundColor: '#1e293b', padding: 15, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#334155' }}>
-                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-                         <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>{formatarTelefone(av.cliente)}</Text>
-                         <Text style={{ color: '#94a3b8', fontSize: 11 }}>{new Date(av.data).toLocaleDateString('pt-BR')} {new Date(av.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
+                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                         <View style={{ flex: 1 }}>
+                            <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Pergunta:</Text>
+                            <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>{av.perguntaTexto}</Text>
+                         </View>
+                         <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>{formatarTelefone(av.cliente)}</Text>
+                            <Text style={{ color: '#94a3b8', fontSize: 10 }}>{new Date(av.data).toLocaleDateString('pt-BR')} {new Date(av.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
+                         </View>
                        </View>
-                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                         <Text style={{ fontSize: 20 }}>{icone}</Text>
-                         <Text style={{ color: cor, fontWeight: 'bold', fontSize: 14 }}>{labelResposta}</Text>
+
+                       <View style={{ height: 1, backgroundColor: '#334155', marginVertical: 8, opacity: 0.5 }} />
+
+                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                         <Text style={{ fontSize: 24 }}>{icone}</Text>
+                         <View>
+                           <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Resposta do Cliente:</Text>
+                           <Text style={{ color: cor, fontWeight: '900', fontSize: 16 }}>{labelResposta}</Text>
+                         </View>
                        </View>
+
                        {av.comentario && (
-                         <Text style={{ color: '#cbd5e1', fontSize: 13, marginTop: 8, fontStyle: 'italic' }}>"{av.comentario}"</Text>
+                         <View style={{ marginTop: 10, backgroundColor: '#0f172a', padding: 10, borderRadius: 8 }}>
+                           <Text style={{ color: '#cbd5e1', fontSize: 13, fontStyle: 'italic' }}>"{av.comentario}"</Text>
+                         </View>
                        )}
                      </View>
                    );
