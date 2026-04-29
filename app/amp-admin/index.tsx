@@ -15,7 +15,7 @@ export default function SuperAdmin() {
   const[lojaExpandida, setLojaExpandida] = useState<string | null>(null);
 
   // 🔥 ESTADOS DO MODAL DE EDIÇÃO / CRIAÇÃO DE LOJA
-  const[modalLoja, setModalLoja] = useState<{ visivel: boolean, id: string | null, nome: string, cnpj: string, telefone: string } | null>(null);
+  const [modalLoja, setModalLoja] = useState<{ visivel: boolean, id: string | null, nome: string, cnpj: string, telefone: string, limite_usuarios: string } | null>(null);
   const [loadingCnpj, setLoadingCnpj] = useState(false);
 
   const[toast, setToast] = useState({ visible: false, message: '', tipo: 'sucesso' });
@@ -138,13 +138,21 @@ export default function SuperAdmin() {
 
     if (modalLoja.id) {
       // ATUALIZAR LOJA EXISTENTE
-      await supabase.from('lojas').update({ nome: modalLoja.nome, cnpj: cnpjLimpo }).eq('id', modalLoja.id);
+      await supabase.from('lojas').update({ 
+        nome: modalLoja.nome, 
+        cnpj: cnpjLimpo,
+        limite_usuarios: Number(modalLoja.limite_usuarios) || 1
+      }).eq('id', modalLoja.id);
       await supabase.from('configuracoes_loja').update({ telefone: modalLoja.telefone }).eq('loja_id', modalLoja.id);
       mostrarToast('Loja atualizada com sucesso!', 'sucesso');
     } else {
       // CRIAR NOVA LOJA
       const { data: novaLoja, error } = await supabase.from('lojas').insert([{ 
-        nome: modalLoja.nome, cnpj: cnpjLimpo, senha: '1234', ativo: true 
+        nome: modalLoja.nome, 
+        cnpj: cnpjLimpo, 
+        senha: '1234', 
+        ativo: true,
+        limite_usuarios: Number(modalLoja.limite_usuarios) || 1
       }]).select('id').single();
 
       if (error) { mostrarToast(error.message, 'erro'); return; }
@@ -160,7 +168,14 @@ export default function SuperAdmin() {
   };
 
   const abrirEdicao = (loja: any) => {
-    setModalLoja({ visivel: true, id: loja.id, nome: loja.nome, cnpj: loja.cnpj || '', telefone: loja.telefone || '' });
+    setModalLoja({ 
+      visivel: true, 
+      id: loja.id, 
+      nome: loja.nome, 
+      cnpj: loja.cnpj || '', 
+      telefone: loja.telefone || '',
+      limite_usuarios: String(loja.limite_usuarios || 1)
+    });
   };
 
   const salvarTaxa = async (id: string) => {
@@ -220,7 +235,17 @@ export default function SuperAdmin() {
             </View>
 
             <TextInput style={styles.input} placeholder="Nome Fantasia / Razão Social" placeholderTextColor="#64748b" value={modalLoja.nome} onChangeText={(t) => setModalLoja({...modalLoja, nome: t})} />
-            <TextInput style={styles.input} placeholder="Telefone Comercial" placeholderTextColor="#64748b" value={modalLoja.telefone} onChangeText={(t) => setModalLoja({...modalLoja, telefone: t})} keyboardType="phone-pad" />
+            
+            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 15 }}>
+              <View style={{ flex: 2 }}>
+                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 5 }}>TELEFONE</Text>
+                <TextInput style={[styles.input, { marginBottom: 0 }]} placeholder="Telefone Comercial" placeholderTextColor="#64748b" value={modalLoja.telefone} onChangeText={(t) => setModalLoja({...modalLoja, telefone: t})} keyboardType="phone-pad" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#facc15', fontSize: 10, fontWeight: 'bold', marginBottom: 5 }}>LIMITE USERS</Text>
+                <TextInput style={[styles.input, { marginBottom: 0, borderColor: '#facc15' }]} placeholder="Ex: 2" placeholderTextColor="#64748b" value={modalLoja.limite_usuarios} onChangeText={(t) => setModalLoja({...modalLoja, limite_usuarios: t})} keyboardType="numeric" />
+              </View>
+            </View>
 
             <View style={{flexDirection: 'row', gap: 10, marginTop: 10}}>
               <TouchableOpacity style={[styles.button, { flex: 1, backgroundColor: '#10b981' }]} onPress={salvarLojaAdmin}>
@@ -272,7 +297,7 @@ export default function SuperAdmin() {
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
           <TextInput style={[styles.inputBusca, { flex: 1, marginBottom: 0 }]} placeholder="🔍 Buscar loja..." placeholderTextColor="#64748b" value={busca} onChangeText={setBusca} />
           {/* 🔥 BOTÃO DE NOVA LOJA */}
-          <TouchableOpacity style={[styles.button, { paddingHorizontal: 20 }]} onPress={() => setModalLoja({ visivel: true, id: null, nome: '', cnpj: '', telefone: '' })}>
+          <TouchableOpacity style={[styles.button, { paddingHorizontal: 20 }]} onPress={() => setModalLoja({ visivel: true, id: null, nome: '', cnpj: '', telefone: '', limite_usuarios: '1' })}>
             <Text style={styles.buttonText}>+ LOJA</Text>
           </TouchableOpacity>
         </View>
@@ -298,6 +323,8 @@ export default function SuperAdmin() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: loja.ativo === false ? '#ef4444' : '#10b981' }} />
                     <Text style={{ color: loja.ativo === false ? '#ef4444' : '#10b981', fontWeight: 'bold', fontSize: 10 }}>{loja.ativo === false ? 'BLOQUEADA' : 'ATIVA'}</Text>
+                    <Text style={{ color: '#94a3b8', fontSize: 10 }}>•</Text>
+                    <Text style={{ color: '#facc15', fontWeight: 'bold', fontSize: 10 }}>{loja.limite_usuarios || 1} USERS</Text>
                   </View>
                   <Text style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: 12 }}>{isExpanded ? 'FECHAR 🔼' : 'GERENCIAR 🔽'}</Text>
                 </View>

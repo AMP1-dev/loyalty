@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
-import Svg, { Path, G, Text as SvgText, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, G, Text as SvgText, Circle, Defs, LinearGradient, RadialGradient, Stop } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
 
 const AnimaTouch = Animated.createAnimatedComponent(TouchableOpacity);
@@ -14,6 +14,17 @@ const salvarStorage = async (key: string, value: string) => {
 const carregarStorage = async (key: string) => {
   if (typeof window !== 'undefined') return localStorage.getItem(key);
   else return await AsyncStorage.getItem(key);
+};
+
+const WHEEL_COLORS = ['#f8f5e9', '#e1f3f0']; // Creme e Verde Água Premium
+const getIconForPrize = (nome: string) => {
+  const n = nome.toLowerCase();
+  if (n.includes('pontos') || n.includes('spg')) return '⭐';
+  if (n.includes('cashback') || n.includes('reais')) return '💰';
+  if (n.includes('café') || n.includes('cappuccino')) return '☕';
+  if (n.includes('brinde') || n.includes('surpresa')) return '🎁';
+  if (n.includes('ferramenta') || n.includes('kit')) return '🛠️';
+  return '✨';
 };
 
 export default function Cliente() {
@@ -762,65 +773,120 @@ export default function Cliente() {
             )}
 
             {etapaRoleta === 'girando' && (
-              <View style={{alignItems: 'center', paddingVertical: 40}}>
-                <View style={{ marginBottom: 25, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 28, fontWeight: '900', color: '#facc15', textShadowColor: '#facc15', textShadowRadius: 15 }}>🎡 SORTEIO 🎡</Text>
+              <View style={{alignItems: 'center', paddingVertical: 20}}>
+                <View style={{ marginBottom: 20, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 28, fontWeight: '900', color: '#020617' }}>✨ Roleta da Sorte ✨</Text>
                 </View>
                 
-                {/* SETA INDICADORA */}
-                <View style={{ width: 0, height: 0, borderLeftWidth: 15, borderLeftColor: 'transparent', borderRightWidth: 15, borderRightColor: 'transparent', borderBottomWidth: 30, borderBottomColor: '#facc15', marginBottom: -10, zIndex: 10, transform: [{rotate: '180deg'}] }} />
-                
-                <Animated.View style={{ width: 300, height: 300, borderRadius: 150, borderWidth: 12, borderColor: '#1e293b', overflow: 'hidden', transform: [{ rotate: wheelSpin }], shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 20, elevation: 15 }}>
-                    <Svg width="100%" height="100%" viewBox="0 0 100 100">
-                       <Circle cx="50" cy="50" r="50" fill="#020617" />
-                       {(() => {
-                         const items = premiosRoleta.length > 0 ? premiosRoleta : [
-                           { nome: 'SORTE' }, { nome: 'SORTE' }, { nome: 'SORTE' }, { nome: 'SORTE' },
-                           { nome: 'SORTE' }, { nome: 'SORTE' }, { nome: 'SORTE' }, { nome: 'SORTE' }
-                         ];
-                         const total = items.length;
-                         const angle = 360 / total;
-                         const colors = ['#10b981', '#1e293b', '#38bdf8', '#1e293b', '#ec4899', '#1e293b', '#facc15', '#1e293b'];
+                {/* DECORAÇÕES DE BRILHO (Sparkles) */}
+                <View style={{ position: 'relative', width: 340, height: 340, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ position: 'absolute', top: 20, left: 20, fontSize: 24, opacity: 0.6 }}>✨</Text>
+                  <Text style={{ position: 'absolute', top: 40, right: 30, fontSize: 20, opacity: 0.6 }}>✦</Text>
+                  <Text style={{ position: 'absolute', bottom: 60, left: 40, fontSize: 18, opacity: 0.6 }}>✦</Text>
+                  <Text style={{ position: 'absolute', bottom: 30, right: 20, fontSize: 22, opacity: 0.6 }}>✨</Text>
 
-                         return items.map((p, i) => {
-                           const startAngle = i * angle;
-                           const endAngle = (i + 1) * angle;
-                           
-                           // Calcular pontos do arco para o Path do SVG
-                           const x1 = 50 + 50 * Math.cos((Math.PI * (startAngle - 90)) / 180);
-                           const y1 = 50 + 50 * Math.sin((Math.PI * (startAngle - 90)) / 180);
-                           const x2 = 50 + 50 * Math.cos((Math.PI * (endAngle - 90)) / 180);
-                           const y2 = 50 + 50 * Math.sin((Math.PI * (endAngle - 90)) / 180);
-                           
-                           const d = `M 50 50 L ${x1} ${y1} A 50 50 0 0 1 ${x2} ${y2} Z`;
-                           
-                           return (
-                             <G key={i}>
-                               <Path d={d} fill={colors[i % colors.length]} stroke="#020617" strokeWidth="0.5" />
-                               <G transform={`rotate(${startAngle + angle / 2} 50 50)`}>
-                                 <SvgText
-                                   x="50"
-                                   y="15"
-                                   fill="#fff"
-                                   fontSize="4"
-                                   fontWeight="bold"
-                                   textAnchor="middle"
-                                   alignmentBaseline="middle"
-                                   transform="rotate(0 50 15)"
-                                 >
-                                   {p.nome.length > 12 ? p.nome.substring(0, 10) + '...' : p.nome}
-                                 </SvgText>
-                               </G>
-                             </G>
-                           );
-                         });
-                       })()}
-                       <Circle cx="50" cy="50" r="8" fill="#020617" stroke="#facc15" strokeWidth="3" />
-                       <Circle cx="50" cy="50" r="3" fill="#facc15" />
+                  {/* SETA INDICADORA PREMIUM (Triângulo Teal) */}
+                  <View style={{ position: 'absolute', top: -10, zIndex: 100, alignItems: 'center' }}>
+                    <Svg width="40" height="40" viewBox="0 0 40 40">
+                      <Path d="M20 35 L5 5 L35 5 Z" fill="#0d9488" stroke="#fff" strokeWidth="2" />
+                      <Path d="M20 30 L10 10 L30 10 Z" fill="#14b8a6" />
                     </Svg>
-                </Animated.View>
+                  </View>
+                  
+                  <Animated.View style={{ width: 320, height: 320, borderRadius: 160, transform: [{ rotate: wheelSpin }], shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 15, elevation: 10 }}>
+                      <Svg width="100%" height="100%" viewBox="0 0 100 100">
+                         <Defs>
+                           <LinearGradient id="rimGradient" x1="0" y1="0" x2="1" y2="1">
+                             <Stop offset="0" stopColor="#cbd5e1" />
+                             <Stop offset="0.5" stopColor="#f8fafc" />
+                             <Stop offset="1" stopColor="#94a3b8" />
+                           </LinearGradient>
+                           <RadialGradient id="centerGradient" cx="50%" cy="50%" r="50%">
+                             <Stop offset="0" stopColor="#f8fafc" />
+                             <Stop offset="0.7" stopColor="#cbd5e1" />
+                             <Stop offset="1" stopColor="#64748b" />
+                           </RadialGradient>
+                         </Defs>
 
-                <Text style={{ color: '#facc15', marginTop: 40, fontWeight: '900', fontSize: 18, letterSpacing: 2 }}>BOA SORTE! 🍀</Text>
+                         {/* ARO METÁLICO EXTERNO */}
+                         <Circle cx="50" cy="50" r="49" fill="url(#rimGradient)" />
+                         <Circle cx="50" cy="50" r="46" fill="#fff" />
+                         
+                         {/* REBITES (Parafusos do aro) */}
+                         {[...Array(12)].map((_, i) => {
+                           const ang = (i * 30) * Math.PI / 180;
+                           return <Circle key={i} cx={50 + 47.5 * Math.cos(ang)} cy={50 + 47.5 * Math.sin(ang)} r="0.8" fill="#64748b" />
+                         })}
+
+                         {/* SEGMENTOS */}
+                         {(() => {
+                           const items = premiosRoleta.length > 0 ? premiosRoleta : [
+                             { nome: '10 SPG' }, { nome: 'R$ 2 Cashback' }, { nome: 'Café Grátis' }, { nome: 'R$ 5 Cashback' },
+                             { nome: '5 SPG' }, { nome: 'Ferramenta' }, { nome: '15 SPG' }, { nome: 'Brinde' }
+                           ];
+                           const total = items.length;
+                           const angle = 360 / total;
+
+                           return items.map((p, i) => {
+                             const startAngle = i * angle;
+                             const endAngle = (i + 1) * angle;
+                             const x1 = 50 + 46 * Math.cos((Math.PI * (startAngle - 90)) / 180);
+                             const y1 = 50 + 46 * Math.sin((Math.PI * (startAngle - 90)) / 180);
+                             const x2 = 50 + 46 * Math.cos((Math.PI * (endAngle - 90)) / 180);
+                             const y2 = 50 + 46 * Math.sin((Math.PI * (endAngle - 90)) / 180);
+                             const d = `M 50 50 L ${x1} ${y1} A 46 46 0 0 1 ${x2} ${y2} Z`;
+                             
+                             return (
+                               <G key={i}>
+                                 <Path d={d} fill={WHEEL_COLORS[i % 2]} stroke="#cbd5e1" strokeWidth="0.2" />
+                                 <G transform={`rotate(${startAngle + angle / 2} 50 50)`}>
+                                   {/* ÍCONE */}
+                                   <SvgText x="50" y="15" fontSize="6" textAnchor="middle" alignmentBaseline="middle">{getIconForPrize(p.nome)}</SvgText>
+                                   {/* TEXTO */}
+                                   <SvgText x="50" y="24" fill="#1e293b" fontSize="3" fontWeight="bold" textAnchor="middle" alignmentBaseline="middle" transform="rotate(0 50 24)">
+                                     {p.nome.length > 15 ? p.nome.substring(0, 12) + '...' : p.nome.toUpperCase()}
+                                   </SvgText>
+                                 </G>
+                               </G>
+                             );
+                           });
+                         })()}
+
+                         {/* PIVÔ CENTRAL METÁLICO */}
+                         <Circle cx="50" cy="50" r="10" fill="url(#rimGradient)" />
+                         <Circle cx="50" cy="50" r="8" fill="url(#centerGradient)" stroke="#fff" strokeWidth="0.5" />
+                         <SvgText x="50" y="52" fill="#0d9488" fontSize="6" textAnchor="middle" fontWeight="bold">✦</SvgText>
+                      </Svg>
+                  </Animated.View>
+                </View>
+
+                {/* BOTÃO GIRAR AGORA (Abaixo da roleta) */}
+                <TouchableOpacity 
+                   onPress={girarRoleta} 
+                   disabled={rodando} 
+                   style={{ 
+                     marginTop: 30, 
+                     backgroundColor: '#14b8a6', 
+                     paddingVertical: 18, 
+                     paddingHorizontal: 60, 
+                     borderRadius: 40, 
+                     flexDirection: 'row', 
+                     alignItems: 'center', 
+                     gap: 10,
+                     shadowColor: '#14b8a6',
+                     shadowOffset: { width: 0, height: 10 },
+                     shadowOpacity: 0.3,
+                     shadowRadius: 15,
+                     elevation: 8
+                   }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 18 }}>GIRAR AGORA</Text>
+                  <Text style={{ fontSize: 20 }}>🔄</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={() => setMostrarRoletaModal(false)} style={{ marginTop: 20 }}>
+                   <Text style={{ color: '#94a3b8', fontWeight: 'bold' }}>Sair da Roleta</Text>
+                </TouchableOpacity>
               </View>
             )}
 

@@ -128,6 +128,13 @@ export default function Merchant() {
   const [historicoCRM, setHistoricoCRM] = useState<any[]>([]);
   const [clientesAtrasados, setClientesAtrasados] = useState(0);
   const [npsChart, setNpsChart] = useState<{ dias: any[], max: number }>({ dias: [], max: 1 });
+  
+  // 🔥 ESTADOS DE EQUIPE / OPERADORES
+  const [operadorLogado, setOperadorLogado] = useState('Master');
+  const [lojaLimiteUsers, setLojaLimiteUsers] = useState(1);
+  const [operadores, setOperadores] = useState<any[]>([]);
+  const [mostrarEquipeModal, setMostrarEquipeModal] = useState(false);
+  const [formOperador, setFormOperador] = useState({ username: '', senha: '', nome: '' });
 
   const buscarFila = async () => {
     if (!lojaId) return;
@@ -379,7 +386,11 @@ export default function Merchant() {
   const carregarConfig = async () => {
     if (!lojaId) return;
     const { data } = await supabase.from('configuracoes_loja').select('*').eq('loja_id', lojaId).maybeSingle();
-    const { data: lojaData } = await supabase.from('lojas').select('senha').eq('id', lojaId).single();
+    const { data: lojaData } = await supabase.from('lojas').select('senha, limite_usuarios').eq('id', lojaId).single();
+
+    if (lojaData) {
+      setLojaLimiteUsers(lojaData.limite_usuarios || 1);
+    }
 
     if (data) {
       setConfig((prev: any) => ({
@@ -397,6 +408,54 @@ export default function Merchant() {
       }));
     } else {
       setConfig((prev: any) => ({ ...prev, senha: lojaData?.senha || '' }));
+    }
+
+    if (typeof window !== 'undefined') {
+      const op = localStorage.getItem('@operador_nome');
+      if (op) setOperadorLogado(op);
+    }
+  };
+
+  const carregarEquipe = async () => {
+    if (!lojaId) return;
+    const { data } = await supabase.from('usuarios_loja').select('*').eq('loja_id', lojaId).order('created_at', { ascending: true });
+    setOperadores(data || []);
+  };
+
+  const salvarOperador = async () => {
+    if (!lojaId) return;
+    if (!formOperador.username || !formOperador.senha || !formOperador.nome) {
+      mostrarToast('Preencha todos os campos do operador.', 'erro');
+      return;
+    }
+
+    if (operadores.length >= lojaLimiteUsers) {
+      mostrarToast(`Limite de ${lojaLimiteUsers} sub-conta(s) atingido.`, 'erro');
+      return;
+    }
+
+    const { error } = await supabase.from('usuarios_loja').insert([{
+      loja_id: lojaId,
+      username: formOperador.username.toLowerCase().trim(),
+      senha: formOperador.senha,
+      nome: formOperador.nome
+    }]);
+
+    if (error) {
+      if (error.code === '23505') mostrarToast('Este nome de usuário já existe.', 'erro');
+      else mostrarToast(error.message, 'erro');
+    } else {
+      mostrarToast('Operador adicionado!', 'sucesso');
+      setFormOperador({ username: '', senha: '', nome: '' });
+      carregarEquipe();
+    }
+  };
+
+  const excluirOperador = async (id: string) => {
+    const { error } = await supabase.from('usuarios_loja').delete().eq('id', id);
+    if (!error) {
+      mostrarToast('Operador removido.', 'sucesso');
+      carregarEquipe();
     }
   };
 
@@ -1162,18 +1221,35 @@ export default function Merchant() {
                    Temos <Text style={{ color: '#8b5cf6', fontWeight: 'bold' }}>{clientesAtrasados}</Text> clientes sumidos.
                 </Text>
                 <View style={{ flex: 1, justifyContent: 'flex-end', marginTop: 6 }}>
-                   <Text style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: 10 }}>VER LISTA ➔</Text>
+                    <Text style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: 10 }}>VER LISTA ➔</Text>
                 </View>
-             </TouchableOpacity>
+              </TouchableOpacity>
 
-             <View style={[styles.card, { flex: 1, minWidth: 200, borderColor: '#10b981' }]}>
-                <Text style={[styles.title, { color: '#10b981' }]}>📈 Lucratividade (ROI)</Text>
-                <Text style={{ color: '#e2e8f0', fontSize: 14, lineHeight: 22 }}>
-                  Hoje os prêmios entregues geraram um retorno de 
-                  <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 18 }}> {formatarMoeda(stats.pontosResgatadosHoje * (Number(config.reais_por_ponto) || 1))}</Text> 
-                   em faturamento fiel.
-                </Text>
-             </View>
+               <View style={[styles.card, { flex: 1, minWidth: 200, borderColor: '#334155', backgroundColor: '#020617' }]}>
+                  <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900', textAlign: 'center', marginBottom: 5 }}>⚡ {operadorLogado}</Text>
+                  <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textAlign: 'center' }}>OPERADOR ATIVO</Text>
+                  <TouchableOpacity onPress={() => { localStorage.clear(); router.replace('/login'); }} style={{ marginTop: 15, backgroundColor: '#ef444420', padding: 8, borderRadius: 10, borderWidth: 1, borderColor: '#ef4444' }}>
+                    <Text style={{ color: '#ef4444', fontWeight: 'bold', textAlign: 'center', fontSize: 10 }}>SAIR DO SISTEMA</Text>
+                  </TouchableOpacity>
+               </View>
+
+               <TouchableOpacity onPress={() => setMostrarEquipeModal(true)} style={[styles.card, { flex: 1, minWidth: 200, borderColor: '#facc15', borderStyle: 'dashed' }]}>
+                  <Text style={{ color: '#facc15', fontSize: 28, fontWeight: '900' }}>{operadores.length + 1}</Text>
+                  <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>EQUIPE ATIVA</Text>
+                  <Text style={{ color: '#facc15', fontSize: 9, fontWeight: 'bold', marginTop: 5 }}>LIMITE: {lojaLimiteUsers} USERS</Text>
+                  <View style={{ marginTop: 10, backgroundColor: '#facc1520', padding: 8, borderRadius: 10, alignItems: 'center' }}>
+                     <Text style={{ color: '#facc15', fontWeight: 'bold', fontSize: 10 }}>GERENCIAR TIME ➔</Text>
+                  </View>
+               </TouchableOpacity>
+
+              <View style={[styles.card, { flex: 1, minWidth: 200, borderColor: '#10b981' }]}>
+                 <Text style={[styles.title, { color: '#10b981' }]}>📈 Lucratividade (ROI)</Text>
+                 <Text style={{ color: '#e2e8f0', fontSize: 14, lineHeight: 22 }}>
+                   Hoje os prêmios entregues geraram um retorno de 
+                   <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 18 }}> {formatarMoeda(stats.pontosResgatadosHoje * (Number(config.reais_por_ponto) || 1))}</Text> 
+                    em faturamento fiel.
+                 </Text>
+              </View>
           </View>
 
           <View style={{ flexDirection: 'row', gap: 15, marginBottom: 40, flexWrap: 'wrap' }}>
@@ -1351,6 +1427,59 @@ export default function Merchant() {
 
         </View>
       </ScrollView>
+      {/* MODAL DE GERENCIAMENTO DE EQUIPE */}
+      {mostrarEquipeModal && (
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { maxWidth: 500 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+               <Text style={[styles.title, { marginBottom: 0, color: '#facc15' }]}>👥 Minha Equipe</Text>
+               <TouchableOpacity onPress={() => setMostrarEquipeModal(false)} style={{ padding: 5 }}>
+                 <Text style={{ color: '#ef4444', fontSize: 18, fontWeight: 'bold' }}>✕</Text>
+               </TouchableOpacity>
+            </View>
+
+            {operadorLogado === 'Master' ? (
+              <>
+                <View style={{ backgroundColor: '#020617', padding: 15, borderRadius: 15, marginBottom: 20, borderWidth: 1, borderColor: '#334155' }}>
+                  <Text style={{ color: '#facc15', fontWeight: 'bold', fontSize: 12, marginBottom: 10 }}>ADICIONAR OPERADOR ({operadores.length}/{lojaLimiteUsers})</Text>
+                  <TextInput style={styles.input} placeholder="Nome do Funcionário" placeholderTextColor="#64748b" value={formOperador.nome} onChangeText={(t) => setFormOperador({...formOperador, nome: t})} />
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                    <TextInput style={[styles.input, { flex: 1, marginBottom: 0 }]} placeholder="Usuário (login)" placeholderTextColor="#64748b" value={formOperador.username} onChangeText={(t) => setFormOperador({...formOperador, username: t})} autoCapitalize="none" />
+                    <TextInput style={[styles.input, { flex: 1, marginBottom: 0 }]} placeholder="Senha" placeholderTextColor="#64748b" value={formOperador.senha} onChangeText={(t) => setFormOperador({...formOperador, senha: t})} secureTextEntry />
+                  </View>
+                  <TouchableOpacity onPress={salvarOperador} style={{ backgroundColor: '#facc15', padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 15 }}>
+                    <Text style={{ color: '#020617', fontWeight: 'bold' }}>CADASTRAR OPERADOR</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView style={{ maxHeight: 300 }}>
+                   <View style={{ padding: 12, backgroundColor: '#1e293b', borderRadius: 12, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: '#10b98130' }}>
+                      <Text style={{ color: '#10b981', fontWeight: 'bold' }}>👑 Master (Você)</Text>
+                      <Text style={{ color: '#64748b', fontSize: 10 }}>ADMINISTRADOR</Text>
+                   </View>
+                   {operadores.map((op) => (
+                     <View key={op.id} style={{ padding: 12, backgroundColor: '#0f172a', borderRadius: 12, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: '#334155' }}>
+                        <View>
+                          <Text style={{ color: '#fff', fontWeight: 'bold' }}>👤 {op.nome}</Text>
+                          <Text style={{ color: '#94a3b8', fontSize: 11 }}>Login: {op.username}</Text>
+                        </View>
+                        <TouchableOpacity onPress={() => excluirOperador(op.id)} style={{ padding: 8 }}>
+                          <Text style={{ color: '#ef4444', fontWeight: 'bold', fontSize: 12 }}>REMOVER</Text>
+                        </TouchableOpacity>
+                     </View>
+                   ))}
+                </ScrollView>
+              </>
+            ) : (
+              <View style={{ alignItems: 'center', padding: 20 }}>
+                <Text style={{ fontSize: 40, marginBottom: 15 }}>🔒</Text>
+                <Text style={{ color: '#fff', fontWeight: 'bold', textAlign: 'center' }}>Acesso Restrito</Text>
+                <Text style={{ color: '#94a3b8', textAlign: 'center', marginTop: 10 }}>Apenas o usuário Master pode gerenciar a equipe.</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      )}
     </View>
   );
 }

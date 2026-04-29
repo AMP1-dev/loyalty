@@ -7,9 +7,10 @@ const { width, height } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const [cnpj, setCnpj] = useState('');
+  const [username, setUsername] = useState('');
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
-  const [focused, setFocused] = useState<'cnpj' | 'senha' | null>(null);
+  const [focused, setFocused] = useState<'cnpj' | 'username' | 'senha' | null>(null);
 
   const [toast, setToast] = useState({ visible: false, message: '', tipo: 'erro' });
   const toastAnim = useRef(new Animated.Value(-150)).current;
@@ -36,14 +37,47 @@ export default function LoginScreen() {
       const lojaEncontrada = data[0];
       if (lojaEncontrada.ativo === false) { mostrarToast('Acesso bloqueado.', 'erro'); setLoading(false); return; }
       
-      const senhaReal = lojaEncontrada.senha || '1234';
-      if (senhaReal !== senha) { mostrarToast('Senha incorreta!', 'erro'); setLoading(false); return; }
+      let autenticado = false;
+      let userNome = 'Master';
 
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('@loja_id_merchant', lojaEncontrada.id);
-        router.replace(`/merchant?loja_id=${lojaEncontrada.id}`);
+      if (!username.trim()) {
+        // LOGIN MASTER (Antigo / Sem usuário)
+        const senhaReal = lojaEncontrada.senha || '1234';
+        if (senhaReal === senha) autenticado = true;
+        else { mostrarToast('Senha Master incorreta!', 'erro'); setLoading(false); return; }
       } else {
-        router.replace('/merchant');
+        // LOGIN POR OPERADOR
+        const { data: uData, error: uError } = await supabase
+          .from('usuarios_loja')
+          .select('*')
+          .eq('loja_id', lojaEncontrada.id)
+          .eq('username', username.trim().toLowerCase())
+          .limit(1);
+
+        if (uError || !uData || uData.length === 0) {
+          mostrarToast('Usuário não encontrado nesta loja.', 'erro');
+          setLoading(false);
+          return;
+        }
+
+        if (uData[0].senha === senha) {
+          autenticado = true;
+          userNome = uData[0].nome || uData[0].username;
+        } else {
+          mostrarToast('Senha do usuário incorreta!', 'erro');
+          setLoading(false);
+          return;
+        }
+      }
+
+      if (autenticado) {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('@loja_id_merchant', lojaEncontrada.id);
+          localStorage.setItem('@operador_nome', userNome);
+          router.replace(`/merchant?loja_id=${lojaEncontrada.id}`);
+        } else {
+          router.replace('/merchant');
+        }
       }
     } catch (err: any) {
       mostrarToast(`Erro: ${err.message}`, 'erro');
@@ -83,6 +117,18 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.inputWrapper}>
+          <Text style={styles.label}>OPERADOR / USUÁRIO (OPCIONAL)</Text>
+          <TextInput
+            style={[styles.input, focused === 'username' && styles.inputFocused]}
+            placeholder="Deixe vazio para Master"
+            placeholderTextColor="#475569"
+            value={username}
+            onChangeText={setUsername}
+            onFocus={() => setFocused('username')}
+            onBlur={() => setFocused(null)}
+            autoCapitalize="none"
+          />
+        </View>
           <Text style={styles.label}>SENHA DE ACESSO</Text>
           <TextInput
             style={[styles.input, focused === 'senha' && styles.inputFocused]}
