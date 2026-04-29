@@ -447,6 +447,7 @@ export default function Merchant() {
     } else {
       mostrarToast('Operador adicionado!', 'sucesso');
       setFormOperador({ username: '', senha: '', nome: '' });
+      setMostrarEquipeModal(false);
       carregarEquipe();
     }
   };
