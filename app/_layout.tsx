@@ -20,7 +20,7 @@ export default function RootLayout() {
       >
         <Stack.Screen name="cliente/index" />
         <Stack.Screen name="merchant/index" />
-        <Stack.Screen name="amp-admin/index" />
+        <Stack.Screen name="master" />
       </Stack>
     </>
   );
