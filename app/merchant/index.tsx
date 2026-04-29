@@ -92,6 +92,7 @@ export default function Merchant() {
   const [editandoRoletaId, setEditandoRoletaId] = useState<string | null>(null);
   const [formRoleta, setFormRoleta] = useState<any>({});
   const [avaliacoes, setAvaliacoes] = useState<any[]>([]);
+  const [mostrarAvaliacoesModal, setMostrarAvaliacoesModal] = useState(false);
   const [mediaEstrelas, setMediaEstrelas] = useState(0);
 
   const [config, setConfig] = useState<any>({
@@ -283,12 +284,25 @@ export default function Merchant() {
     const { data: avData } = await supabase.from('respostas_nps').select('*').eq('loja_id', lojaId).order('created_at', { ascending: false });
     const avs = avData || [];
     
-    setAvaliacoes(avs.slice(0, 20).map(a => ({
-      nota: a.nota,
-      comentario: a.comentario,
-      data: a.created_at,
-      cliente: a.cliente_cpf
-    })));
+    setAvaliacoes(avs.filter(a => a.resposta !== 'JOGADA_ROLETA').slice(0, 50).map(a => {
+      let nota = a.nota;
+      if (!nota && a.resposta) {
+        if (!isNaN(Number(a.resposta))) nota = Number(a.resposta);
+        else {
+          const rLow = a.resposta.toLowerCase();
+          if (rLow === 'sim' || rLow === 'positivo') nota = 5;
+          else if (rLow === 'neutro') nota = 3;
+          else if (rLow === 'nao' || rLow === 'negativo') nota = 1;
+        }
+      }
+      return {
+        nota: nota || 0,
+        respostaStr: a.resposta,
+        comentario: a.comentario,
+        data: a.created_at,
+        cliente: a.cliente_cpf
+      };
+    }).sort((a, b) => a.nota - b.nota));
 
     const agrupadosPorDia: any = {};
     const chartDataArray = [];
@@ -778,6 +792,54 @@ export default function Merchant() {
         </View>
       )}
 
+      {/* MODAL DE AVALIAÇÕES (NPS) */}
+      {mostrarAvaliacoesModal && (
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { maxWidth: 500 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+               <Text style={[styles.title, { marginBottom: 0, color: '#facc15' }]}>⭐ Lista de Avaliações</Text>
+               <TouchableOpacity onPress={() => setMostrarAvaliacoesModal(false)} style={{ padding: 5 }}>
+                 <Text style={{ color: '#ef4444', fontSize: 18, fontWeight: 'bold' }}>✕</Text>
+               </TouchableOpacity>
+            </View>
+            <Text style={{ color: '#94a3b8', fontSize: 12, marginBottom: 15 }}>As avaliações estão ordenadas das piores para as melhores.</Text>
+            
+            <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={true}>
+               {avaliacoes.length === 0 ? (
+                 <Text style={{ color: '#64748b', textAlign: 'center', marginTop: 20 }}>Nenhuma avaliação encontrada.</Text>
+               ) : (
+                 avaliacoes.map((av, idx) => {
+                   let cor = '#10b981';
+                   let icone = '😍';
+                   if (av.nota <= 2) { cor = '#ef4444'; icone = '😡'; }
+                   else if (av.nota === 3) { cor = '#facc15'; icone = '😐'; }
+
+                   let labelResposta = av.respostaStr || av.nota.toString();
+                   if (!isNaN(Number(labelResposta))) labelResposta = `${labelResposta} Estrelas`;
+                   else labelResposta = labelResposta.toUpperCase();
+
+                   return (
+                     <View key={idx} style={{ backgroundColor: '#1e293b', padding: 15, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#334155' }}>
+                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                         <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>{formatarTelefone(av.cliente)}</Text>
+                         <Text style={{ color: '#94a3b8', fontSize: 11 }}>{new Date(av.data).toLocaleDateString('pt-BR')} {new Date(av.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
+                       </View>
+                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                         <Text style={{ fontSize: 20 }}>{icone}</Text>
+                         <Text style={{ color: cor, fontWeight: 'bold', fontSize: 14 }}>{labelResposta}</Text>
+                       </View>
+                       {av.comentario && (
+                         <Text style={{ color: '#cbd5e1', fontSize: 13, marginTop: 8, fontStyle: 'italic' }}>"{av.comentario}"</Text>
+                       )}
+                     </View>
+                   );
+                 })
+               )}
+            </ScrollView>
+          </View>
+        </View>
+      )}
+
       <ScrollView ref={mainScrollRef} style={styles.container}>
         <Animated.View style={[styles.toastContainer, { transform: [{ translateY: toastAnim as any }], backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444' }]}>
           <Text style={{ fontSize: 24, marginRight: 12 }}>{toast.tipo === 'sucesso' ? '✅' : '⚠️'}</Text><Text style={styles.toastText}>{toast.message}</Text>
@@ -1032,8 +1094,11 @@ export default function Merchant() {
           </View>
 
           <View style={{ flexDirection: 'row', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
-              <View style={[styles.card, { flex: 2, minWidth: 300, borderColor: '#facc15' }]}>
-                 <Text style={[styles.title, { color: '#facc15' }]}>⭐ NPS & Avaliações ({isNaN(mediaEstrelas) ? '0.0' : mediaEstrelas.toFixed(1)})</Text>
+              <TouchableOpacity onPress={() => setMostrarAvaliacoesModal(true)} style={[styles.card, { flex: 2, minWidth: 300, borderColor: '#facc15' }]}>
+                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                   <Text style={[styles.title, { color: '#facc15' }]}>⭐ NPS & Avaliações ({isNaN(mediaEstrelas) ? '0.0' : mediaEstrelas.toFixed(1)})</Text>
+                   <Text style={{ color: '#facc15', fontSize: 10, fontWeight: 'bold' }}>VER LISTA ➔</Text>
+                 </View>
                  <View style={{ flexDirection: 'row', gap: 4, marginBottom: 15 }}>
                    {[1,2,3,4,5].map(star => (
                      <View key={star} style={{ flex: 1, height: 6, backgroundColor: (!isNaN(mediaEstrelas) && mediaEstrelas >= star) ? '#facc15' : '#334155', borderRadius: 3 }} />
@@ -1067,7 +1132,7 @@ export default function Merchant() {
                       </View>
                    </View>
                  )}
-              </View>
+              </TouchableOpacity>
 
              <TouchableOpacity onPress={() => setMostrarCRM(prev => !prev)} style={[styles.card, { flex: 1, minWidth: 200, borderColor: '#8b5cf6', borderWidth: 1 }]}>
                 <Text style={{ color: '#8b5cf6', fontSize: 32, fontWeight: '900' }}>{clientesAtrasados}</Text>
