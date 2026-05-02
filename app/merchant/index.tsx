@@ -636,7 +636,7 @@ export default function Merchant() {
       bairro: config.bairro, cidade: config.cidade, estado: config.estado, cep: config.cep,
       roleta_ativa: config.roleta_ativa, 
       roleta_intervalo_dias: config.roleta_intervalo_dias !== "" ? Number(config.roleta_intervalo_dias) : 1,
-      link_google_review: config.link_google_review || null, qr_mesa_ativo: config.qr_mesa_ativo, brinde_mesa: config.brinde_mesa || null
+      link_google_review: config.link_google_review || null
     }, { onConflict: 'loja_id' });
 
     if (config.senha && config.senha.trim() !== '') await supabase.from('lojas').update({ senha: config.senha }).eq('id', lojaId);
@@ -812,18 +812,6 @@ export default function Merchant() {
               <View style={{ marginBottom: 10, width: '100%' }}>
                 <Text style={{ color: '#94a3b8', fontSize: 10 }}>NOVA SENHA DO PAINEL (Deixe em branco para manter a atual)</Text>
                 <TextInput value={config.senha} onChangeText={(t) => setConfig({ ...config, senha: t })} placeholder="Digite a nova senha..." placeholderTextColor="#475569" secureTextEntry style={styles.input} />
-              </View>
-
-              <Text style={[styles.label, { color: '#facc15', marginTop: 20 }]}>📱 MÓDULO QR DE MESA:</Text>
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <Switch value={config.qr_mesa_ativo} onValueChange={(v) => setConfig({ ...config, qr_mesa_ativo: v })} />
-                  <Text style={{ color: '#fff', fontSize: 12 }}>Ativar QR na Mesa</Text>
-                </View>
-                <View style={{ flex: 2 }}>
-                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>BRINDE (Ex: 1 Sobremesa Grátis)</Text>
-                  <TextInput value={config.brinde_mesa} onChangeText={(t) => setConfig({ ...config, brinde_mesa: t })} placeholder="Qual o brinde?" placeholderTextColor="#475569" style={styles.input} />
-                </View>
               </View>
 
               <TouchableOpacity 
