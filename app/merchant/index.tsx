@@ -31,6 +31,7 @@ export default function Merchant() {
   const manualInputRef = useRef<View>(null);
 
   const [lojaId, setLojaId] = useState<string>('');
+  const APP_VERSION = '4.6.1-pro-platinum';
   const [fila, setFila] = useState<any[]>([]);
   const [clienteFocadoId, setClienteFocadoId] = useState<string | null>(null);
 
@@ -944,7 +945,10 @@ export default function Merchant() {
                <TouchableOpacity onPress={() => { buscarFila(); buscarStats(); buscarAvaliacoesERoleta(); mostrarToast('Dados Atualizados!', 'sucesso'); }} style={{ backgroundColor: '#1e293b', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#334155' }}>
                  <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold' }}>🔄 SINCRONIZAR</Text>
                </TouchableOpacity>
-               <TouchableOpacity onPress={() => setMostrarConfig(!mostrarConfig)}><Text style={styles.headerButton}>⚙️ Configurações</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => setMostrarConfig(!mostrarConfig)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.headerButton}>⚙️ Configurações</Text>
+                  <Text style={{ color: '#64748b', fontSize: 9, fontWeight: 'bold', backgroundColor: '#1e293b', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>v{APP_VERSION.split('-')[0]}</Text>
+                </TouchableOpacity>
                <TouchableOpacity onPress={() => { localStorage.removeItem('@loja_id_merchant'); router.replace('/login'); }}><Text style={styles.closeText}>✕ SAIR</Text></TouchableOpacity>
             </View>
           </View>
