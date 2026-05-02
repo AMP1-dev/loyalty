@@ -404,7 +404,7 @@ export default function Merchant() {
         bonus_retorno_pontos: String(data.bonus_retorno_pontos || 50),
         bonus_retorno_validade_dias: String(data.bonus_retorno_validade_dias || 3),
         roleta_ativa: data.roleta_ativa || false,
-        roleta_intervalo_dias: String(data.roleta_intervalo_dias || 1)
+        roleta_intervalo_dias: data.roleta_intervalo_dias !== null && data.roleta_intervalo_dias !== undefined ? String(data.roleta_intervalo_dias) : '1'
       }));
     } else {
       setConfig((prev: any) => ({ ...prev, senha: lojaData?.senha || '' }));
@@ -521,7 +521,8 @@ export default function Merchant() {
 
     const sucesso = await processarPagamento(item.cliente_cpf, valorReal, usarBonus[item.id] !== false);
     if (sucesso) {
-      await supabase.from('checkins').delete().eq('id', id);
+      await supabase.from('checkins').update({ status: 'atendido' }).eq('id', id);
+      setTimeout(async () => { await supabase.from('checkins').delete().eq('id', id); }, 5000); 
       Vibration.vibrate(200);
       setFila(prev => prev.filter(f => f.id !== id));
       setValorVenda((prev: any) => { const n = { ...prev }; delete n[id]; return n; });
@@ -632,13 +633,18 @@ export default function Merchant() {
       bonus_retorno_pontos: Number(config.bonus_retorno_pontos) || 50, bonus_retorno_validade_dias: Number(config.bonus_retorno_validade_dias) || 3,
       usar_cashback_total: config.usar_cashback_total, telefone: config.telefone, endereco: config.endereco, numero: config.numero,
       bairro: config.bairro, cidade: config.cidade, estado: config.estado, cep: config.cep,
-      roleta_ativa: config.roleta_ativa, roleta_intervalo_dias: Number(config.roleta_intervalo_dias) || 1,
+      roleta_ativa: config.roleta_ativa, 
+      roleta_intervalo_dias: config.roleta_intervalo_dias !== "" ? Number(config.roleta_intervalo_dias) : 1,
       link_google_review: config.link_google_review || null, qr_mesa_ativo: config.qr_mesa_ativo, brinde_mesa: config.brinde_mesa || null
     }, { onConflict: 'loja_id' });
 
     if (config.senha && config.senha.trim() !== '') await supabase.from('lojas').update({ senha: config.senha }).eq('id', lojaId);
     setLoadingSalvar(false);
-    if (error) { mostrarToast('Erro ao salvar configurações.', 'erro'); return; }
+    if (error) { 
+      console.error("Erro ao salvar config:", error);
+      mostrarToast(`Erro ao salvar: ${error.message || 'Verifique os campos'}`, 'erro'); 
+      return; 
+    }
     mostrarToast('⚙️ Configurações salvas com sucesso!', 'sucesso');
     setTimeout(() => { setMostrarConfig(false); }, 1000);
   };
