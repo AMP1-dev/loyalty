@@ -96,7 +96,7 @@ export default function Cliente() {
   useEffect(() => {
     const initApp = async () => { 
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const APP_VERSION = '4.6.1-pro-platinum';
+        const APP_VERSION = '4.6.2-pro-platinum';
         const savedVersion = localStorage.getItem('@app_version');
         if (savedVersion !== APP_VERSION) {
           localStorage.clear();
@@ -136,9 +136,22 @@ export default function Cliente() {
     girarInfinitamente();
 
     const cleanCpf = cpf.replace(/\D/g, '');
+    
+    // Fallback: Polling de segurança caso o Realtime falhe
+    const interval = setInterval(async () => {
+      const { data } = await supabase.from('checkins').select('status').eq('cliente_cpf', cleanCpf).single();
+      if (!data || data.status === 'atendido') {
+        clearInterval(interval);
+        Vibration.vibrate(500);
+        carregarDados(cleanCpf, String(loja_id));
+        setStatus('finalizado');
+      }
+    }, 5000);
+
     const subscription = supabase.channel(`wait_${cleanCpf}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'checkins', filter: `cliente_cpf=eq.${cleanCpf}` }, (payload) => {
         if (payload.new.status === 'atendido') {
+           clearInterval(interval);
            Vibration.vibrate(500);
            carregarDados(cleanCpf, String(loja_id));
            setStatus('finalizado');
@@ -146,7 +159,10 @@ export default function Cliente() {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(subscription); };
+    return () => { 
+      clearInterval(interval);
+      supabase.removeChannel(subscription); 
+    };
   }, [status]);
 
   useEffect(() => {
@@ -420,7 +436,7 @@ export default function Cliente() {
         </View>
 
         <TouchableOpacity style={styles.botaoSair} onPress={sairDaCarteira}><Text style={{ color: '#ef4444', fontWeight: 'bold' }}>🚪 SAIR DA CONTA</Text></TouchableOpacity>
-        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 30 }}>Versão 4.6.1-pro-platinum</Text>
+        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 30 }}>Versão 4.6.2-pro-platinum</Text>
 
       </ScrollView>
 
