@@ -32,6 +32,8 @@ export default function Cliente() {
   
   const[displayCash, setDisplayCash] = useState(0);
   const[displaySaldo, setDisplaySaldo] = useState(0); 
+  const[displayCashLocal, setDisplayCashLocal] = useState(0);
+  const[displaySaldoLocal, setDisplaySaldoLocal] = useState(0);
 
   const[nomeLojaAtual, setNomeLojaAtual] = useState(''); 
   const[recompensas, setRecompensas] = useState<any[]>([]);
@@ -60,6 +62,8 @@ export default function Cliente() {
   const colorAnim = useRef(new Animated.Value(0)).current; 
   const animatedCash = useRef(new Animated.Value(0)).current;
   const animatedSaldo = useRef(new Animated.Value(0)).current; 
+  const animatedCashLocal = useRef(new Animated.Value(0)).current;
+  const animatedSaldoLocal = useRef(new Animated.Value(0)).current;
   const pulseWin = useRef(new Animated.Value(1)).current;
   const shineAnim = useRef(new Animated.Value(-200)).current;
 
@@ -176,6 +180,18 @@ export default function Cliente() {
     const listener = animatedSaldo.addListener(({ value }) => setDisplaySaldo(value));
     return () => animatedSaldo.removeListener(listener);
   }, [saldo]);
+
+  useEffect(() => {
+    Animated.timing(animatedCashLocal, { toValue: cashbackLocal, duration: 1200, useNativeDriver: false }).start();
+    const listener = animatedCashLocal.addListener(({ value }) => setDisplayCashLocal(value));
+    return () => animatedCashLocal.removeListener(listener);
+  }, [cashbackLocal]);
+
+  useEffect(() => {
+    Animated.timing(animatedSaldoLocal, { toValue: saldoLocal, duration: 1200, useNativeDriver: false }).start();
+    const listener = animatedSaldoLocal.addListener(({ value }) => setDisplaySaldoLocal(value));
+    return () => animatedSaldoLocal.removeListener(listener);
+  }, [saldoLocal]);
 
   const carregarDados = async (cpfBusca: string, lojaIdEfetivo?: string) => {
     const { data: lojas } = await supabase.from('lojas').select('id, nome');
@@ -366,16 +382,27 @@ export default function Cliente() {
               </TouchableOpacity>
            </View>
            
-           <View style={{ flexDirection: 'row', gap: 12, marginTop: 25 }}>
-              <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, shadowColor: c.neonVerde, shadowOpacity: 0.2, shadowRadius: 10, elevation: 5 }]}>
-                <Text style={{ color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>SPRINGS (REDE)</Text>
-                <Text style={{ color: c.neonVerde, fontSize: 32, fontWeight: '900', marginTop: 5 }}>✨ {Math.floor(displaySaldo)}</Text>
-              </View>
-              <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda }]}>
-                <Text style={{ color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>CASHBACK (REDE)</Text>
-                <Text style={{ color: c.neonAmarelo, fontSize: 24, fontWeight: '900', marginTop: 5 }}>💰 R$ {displayCash.toFixed(2)}</Text>
-              </View>
-           </View>
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 25 }}>
+               <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, shadowColor: c.neonVerde, shadowOpacity: 0.2, shadowRadius: 10, elevation: 5 }]}>
+                 <Text style={{ color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>SPRINGS (REDE)</Text>
+                 <Text style={{ color: c.neonVerde, fontSize: 28, fontWeight: '900', marginTop: 5 }}>✨ {Math.floor(displaySaldo)}</Text>
+               </View>
+               <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda }]}>
+                 <Text style={{ color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>CASHBACK (REDE)</Text>
+                 <Text style={{ color: c.neonAmarelo, fontSize: 24, fontWeight: '900', marginTop: 5 }}>💰 R$ {displayCash.toFixed(2)}</Text>
+               </View>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+               <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, padding: 12, borderRadius: 16 }]}>
+                 <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold' }}>SPRINGS ({nomeLojaAtual.split(' ')[0]})</Text>
+                 <Text style={{ color: c.neonVerde, fontSize: 18, fontWeight: '900', marginTop: 3 }}>✨ {Math.floor(displaySaldoLocal)}</Text>
+               </View>
+               <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, padding: 12, borderRadius: 16 }]}>
+                 <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold' }}>CASHBACK ({nomeLojaAtual.split(' ')[0]})</Text>
+                 <Text style={{ color: c.neonAmarelo, fontSize: 16, fontWeight: '900', marginTop: 3 }}>💰 R$ {displayCashLocal.toFixed(2)}</Text>
+               </View>
+            </View>
         </View>
 
         {/* METALLIC TRIGGER BUTTON */}
