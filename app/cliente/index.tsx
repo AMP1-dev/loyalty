@@ -22,16 +22,17 @@ const carregarStorage = async (key: string) => {
   else return await AsyncStorage.getItem(key);
 };
 
+// ─── DDDs válidos brasileiros ──────────────────────────────────────────────────
 const DDD_VALIDOS = [
-  '11','12','13','14','15','16','17','18','19',
-  '21','22','24','27','28','27','28',
-  '31','32','33','34','35','37','38',
-  '41','42','43','44','45','46','47','48','49',
-  '51','53','54','55',
-  '61','62','63','64','65','66','67','68','69',
-  '71','73','74','75','77','79',
-  '81','82','83','84','85','86','87','88','89',
-  '91','92','93','94','95','96','97','98','99'
+  '11', '12', '13', '14', '15', '16', '17', '18', '19',
+  '21', '22', '24', '27', '28',
+  '31', '32', '33', '34', '35', '37', '38',
+  '41', '42', '43', '44', '45', '46', '47', '48', '49',
+  '51', '53', '54', '55',
+  '61', '62', '63', '64', '65', '66', '67', '68', '69',
+  '71', '73', '74', '75', '77', '79',
+  '81', '82', '83', '84', '85', '86', '87', '88', '89',
+  '91', '92', '93', '94', '95', '96', '97', '98', '99'
 ];
 
 // ─── Helpers da roleta ────────────────────────────────────────────────────────
@@ -440,6 +441,18 @@ export default function Cliente() {
     return () => { clearInterval(interval); supabase.removeChannel(subscription); };
   }, [status]);
 
+  // ─── Resetar roleta ao fechar modal ───────────────────────────────────────
+  useEffect(() => {
+    if (!mostrarRoletaModal) {
+      // Ao fechar, reseta para estado idle (girando lentamente)
+      rotateAnim.setValue(0);
+      setRoletaTargetDeg(0);
+      setPremioGanho(null);
+      setEtapaRoleta('nps');
+      setRespostasNps({});
+    }
+  }, [mostrarRoletaModal]);
+
   // ─── Animações de saldo ────────────────────────────────────────────────────
   useEffect(() => {
     Animated.timing(animatedCash, { toValue: cashback, duration: 1200, useNativeDriver: false }).start();
@@ -537,7 +550,7 @@ export default function Cliente() {
 
   const formatarTelefone = (text: string) => {
     const cleaned = text.replace(/\D/g, '');
-    
+
     // Validação de DDD
     if (cleaned.length >= 2) {
       const ddd = cleaned.slice(0, 2);
@@ -633,7 +646,7 @@ export default function Cliente() {
     Animated.timing(rotateAnim, {
       toValue: 1,
       duration: 6000,
-      easing: Easing.out(Easing.bezier(0.25, 0.1, 0.1, 1)),
+      easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start(async () => {
       rotateAnim.removeListener(listener);
@@ -662,27 +675,27 @@ export default function Cliente() {
   if (status === 'idle') {
     return (
       <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={[styles.scroll, { justifyContent: 'flex-start', paddingTop: 60 }]}>
-        
+
         {/* CABEÇALHO FESTIVO PREMIUM */}
         <View style={{ alignItems: 'center', marginBottom: 25 }}>
-           <View style={{ position: 'relative', padding: 20 }}>
-              {/* Estrelas flutuantes decorativas */}
-              <Text style={{ position: 'absolute', top: 0, left: 0, fontSize: 24 }}>✨</Text>
-              <Text style={{ position: 'absolute', top: -10, right: 10, fontSize: 18 }}>✨</Text>
-              <Text style={{ position: 'absolute', bottom: 10, left: -10, fontSize: 14 }}>✨</Text>
-              <Text style={{ position: 'absolute', bottom: 0, right: -5, fontSize: 22 }}>✨</Text>
-              
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 2, lineHeight: 46 }}>PALM</Text>
-                <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 2, lineHeight: 46 }}>SPRINGS</Text>
-              </View>
-           </View>
-           
-           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 5 }}>
-              <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
-              <Text style={{ color: c.subtexto, fontSize: 13, fontWeight: '600', letterSpacing: 0.5 }}>seu clube de benefícios premium</Text>
-              <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
-           </View>
+          <View style={{ position: 'relative', padding: 20 }}>
+            {/* Estrelas flutuantes decorativas */}
+            <Text style={{ position: 'absolute', top: 0, left: 0, fontSize: 24 }}>✨</Text>
+            <Text style={{ position: 'absolute', top: -10, right: 10, fontSize: 18 }}>✨</Text>
+            <Text style={{ position: 'absolute', bottom: 10, left: -10, fontSize: 14 }}>✨</Text>
+            <Text style={{ position: 'absolute', bottom: 0, right: -5, fontSize: 22 }}>✨</Text>
+
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 2, lineHeight: 46 }}>PALM</Text>
+              <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 2, lineHeight: 46 }}>SPRINGS</Text>
+            </View>
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 5 }}>
+            <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
+            <Text style={{ color: c.subtexto, fontSize: 13, fontWeight: '600', letterSpacing: 0.5 }}>seu clube de benefícios premium</Text>
+            <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
+          </View>
         </View>
 
         <TextInput
@@ -733,27 +746,37 @@ export default function Cliente() {
             </View>
           </View>
 
-          {/* Saldos globais */}
-          <View style={{ flexDirection: 'row', gap: 12, marginTop: 25 }}>
-            <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, shadowColor: c.neonVerde, shadowOpacity: 0.2, shadowRadius: 10, elevation: 5 }]}>
-              <Text style={{ color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>SPRINGS (REDE)</Text>
-              <Text style={{ color: c.neonVerde, fontSize: 28, fontWeight: '900', marginTop: 5 }}>✨ {Math.floor(displaySaldo)}</Text>
+          {/* Saldos globais + locais em um card separado */}
+          <View style={{
+            marginTop: 25, padding: 16, borderRadius: 24,
+            backgroundColor: c.card, borderWidth: 2, borderColor: c.neonVerde,
+            shadowColor: c.neonVerde, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8
+          }}>
+            {/* Globais */}
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 14 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold', marginBottom: 6 }}>SPRINGS (REDE)</Text>
+                <Text style={{ color: c.neonVerde, fontSize: 24, fontWeight: '900' }}>✨ {Math.floor(displaySaldo)}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold', marginBottom: 6 }}>CASHBACK (REDE)</Text>
+                <Text style={{ color: c.neonAmarelo, fontSize: 20, fontWeight: '900' }}>💰 R$ {displayCash.toFixed(2)}</Text>
+              </View>
             </View>
-            <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda }]}>
-              <Text style={{ color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>CASHBACK (REDE)</Text>
-              <Text style={{ color: c.neonAmarelo, fontSize: 24, fontWeight: '900', marginTop: 5 }}>💰 R$ {displayCash.toFixed(2)}</Text>
-            </View>
-          </View>
 
-          {/* Saldos locais */}
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-            <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, padding: 12, borderRadius: 16 }]}>
-              <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold' }}>DISPONÍVEL NESTA LOJA</Text>
-              <Text style={{ color: c.neonVerde, fontSize: 18, fontWeight: '900', marginTop: 3 }}>{Math.floor(displaySaldoLocal)} Springs</Text>
-            </View>
-            <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, padding: 12, borderRadius: 16 }]}>
-              <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold' }}>DISPONÍVEL NESTA LOJA</Text>
-              <Text style={{ color: c.neonAmarelo, fontSize: 16, fontWeight: '900', marginTop: 3 }}>R$ {displayCashLocal.toFixed(2)}</Text>
+            {/* Divisor */}
+            <View style={{ height: 1, backgroundColor: c.borda, marginBottom: 14 }} />
+
+            {/* Locais */}
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold', marginBottom: 6 }}>DISPONÍVEL NESTA LOJA</Text>
+                <Text style={{ color: c.neonVerde, fontSize: 16, fontWeight: '900' }}>{Math.floor(displaySaldoLocal)} Springs</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold', marginBottom: 6 }}>DISPONÍVEL NESTA LOJA</Text>
+                <Text style={{ color: c.neonAmarelo, fontSize: 14, fontWeight: '900' }}>R$ {displayCashLocal.toFixed(2)}</Text>
+              </View>
             </View>
           </View>
         </View>
@@ -905,7 +928,18 @@ export default function Cliente() {
                     </View>
                   </View>
                 ))}
-                <TouchableOpacity style={[styles.buttonBig, { marginTop: 30 }]} onPress={() => setEtapaRoleta('girando')}>
+                <TouchableOpacity
+                  style={[styles.buttonBig, { marginTop: 30, opacity: Object.keys(respostasNps).length === perguntasNps.length ? 1 : 0.5 }]}
+                  onPress={() => {
+                    // Validar se respondeu todas as perguntas
+                    if (Object.keys(respostasNps).length !== perguntasNps.length) {
+                      mostrarToast('⚠️ Responda todas as perguntas!', 'erro');
+                      return;
+                    }
+                    setEtapaRoleta('girando');
+                  }}
+                  disabled={Object.keys(respostasNps).length !== perguntasNps.length}
+                >
                   <Text style={styles.buttonTextBig}>LIBERAR ROLETA 🎡</Text>
                 </TouchableOpacity>
               </ScrollView>
@@ -937,7 +971,7 @@ export default function Cliente() {
                     overflow: 'hidden',
                     transform: [{ rotate: wheelSpin }],
                   }}>
-                    <WheelSVG prizes={premiosRoleta} size={288} isDark={false} />
+                    <WheelSVG prizes={premiosRoleta} size={288} isDark={isDark} />
                   </Animated.View>
                 </View>
 
