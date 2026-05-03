@@ -22,6 +22,18 @@ const carregarStorage = async (key: string) => {
   else return await AsyncStorage.getItem(key);
 };
 
+const DDD_VALIDOS = [
+  '11','12','13','14','15','16','17','18','19',
+  '21','22','24','27','28','27','28',
+  '31','32','33','34','35','37','38',
+  '41','42','43','44','45','46','47','48','49',
+  '51','53','54','55',
+  '61','62','63','64','65','66','67','68','69',
+  '71','73','74','75','77','79',
+  '81','82','83','84','85','86','87','88','89',
+  '91','92','93','94','95','96','97','98','99'
+];
+
 // ─── Helpers da roleta ────────────────────────────────────────────────────────
 const isPremioPositivo = (premio: any): boolean => {
   if (!premio) return false;
@@ -525,6 +537,17 @@ export default function Cliente() {
 
   const formatarTelefone = (text: string) => {
     const cleaned = text.replace(/\D/g, '');
+    
+    // Validação de DDD
+    if (cleaned.length >= 2) {
+      const ddd = cleaned.slice(0, 2);
+      if (!DDD_VALIDOS.includes(ddd)) {
+        setCpf('');
+        mostrarToast('⚠️ Insira um DDD válido (Ex: 11, 19, 21...)', 'erro');
+        return;
+      }
+    }
+
     let formatted = cleaned;
     if (cleaned.length > 2 && cleaned.length <= 7) formatted = `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
     else if (cleaned.length > 7) formatted = `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`;
@@ -638,9 +661,30 @@ export default function Cliente() {
   // ─── TELA DE LOGIN ─────────────────────────────────────────────────────────
   if (status === 'idle') {
     return (
-      <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={styles.scroll}>
-        <Text style={[styles.logo, { color: c.neonVerde }]}>PALM SPRINGS</Text>
-        <Text style={{ textAlign: 'center', color: c.subtexto, marginBottom: 40, fontSize: 16 }}>Sua carteira de benefícios premium</Text>
+      <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={[styles.scroll, { justifyContent: 'flex-start', paddingTop: 60 }]}>
+        
+        {/* CABEÇALHO FESTIVO PREMIUM */}
+        <View style={{ alignItems: 'center', marginBottom: 25 }}>
+           <View style={{ position: 'relative', padding: 20 }}>
+              {/* Estrelas flutuantes decorativas */}
+              <Text style={{ position: 'absolute', top: 0, left: 0, fontSize: 24 }}>✨</Text>
+              <Text style={{ position: 'absolute', top: -10, right: 10, fontSize: 18 }}>✨</Text>
+              <Text style={{ position: 'absolute', bottom: 10, left: -10, fontSize: 14 }}>✨</Text>
+              <Text style={{ position: 'absolute', bottom: 0, right: -5, fontSize: 22 }}>✨</Text>
+              
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 2, lineHeight: 46 }}>PALM</Text>
+                <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 2, lineHeight: 46 }}>SPRINGS</Text>
+              </View>
+           </View>
+           
+           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 5 }}>
+              <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
+              <Text style={{ color: c.subtexto, fontSize: 13, fontWeight: '600', letterSpacing: 0.5 }}>seu clube de benefícios premium</Text>
+              <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
+           </View>
+        </View>
+
         <TextInput
           placeholder="(19) 99999-9999" placeholderTextColor={c.subtexto}
           value={cpf} onChangeText={formatarTelefone}
@@ -650,6 +694,8 @@ export default function Cliente() {
         <TouchableOpacity style={styles.buttonBig} onPress={entrarFila} activeOpacity={0.8}>
           <Text style={styles.buttonTextBig}>ACESSAR MINHA CARTEIRA</Text>
         </TouchableOpacity>
+
+        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v4.6.2-pro-platinum</Text>
       </ScrollView>
     );
   }
