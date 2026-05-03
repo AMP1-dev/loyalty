@@ -18,6 +18,18 @@ const carregarStorage = async (key: string) => {
   else return await AsyncStorage.getItem(key);
 };
 
+const DDD_VALIDOS = [
+  '11','12','13','14','15','16','17','18','19',
+  '21','22','24','27','28','27','28',
+  '31','32','33','34','35','37','38',
+  '41','42','43','44','45','46','47','48','49',
+  '51','53','54','55',
+  '61','62','63','64','65','66','67','68','69',
+  '71','73','74','75','77','79',
+  '81','82','83','84','85','86','87','88','89',
+  '91','92','93','94','95','96','97','98','99'
+];
+
 // ─── Componente CTA da Roleta ────────────────────────────────────────────────
 function RoletaCTA({ onPress, premiosRoleta, isDark, c }: any) {
   const idleAnim = useRef(new Animated.Value(0)).current;
@@ -563,7 +575,19 @@ export default function Cliente() {
   };
 
   const formatarTelefone = (text: string) => {
-    const cleaned = text.replace(/\D/g, ''); let formatted = cleaned;
+    const cleaned = text.replace(/\D/g, '');
+    
+    // Validação de DDD
+    if (cleaned.length >= 2) {
+      const ddd = cleaned.slice(0, 2);
+      if (!DDD_VALIDOS.includes(ddd)) {
+        setCpf('');
+        mostrarToast('⚠️ Insira um DDD válido (Ex: 11, 19, 21...)', 'erro');
+        return;
+      }
+    }
+
+    let formatted = cleaned;
     if (cleaned.length > 2 && cleaned.length <= 7) formatted = `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
     else if (cleaned.length > 7) formatted = `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`;
     setCpf(formatted);
