@@ -669,8 +669,29 @@ export default function Cliente() {
   if (status === 'idle') {
     return (
       <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={styles.scroll}>
-        <Text style={[styles.logo, { color: c.neonVerde }]}>PALM SPRINGS</Text>
-        <Text style={{ textAlign: 'center', color: c.subtexto, marginBottom: 40, fontSize: 16 }}>Sua carteira de benefícios premium</Text>
+        
+        {/* CABEÇALHO FESTIVO PREMIUM */}
+        <View style={{ alignItems: 'center', marginBottom: 40 }}>
+           <View style={{ position: 'relative', padding: 20 }}>
+              {/* Estrelas flutuantes decorativas */}
+              <Text style={{ position: 'absolute', top: 0, left: 0, fontSize: 24 }}>✨</Text>
+              <Text style={{ position: 'absolute', top: -10, right: 10, fontSize: 18 }}>✨</Text>
+              <Text style={{ position: 'absolute', bottom: 10, left: -10, fontSize: 14 }}>✨</Text>
+              <Text style={{ position: 'absolute', bottom: 0, right: -5, fontSize: 22 }}>✨</Text>
+              
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 8, lineHeight: 48 }}>PALM</Text>
+                <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 8, lineHeight: 48 }}>SPRINGS</Text>
+              </View>
+           </View>
+           
+           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 }}>
+              <View style={{ height: 1, width: 30, backgroundColor: c.borda }} />
+              <Text style={{ color: c.subtexto, fontSize: 14, fontWeight: '600', letterSpacing: 1 }}>Sua carteira de benefícios premium</Text>
+              <View style={{ height: 1, width: 30, backgroundColor: c.borda }} />
+           </View>
+        </View>
+
         <TextInput placeholder="(19) 99999-9999" placeholderTextColor={c.subtexto} value={cpf} onChangeText={formatarTelefone} keyboardType="phone-pad" maxLength={15} style={[styles.inputGigante, { backgroundColor: c.card, borderColor: c.borda, color: c.texto }]} />
         <TouchableOpacity style={styles.buttonBig} onPress={entrarFila} activeOpacity={0.8}><Text style={styles.buttonTextBig}>ACESSAR MINHA CARTEIRA</Text></TouchableOpacity>
       </ScrollView>
