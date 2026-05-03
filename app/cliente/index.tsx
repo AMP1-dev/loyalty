@@ -668,10 +668,10 @@ export default function Cliente() {
   // ─── TELA DE LOGIN ─────────────────────────────────────────────────────────
   if (status === 'idle') {
     return (
-      <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={styles.scroll}>
+      <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={[styles.scroll, { justifyContent: 'flex-start', paddingTop: 60 }]}>
         
         {/* CABEÇALHO FESTIVO PREMIUM */}
-        <View style={{ alignItems: 'center', marginBottom: 40 }}>
+        <View style={{ alignItems: 'center', marginBottom: 25 }}>
            <View style={{ position: 'relative', padding: 20 }}>
               {/* Estrelas flutuantes decorativas */}
               <Text style={{ position: 'absolute', top: 0, left: 0, fontSize: 24 }}>✨</Text>
@@ -680,20 +680,22 @@ export default function Cliente() {
               <Text style={{ position: 'absolute', bottom: 0, right: -5, fontSize: 22 }}>✨</Text>
               
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 8, lineHeight: 48 }}>PALM</Text>
-                <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 8, lineHeight: 48 }}>SPRINGS</Text>
+                <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 2, lineHeight: 46 }}>PALM</Text>
+                <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 2, lineHeight: 46 }}>SPRINGS</Text>
               </View>
            </View>
            
-           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 }}>
-              <View style={{ height: 1, width: 30, backgroundColor: c.borda }} />
-              <Text style={{ color: c.subtexto, fontSize: 14, fontWeight: '600', letterSpacing: 1 }}>Sua carteira de benefícios premium</Text>
-              <View style={{ height: 1, width: 30, backgroundColor: c.borda }} />
+           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 5 }}>
+              <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
+              <Text style={{ color: c.subtexto, fontSize: 13, fontWeight: '600', letterSpacing: 0.5 }}>seu clube de benefícios premium</Text>
+              <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
            </View>
         </View>
 
         <TextInput placeholder="(19) 99999-9999" placeholderTextColor={c.subtexto} value={cpf} onChangeText={formatarTelefone} keyboardType="phone-pad" maxLength={15} style={[styles.inputGigante, { backgroundColor: c.card, borderColor: c.borda, color: c.texto }]} />
         <TouchableOpacity style={styles.buttonBig} onPress={entrarFila} activeOpacity={0.8}><Text style={styles.buttonTextBig}>ACESSAR MINHA CARTEIRA</Text></TouchableOpacity>
+        
+        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v4.6.2-pro-platinum</Text>
       </ScrollView>
     );
   }
