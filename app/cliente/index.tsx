@@ -116,18 +116,18 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
             {/* Conteúdo da fatia */}
             <G transform={`rotate(${rotation} ${x} ${y})`}>
               <SvgText x={x} y={y - (lines.length > 1 ? 11 : 6)}
-                fill={iconColor} fontSize={size < 250 ? "10" : "12"}
+                fill={iconColor} fontSize={size < 240 ? "10" : "12"}
                 fontWeight="900" textAnchor="middle">
                 {icon}
               </SvgText>
               <SvgText x={x} y={y + (lines.length > 1 ? 0 : 5)}
-                fill={textColor} fontSize={size < 250 ? "8.5" : "10"}
+                fill={textColor} fontSize={size < 240 ? "8.5" : "10"}
                 fontWeight="bold" textAnchor="middle">
                 {lines[0]}
               </SvgText>
               {lines[1] && (
                 <SvgText x={x} y={y + 10}
-                  fill={textColor} fontSize={size < 250 ? "8.5" : "10"}
+                  fill={textColor} fontSize={size < 240 ? "8.5" : "10"}
                   fontWeight="bold" textAnchor="middle">
                   {lines[1]}
                 </SvgText>
@@ -403,7 +403,7 @@ export default function Cliente() {
   useEffect(() => {
     const initApp = async () => {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const APP_VERSION = '4.9.5-platinum-pro-final';
+        const APP_VERSION = '5.0.0-diamond-edition';
         const savedVersion = localStorage.getItem('@app_version');
         if (savedVersion !== APP_VERSION) {
           localStorage.clear();
@@ -551,17 +551,20 @@ export default function Cliente() {
     const { data: trans } = await supabase.from('transacoes').select('*').eq('cliente_cpf', cpfBusca);
     const { data: res } = await supabase.from('resgates').select('*').eq('cliente_cpf', cpfBusca);
     const { data: cash } = await supabase.from('cashbacks').select('*').eq('cliente_cpf', cpfBusca);
+    const { data: bonus } = await supabase.from('bonus_pendentes').select('pontos, loja_id').eq('cliente_cpf', cpfBusca).eq('usado', false);
 
     const totalGlobal = (trans || []).reduce((a, t) => a + (t.pontos_gerados || 0), 0);
+    const bonusTotal = (bonus || []).reduce((a, b) => a + (b.pontos || 0), 0);
     const usadosGlobal = (res || []).reduce((a, r) => a + (r.pontos_usados || 0), 0);
-    setSaldo(totalGlobal - usadosGlobal);
+    setSaldo((totalGlobal + bonusTotal) - usadosGlobal);
     setResgatados((res || []).map(r => String(r.recompensa_id)));
     setCashback((cash || []).filter(c => c.usado === false).reduce((s, c) => s + Number(c.valor), 0));
 
     if (lidEfetivo && lidEfetivo !== 'undefined') {
       const tLocal = (trans || []).filter(t => String(t.loja_id) === String(lidEfetivo)).reduce((a, t) => a + (t.pontos_gerados || 0), 0);
+      const bLocal = (bonus || []).filter(b => String(b.loja_id) === String(lidEfetivo)).reduce((a, b) => a + (b.pontos || 0), 0);
       const uLocal = (res || []).filter(r => String(r.loja_id) === String(lidEfetivo)).reduce((a, r) => a + (r.pontos_usados || 0), 0);
-      setSaldoLocal(tLocal - uLocal);
+      setSaldoLocal((tLocal + bLocal) - uLocal);
       const cLocal = (cash || []).filter(c => String(c.loja_id) === String(lidEfetivo) && c.usado === false).reduce((s, c) => s + Number(c.valor), 0);
       setCashbackLocal(cLocal);
       const { data: rec } = await supabase.from('recompensas').select('*').eq('loja_id', String(lidEfetivo)).eq('ativo', true).order('custo_pontos', { ascending: true });
@@ -1016,60 +1019,50 @@ export default function Cliente() {
   const bannerGrande = banners.find(b => b.ordem === 3);
 
   // ─── TELA DE LOGIN ─────────────────────────────────────────────────────────
-  if (status === 'idle') {
-    return (
-      <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={[styles.scroll, { justifyContent: 'flex-start', paddingTop: 60 }]}>
-
-        {/* CABEÇALHO FESTIVO PREMIUM */}
-        <View style={{ alignItems: 'center', marginBottom: 25 }}>
-          <View style={{ position: 'relative', padding: 20 }}>
-            {/* Estrelas flutuantes decorativas */}
-            <Text style={{ position: 'absolute', top: 0, left: 0, fontSize: 24 }}>✨</Text>
-            <Text style={{ position: 'absolute', top: -10, right: 10, fontSize: 18 }}>✨</Text>
-            <Text style={{ position: 'absolute', bottom: 10, left: -10, fontSize: 14 }}>✨</Text>
-            <Text style={{ position: 'absolute', bottom: 0, right: -5, fontSize: 22 }}>✨</Text>
-
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 2, lineHeight: 46 }}>PALM</Text>
-              <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 2, lineHeight: 46 }}>SPRINGS</Text>
-            </View>
-          </View>
-
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 5 }}>
-            <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
-            <Text style={{ color: c.subtexto, fontSize: 13, fontWeight: '600', letterSpacing: 0.5 }}>seu clube de benefícios premium</Text>
-            <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
+  const renderIdle = () => (
+    <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={[styles.scroll, { justifyContent: 'flex-start', paddingTop: 60 }]}>
+      {/* CABEÇALHO FESTIVO PREMIUM */}
+      <View style={{ alignItems: 'center', marginBottom: 25 }}>
+        <View style={{ position: 'relative', padding: 20 }}>
+          <Text style={{ position: 'absolute', top: 0, left: 0, fontSize: 24 }}>✨</Text>
+          <Text style={{ position: 'absolute', top: -10, right: 10, fontSize: 18 }}>✨</Text>
+          <Text style={{ position: 'absolute', bottom: 10, left: -10, fontSize: 14 }}>✨</Text>
+          <Text style={{ position: 'absolute', bottom: 0, right: -5, fontSize: 22 }}>✨</Text>
+          <View style={{ alignItems: 'center' }}>
+            <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 2, lineHeight: 46 }}>PALM</Text>
+            <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 2, lineHeight: 46 }}>SPRINGS</Text>
           </View>
         </View>
-
-        <TextInput
-          placeholder="(19) 99999-9999" placeholderTextColor={c.subtexto}
-          value={cpf} onChangeText={formatarTelefone}
-          keyboardType="phone-pad" maxLength={15}
-          style={[styles.inputGigante, { backgroundColor: c.card, borderColor: c.borda, color: c.texto }]}
-        />
-        <TouchableOpacity style={styles.buttonBig} onPress={entrarFila} activeOpacity={0.8}>
-          <Text style={styles.buttonTextBig}>ACESSAR MINHA CARTEIRA</Text>
-        </TouchableOpacity>
-
-        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v4.9.5-platinum-pro-final</Text>
-      </ScrollView>
-    );
-  }
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 5 }}>
+          <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
+          <Text style={{ color: c.subtexto, fontSize: 13, fontWeight: '600', letterSpacing: 0.5 }}>seu clube de benefícios premium</Text>
+          <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
+        </View>
+      </View>
+      <TextInput
+        placeholder="(19) 99999-9999" placeholderTextColor={c.subtexto}
+        value={cpf} onChangeText={formatarTelefone}
+        keyboardType="phone-pad" maxLength={15}
+        style={[styles.inputGigante, { backgroundColor: c.card, borderColor: c.borda, color: c.texto }]}
+      />
+      <TouchableOpacity style={styles.buttonBig} onPress={entrarFila} activeOpacity={0.8} disabled={carregando}>
+        <Text style={styles.buttonTextBig}>{carregando ? 'CARREGANDO...' : 'ACESSAR MINHA CARTEIRA'}</Text>
+      </TouchableOpacity>
+      <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v5.0.0-diamond-edition</Text>
+    </ScrollView>
+  );
 
   // ─── TELA DE AGUARDANDO ────────────────────────────────────────────────────
-  if (status === 'aguardando') {
-    return (
-      <View style={[styles.center, { backgroundColor: c.bg }]}>
-        <Animated.View style={[styles.aiCircle, { transform: [{ scale: pulse }, { rotate: spinAguard }], borderColor: '#14b8a6', backgroundColor: c.card }]} />
-        <Text style={{ marginTop: 20, color: c.texto, fontWeight: 'bold' }}>Aguardando liberação do lojista...</Text>
-        <Text style={{ color: c.subtexto, fontSize: 12, marginTop: 5 }}>Você será redirecionado automaticamente</Text>
-      </View>
-    );
-  }
+  const renderAguardando = () => (
+    <View style={[styles.center, { backgroundColor: c.bg }]}>
+      <Animated.View style={[styles.aiCircle, { transform: [{ scale: pulse }, { rotate: spinAguard }], borderColor: '#14b8a6', backgroundColor: c.card }]} />
+      <Text style={{ marginTop: 20, color: c.texto, fontWeight: 'bold' }}>Aguardando liberação do lojista...</Text>
+      <Text style={{ color: c.subtexto, fontSize: 12, marginTop: 5 }}>Você será redirecionado automaticamente</Text>
+    </View>
+  );
 
-  // ─── TELA PRINCIPAL ────────────────────────────────────────────────────────
-  return (
+  // ─── TELA PRINCIPAL (DASHBOARD) ────────────────────────────────────────────
+  const renderFinalizado = () => (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 60 }}>
 
@@ -1271,10 +1264,21 @@ export default function Cliente() {
         <TouchableOpacity style={styles.botaoSair} onPress={sairDaCarteira}>
           <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>🚪 SAIR DA CONTA</Text>
         </TouchableOpacity>
-        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 16, marginBottom: 10 }}>
-          v4.9.5-platinum-pro-final
+        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 16 }}>
+          v5.0.0-diamond-edition
         </Text>
       </ScrollView>
+    </View>
+  );
+
+  return (
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+      {/* ── Conteúdo Dinâmico ── */}
+      {status === 'idle' && renderIdle()}
+      {status === 'aguardando' && renderAguardando()}
+      {status === 'finalizado' && renderFinalizado()}
+
+      {/* ── Modais Globais (Sempre acessíveis) ── */}
 
       {/* ── MODAL DA ROLETA ── */}
       {mostrarRoletaModal && (
