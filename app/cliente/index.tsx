@@ -114,19 +114,19 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
             />
             {/* Conteúdo da fatia */}
             <G transform={`rotate(${rotation} ${x} ${y})`}>
-              <SvgText x={x} y={y - (lines.length > 1 ? 9 : 5)}
-                fill={iconColor} fontSize={size < 200 ? "6" : "7"}
+              <SvgText x={x} y={y - (lines.length > 1 ? 11 : 6)}
+                fill={iconColor} fontSize={size < 200 ? "7" : "9"}
                 fontWeight="900" textAnchor="middle">
                 {icon}
               </SvgText>
-              <SvgText x={x} y={y + (lines.length > 1 ? 0 : 4)}
-                fill={textColor} fontSize={size < 200 ? "5" : "5.5"}
+              <SvgText x={x} y={y + (lines.length > 1 ? 0 : 5)}
+                fill={textColor} fontSize={size < 200 ? "6" : "7.5"}
                 fontWeight="bold" textAnchor="middle">
                 {lines[0]}
               </SvgText>
               {lines[1] && (
-                <SvgText x={x} y={y + 8}
-                  fill={textColor} fontSize={size < 200 ? "5" : "5.5"}
+                <SvgText x={x} y={y + 10}
+                  fill={textColor} fontSize={size < 200 ? "6" : "7.5"}
                   fontWeight="bold" textAnchor="middle">
                   {lines[1]}
                 </SvgText>
@@ -163,6 +163,21 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
       <Circle cx={CENTER} cy={CENTER} r={size * 0.075} fill="url(#gCenter)" stroke={isDark ? '#475569' : '#94a3b8'} strokeWidth="1.5" />
       <Circle cx={CENTER} cy={CENTER} r={size * 0.042} fill={isDark ? '#0f172a' : '#fff'} stroke={isDark ? '#334155' : '#cbd5e1'} strokeWidth="1" />
       <SvgText x={CENTER} y={CENTER + size * 0.016} fill="#10b981" fontSize={size * 0.038} fontWeight="900" textAnchor="middle">✦</SvgText>
+
+      {/* Rebites/Parafusos no aro metálico */}
+      {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {
+        const rad = (angle * Math.PI) / 180;
+        const rivetRadius = RADIUS + size * 0.04;
+        const rivetX = CENTER + rivetRadius * Math.cos(rad);
+        const rivetY = CENTER + rivetRadius * Math.sin(rad);
+        const rivetSize = size * 0.04;
+        return (
+          <G key={`rivet-${angle}`}>
+            <Circle cx={rivetX} cy={rivetY} r={rivetSize} fill={isDark ? '#64748b' : '#cbd5e1'} stroke={isDark ? '#334155' : '#94a3b8'} strokeWidth="0.5" />
+            <Circle cx={rivetX} cy={rivetY} r={rivetSize * 0.5} fill={isDark ? '#334155' : '#e2e8f0'} opacity="0.7" />
+          </G>
+        );
+      })}
     </Svg>
   );
 }
@@ -175,26 +190,21 @@ function RoletaCTA({ onPress, premiosRoleta, isDark, c }: any) {
 
   const WHEEL_SIZE = 240;
 
-  // Prêmios: usa os reais se já foram carregados, senão usa os decorativos
-  const prizesDisplay = premiosRoleta && premiosRoleta.length >= 2
-    ? premiosRoleta.map((p: any) => ({
-      ...p,
-      nome: p.nome.length > 14 ? p.nome.substring(0, 12) + '...' : p.nome,
-    }))
-    : [
-      { nome: '10 SPG', tipo: 'pontos' },
-      { nome: 'R$ 2,00\nCashback', tipo: 'cashback' },
-      { nome: 'Café\nGrátis', tipo: 'brinde' },
-      { nome: 'R$ 5,00\nCashback', tipo: 'cashback' },
-      { nome: '5 SPG', tipo: 'pontos' },
-      { nome: 'Kit de\nFerramentas', tipo: 'brinde' },
-      { nome: '15 SPG', tipo: 'pontos' },
-      { nome: 'Brinde\nSurpresa', tipo: 'brinde' },
-      { nome: 'R$ 1,00\nCashback', tipo: 'cashback' },
-      { nome: '20 SPG', tipo: 'pontos' },
-      { nome: 'Cappuccino\nPremium', tipo: 'brinde' },
-      { nome: 'R$ 3,00\nCashback', tipo: 'cashback' },
-    ];
+  // Prêmios SEMPRE decorativos - nunca usa os reais!
+  const prizesDisplay = [
+    { nome: '10 SPG', tipo: 'pontos' },
+    { nome: 'R$ 2,00\nCashback', tipo: 'cashback' },
+    { nome: 'Café\nGrátis', tipo: 'brinde' },
+    { nome: 'R$ 5,00\nCashback', tipo: 'cashback' },
+    { nome: '5 SPG', tipo: 'pontos' },
+    { nome: 'Kit de\nFerramentas', tipo: 'brinde' },
+    { nome: '15 SPG', tipo: 'pontos' },
+    { nome: 'Brinde\nSurpresa', tipo: 'brinde' },
+    { nome: 'R$ 1,00\nCashback', tipo: 'cashback' },
+    { nome: '20 SPG', tipo: 'pontos' },
+    { nome: 'Cappuccino\nPremium', tipo: 'brinde' },
+    { nome: 'R$ 3,00\nCashback', tipo: 'cashback' },
+  ];
 
   useEffect(() => {
     const rodar = () => {
@@ -218,69 +228,69 @@ function RoletaCTA({ onPress, premiosRoleta, isDark, c }: any) {
   const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] });
 
   return (
-    <TouchableOpacity onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut} activeOpacity={1}>
-      <Animated.View style={{ alignItems: 'center', transform: [{ scale: scaleAnim }] }}>
+    <Animated.View style={{ alignItems: 'center', transform: [{ scale: scaleAnim }] }}>
 
-        {/* Título */}
-        <Text style={{ fontSize: 20, fontWeight: '900', color: isDark ? '#f8fafc' : '#0f172a', marginBottom: 6, letterSpacing: 1 }}>
-          ✨ Roleta da Sorte ✨
-        </Text>
-        <Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 12, marginBottom: 18, fontWeight: '600' }}>
-          Toque para girar e ganhar prêmios!
-        </Text>
+      {/* Título */}
+      <Text style={{ fontSize: 20, fontWeight: '900', color: isDark ? '#f8fafc' : '#0f172a', marginBottom: 6, letterSpacing: 1 }}>
+        ✨ Roleta da Sorte ✨
+      </Text>
+      <Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 12, marginBottom: 18, fontWeight: '600' }}>
+        Toque para girar e ganhar prêmios!
+      </Text>
 
-        {/* Glow */}
+      {/* Glow */}
+      <Animated.View style={{
+        position: 'absolute', top: 44,
+        width: WHEEL_SIZE + 20, height: WHEEL_SIZE + 20,
+        borderRadius: (WHEEL_SIZE + 20) / 2,
+        shadowColor: '#10b981', shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: glowOpacity as any, shadowRadius: 20, elevation: 20,
+      }} />
+
+      {/* Ponteiro */}
+      <View style={{ zIndex: 10, marginBottom: -12 }}>
+        <Svg width={32} height={32} viewBox="0 0 32 32">
+          <Path d="M16 28 L4 6 L28 6 Z" fill="#10b981" stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
+          <Circle cx="16" cy="6" r="4" fill="#10b981" stroke="#fff" strokeWidth="1.5" />
+        </Svg>
+      </View>
+
+      {/* Aro metálico */}
+      <View style={{
+        width: WHEEL_SIZE + 16, height: WHEEL_SIZE + 16,
+        borderRadius: (WHEEL_SIZE + 16) / 2,
+        backgroundColor: isDark ? '#334155' : '#94a3b8',
+        justifyContent: 'center', alignItems: 'center',
+        shadowColor: '#000', shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4, shadowRadius: 12, elevation: 15,
+      }}>
         <Animated.View style={{
-          position: 'absolute', top: 44,
-          width: WHEEL_SIZE + 20, height: WHEEL_SIZE + 20,
-          borderRadius: (WHEEL_SIZE + 20) / 2,
-          shadowColor: '#10b981', shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: glowOpacity as any, shadowRadius: 20, elevation: 20,
-        }} />
-
-        {/* Ponteiro */}
-        <View style={{ zIndex: 10, marginBottom: -12 }}>
-          <Svg width={32} height={32} viewBox="0 0 32 32">
-            <Path d="M16 28 L4 6 L28 6 Z" fill="#10b981" stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
-            <Circle cx="16" cy="6" r="4" fill="#10b981" stroke="#fff" strokeWidth="1.5" />
-          </Svg>
-        </View>
-
-        {/* Aro metálico */}
-        <View style={{
-          width: WHEEL_SIZE + 16, height: WHEEL_SIZE + 16,
-          borderRadius: (WHEEL_SIZE + 16) / 2,
-          backgroundColor: isDark ? '#334155' : '#94a3b8',
-          justifyContent: 'center', alignItems: 'center',
-          shadowColor: '#000', shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.4, shadowRadius: 12, elevation: 15,
+          width: WHEEL_SIZE, height: WHEEL_SIZE,
+          borderRadius: WHEEL_SIZE / 2, overflow: 'hidden',
+          transform: [{ rotate: wheelRotate }],
         }}>
-          <Animated.View style={{
-            width: WHEEL_SIZE, height: WHEEL_SIZE,
-            borderRadius: WHEEL_SIZE / 2, overflow: 'hidden',
-            transform: [{ rotate: wheelRotate }],
-          }}>
-            <WheelSVG prizes={prizesDisplay} size={WHEEL_SIZE} isDark={isDark} />
-          </Animated.View>
-        </View>
+          <WheelSVG prizes={prizesDisplay} size={WHEEL_SIZE} isDark={isDark} />
+        </Animated.View>
+      </View>
 
-        {/* Bolinhas decorativas */}
-        {[45, 135, 225, 315].map((deg) => {
-          const rad = (deg * Math.PI) / 180;
-          const r = WHEEL_SIZE / 2 + 30;
-          return (
-            <View key={deg} style={{
-              position: 'absolute',
-              top: 44 + WHEEL_SIZE / 2 + r * Math.sin(rad) - 5,
-              left: WHEEL_SIZE / 2 + 8 + r * Math.cos(rad) - 5,
-              width: 10, height: 10, borderRadius: 5,
-              backgroundColor: deg % 90 === 45 ? '#10b981' : '#facc15',
-              opacity: 0.7,
-            }} />
-          );
-        })}
+      {/* Bolinhas decorativas */}
+      {[45, 135, 225, 315].map((deg) => {
+        const rad = (deg * Math.PI) / 180;
+        const r = WHEEL_SIZE / 2 + 30;
+        return (
+          <View key={deg} style={{
+            position: 'absolute',
+            top: 44 + WHEEL_SIZE / 2 + r * Math.sin(rad) - 5,
+            left: WHEEL_SIZE / 2 + 8 + r * Math.cos(rad) - 5,
+            width: 10, height: 10, borderRadius: 5,
+            backgroundColor: deg % 90 === 45 ? '#10b981' : '#facc15',
+            opacity: 0.7,
+          }} />
+        );
+      })}
 
-        {/* Botão */}
+      {/* Botão */}
+      <TouchableOpacity onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut} activeOpacity={0.8}>
         <LinearGradient
           colors={['#10b981', '#059669']}
           style={{
@@ -293,8 +303,8 @@ function RoletaCTA({ onPress, premiosRoleta, isDark, c }: any) {
             JOGAR ROLETA 🎡
           </Text>
         </LinearGradient>
-      </Animated.View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
@@ -384,7 +394,7 @@ export default function Cliente() {
   useEffect(() => {
     const initApp = async () => {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const APP_VERSION = '4.6.2-pro-platinum';
+        const APP_VERSION = '4.6.5-final-platinum';
         const savedVersion = localStorage.getItem('@app_version');
         if (savedVersion !== APP_VERSION) {
           localStorage.clear();
@@ -722,7 +732,7 @@ export default function Cliente() {
           <Text style={styles.buttonTextBig}>ACESSAR MINHA CARTEIRA</Text>
         </TouchableOpacity>
 
-        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v4.6.2-pro-platinum</Text>
+        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v4.6.5-final-platinum</Text>
       </ScrollView>
     );
   }
