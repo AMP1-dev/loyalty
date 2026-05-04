@@ -120,13 +120,13 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
                 {icon}
               </SvgText>
               <SvgText x={x} y={y + (lines.length > 1 ? 0 : 5)}
-                fill={textColor} fontSize={size < 200 ? "6" : "7.5"}
+                fill={textColor} fontSize={size < 200 ? "6" : "9"}
                 fontWeight="bold" textAnchor="middle">
                 {lines[0]}
               </SvgText>
               {lines[1] && (
                 <SvgText x={x} y={y + 10}
-                  fill={textColor} fontSize={size < 200 ? "6" : "7.5"}
+                  fill={textColor} fontSize={size < 200 ? "6" : "9"}
                   fontWeight="bold" textAnchor="middle">
                   {lines[1]}
                 </SvgText>
@@ -394,7 +394,7 @@ export default function Cliente() {
   useEffect(() => {
     const initApp = async () => {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const APP_VERSION = '4.6.5-final-platinum';
+        const APP_VERSION = '4.6.10-platinum-sync';
         const savedVersion = localStorage.getItem('@app_version');
         if (savedVersion !== APP_VERSION) {
           localStorage.clear();
@@ -625,6 +625,50 @@ export default function Cliente() {
     } finally { setCarregando(false); }
   };
 
+  // ─── Função para salvar prêmio ganho ───────────────────────────────────────
+  const salvarPremioGanho = async (premio: any, cpfCliente: string, lojaIdEfetiva: string) => {
+    try {
+      const lid = lojaIdEfetiva || configLoja?.loja_id || '1';
+
+      if (premio.tipo === 'cashback') {
+        // INSERT em cashbacks
+        const { error } = await supabase.from('cashbacks').insert([{
+          cliente_cpf: cpfCliente,
+          loja_id: lid,
+          valor: Number(premio.valor),
+          usado: false,
+        }]);
+        if (error) console.error('Erro ao salvar cashback:', error);
+      } else if (premio.tipo === 'pontos') {
+        // INSERT em bonus_pendentes com expiração
+        const { data: config } = await supabase.from('configuracoes_loja').select('pontos_expiracao_dias').eq('loja_id', lid).single();
+        const diasExpiracao = config?.pontos_expiracao_dias || 365;
+        const dataExpiracao = new Date();
+        dataExpiracao.setDate(dataExpiracao.getDate() + diasExpiracao);
+
+        const { error } = await supabase.from('bonus_pendentes').insert([{
+          cliente_cpf: cpfCliente,
+          loja_id: lid,
+          pontos: Number(premio.valor),
+          data_expiracao: dataExpiracao.toISOString(),
+          usado: false,
+        }]);
+        if (error) console.error('Erro ao salvar bonus:', error);
+      } else if (premio.tipo === 'brinde') {
+        // INSERT em brindes_pendentes
+        const { error } = await supabase.from('brindes_pendentes').insert([{
+          cliente_cpf: cpfCliente,
+          loja_id: lid,
+          nome_brinde: premio.nome,
+          resgatado: false,
+        }]);
+        if (error) console.error('Erro ao salvar brinde:', error);
+      }
+    } catch (err) {
+      console.error('Erro ao salvar prêmio:', err);
+    }
+  };
+
   // ─── Girar Roleta ──────────────────────────────────────────────────────────
   const girarRoleta = async () => {
     if (rodando) return;
@@ -684,6 +728,10 @@ export default function Cliente() {
       setPremioGanho(premioSorteado);
       setRodando(false);
       setEtapaRoleta('resultado');
+
+      // Salvar prêmio ganho no banco
+      await salvarPremioGanho(premioSorteado, clean, loja_id);
+
       Animated.spring(resultAnim, { toValue: 1, useNativeDriver: true, speed: 10, bounciness: 12 }).start();
 
       await carregarDados(clean);
@@ -732,7 +780,7 @@ export default function Cliente() {
           <Text style={styles.buttonTextBig}>ACESSAR MINHA CARTEIRA</Text>
         </TouchableOpacity>
 
-        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v4.6.5-final-platinum</Text>
+        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v4.6.10-platinum-sync</Text>
       </ScrollView>
     );
   }
@@ -770,32 +818,68 @@ export default function Cliente() {
             </View>
           </View>
 
-          <View style={{ flexDirection: 'row', gap: 12, marginTop: 25 }}>
-            <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, shadowColor: c.neonVerde, shadowOpacity: 0.2, shadowRadius: 10, elevation: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-              <View>
-                <Text style={{ color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>SPRINGS (REDE)</Text>
-                <Text style={{ color: c.neonVerde, fontSize: 28, fontWeight: '900', marginTop: 5 }}>✨ {Math.floor(displaySaldo)}</Text>
-              </View>
-              <TouchableOpacity onPress={() => setMostrarExtrato(!mostrarExtrato)} style={{ padding: 8 }}>
-                <Text style={{ fontSize: 20 }}>👁️</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda }]}>
-              <Text style={{ color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>CASHBACK (REDE)</Text>
-              <Text style={{ color: c.neonAmarelo, fontSize: 24, fontWeight: '900', marginTop: 5 }}>💰 R$ {displayCash.toFixed(2)}</Text>
-            </View>
-          </View>
+          {/* CARD ENVOLVENTE CINZA CLARO - SALDOS + EXTRATO */}
+          <View style={{ paddingHorizontal: 20, marginTop: 25, borderRadius: 24, backgroundColor: '#f3f4f6', padding: 16, borderWidth: 1, borderColor: '#e5e7eb' }}>
 
-          {/* Saldos locais */}
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-            <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, padding: 12, borderRadius: 16 }]}>
-              <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold' }}>DISPONÍVEL NESTA LOJA</Text>
-              <Text style={{ color: c.neonVerde, fontSize: 18, fontWeight: '900', marginTop: 3 }}>{Math.floor(displaySaldoLocal)} Springs</Text>
+            {/* Saldos globais */}
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: loja_id ? 12 : 0 }}>
+              <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, shadowColor: c.neonVerde, shadowOpacity: 0.2, shadowRadius: 10, elevation: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 16, padding: 12 }]}>
+                <View>
+                  <Text style={{ color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>SPRINGS (REDE)</Text>
+                  <Text style={{ color: c.neonVerde, fontSize: 28, fontWeight: '900', marginTop: 5 }}>✨ {Math.floor(displaySaldo)}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setMostrarExtrato(!mostrarExtrato)} style={{ padding: 8 }}>
+                  <Text style={{ fontSize: 20 }}>👁️</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, borderRadius: 16, padding: 12 }]}>
+                <Text style={{ color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>CASHBACK (REDE)</Text>
+                <Text style={{ color: c.neonAmarelo, fontSize: 24, fontWeight: '900', marginTop: 5 }}>💰 R$ {displayCash.toFixed(2)}</Text>
+              </View>
             </View>
-            <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, padding: 12, borderRadius: 16 }]}>
-              <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold' }}>DISPONÍVEL NESTA LOJA</Text>
-              <Text style={{ color: c.neonAmarelo, fontSize: 16, fontWeight: '900', marginTop: 3 }}>R$ {displayCashLocal.toFixed(2)}</Text>
-            </View>
+
+            {/* Saldos locais - APENAS SE LOJA_ID */}
+            {loja_id && (
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: mostrarExtrato ? 12 : 0 }}>
+                <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, padding: 12, borderRadius: 16 }]}>
+                  <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold' }}>DISPONÍVEL NESTA LOJA</Text>
+                  <Text style={{ color: c.neonVerde, fontSize: 18, fontWeight: '900', marginTop: 3 }}>{Math.floor(displaySaldoLocal)} Springs</Text>
+                </View>
+                <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, padding: 12, borderRadius: 16 }]}>
+                  <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold' }}>DISPONÍVEL NESTA LOJA</Text>
+                  <Text style={{ color: c.neonAmarelo, fontSize: 16, fontWeight: '900', marginTop: 3 }}>R$ {displayCashLocal.toFixed(2)}</Text>
+                </View>
+              </View>
+            )}
+
+            {/* EXTRATO */}
+            {mostrarExtrato && (
+              <View style={{ marginTop: 10, borderTopWidth: 1, borderTopColor: c.borda, paddingTop: 12 }}>
+                <Text style={{ color: c.texto, fontWeight: '900', fontSize: 14, marginBottom: 12 }}>Histórico de Transações</Text>
+                <ScrollView style={{ maxHeight: 250 }} showsVerticalScrollIndicator={true}>
+                  {extrato.length > 0 ? (
+                    extrato.map((item: any) => (
+                      <View key={item.id} style={{ paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: c.borda, marginBottom: 10 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ color: c.texto, fontWeight: '700', fontSize: 12 }}>{item.loja}</Text>
+                            <Text style={{ color: c.subtexto, fontSize: 10, marginTop: 2 }}>
+                              {new Date(item.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })} {new Date(item.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </Text>
+                          </View>
+                          <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={{ color: c.neonVerde, fontWeight: '900', fontSize: 12 }}>+{item.pontos} SPG</Text>
+                            <Text style={{ color: c.neonAmarelo, fontSize: 10, marginTop: 2 }}>R$ {Number(item.valor).toFixed(2)}</Text>
+                          </View>
+                        </View>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={{ color: c.subtexto, textAlign: 'center', fontSize: 12 }}>Nenhuma transação ainda</Text>
+                  )}
+                </ScrollView>
+              </View>
+            )}
           </View>
         </View>
 
