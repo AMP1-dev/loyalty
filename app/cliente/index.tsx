@@ -380,6 +380,8 @@ export default function Cliente() {
     subtexto: isDark ? '#94a3b8' : '#64748B',
     neonVerde: '#10b981',
     neonAmarelo: '#facc15',
+    verde: '#10b981',
+    roxo: '#a855f7',
   };
 
   // Spin da roleta real (de 0→1 mapeado para 0→targetDeg)
@@ -403,7 +405,7 @@ export default function Cliente() {
   useEffect(() => {
     const initApp = async () => {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const APP_VERSION = '5.2.0-diamond-ultra';
+        const APP_VERSION = '5.2.5-diamond-secure-fixed';
         const savedVersion = localStorage.getItem('@app_version');
         if (savedVersion !== APP_VERSION) {
           localStorage.clear();
@@ -1032,7 +1034,7 @@ export default function Cliente() {
       <TouchableOpacity style={styles.buttonBig} onPress={entrarFila} activeOpacity={0.8} disabled={carregando}>
         <Text style={styles.buttonTextBig}>{carregando ? 'CARREGANDO...' : 'ACESSAR MINHA CARTEIRA'}</Text>
       </TouchableOpacity>
-      <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v5.2.0-diamond-ultra</Text>
+      <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v5.2.5-diamond-secure-fixed</Text>
     </ScrollView>
   );
 
@@ -1047,7 +1049,8 @@ export default function Cliente() {
 
   // ─── TELA PRINCIPAL (DASHBOARD) ────────────────────────────────────────────
   const renderFinalizado = () => (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 60 }}>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 60 }}>
 
         {/* ── 1. HEADER ── */}
         <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
@@ -1247,18 +1250,8 @@ export default function Cliente() {
         <TouchableOpacity style={styles.botaoSair} onPress={sairDaCarteira}>
           <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>🚪 SAIR DA CONTA</Text>
         </TouchableOpacity>
-        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 16 }}>v5.2.0-diamond-ultra</Text>
-    </ScrollView>
-  );
-
-  return (
-    <View style={{ flex: 1, backgroundColor: c.bg }}>
-      {/* ── Conteúdo Dinâmico ── */}
-      {status === 'idle' && renderIdle()}
-      {status === 'aguardando' && renderAguardando()}
-      {status === 'finalizado' && renderFinalizado()}
-
-      {/* ── Modais Globais (Sempre acessíveis) ── */}
+        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 16 }}>v5.2.5-diamond-secure-fixed</Text>
+      </ScrollView>
 
       {/* ── MODAL DA ROLETA ── */}
       {mostrarRoletaModal && (
