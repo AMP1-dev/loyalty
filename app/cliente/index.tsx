@@ -116,18 +116,18 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
             {/* Conteúdo da fatia */}
             <G transform={`rotate(${rotation} ${x} ${y})`}>
               <SvgText x={x} y={y - (lines.length > 1 ? 11 : 6)}
-                fill={iconColor} fontSize={size < 250 ? "8" : "10"}
+                fill={iconColor} fontSize={size < 250 ? "10" : "12"}
                 fontWeight="900" textAnchor="middle">
                 {icon}
               </SvgText>
               <SvgText x={x} y={y + (lines.length > 1 ? 0 : 5)}
-                fill={textColor} fontSize={size < 250 ? "7" : "8.5"}
+                fill={textColor} fontSize={size < 250 ? "8.5" : "10"}
                 fontWeight="bold" textAnchor="middle">
                 {lines[0]}
               </SvgText>
               {lines[1] && (
                 <SvgText x={x} y={y + 10}
-                  fill={textColor} fontSize={size < 250 ? "7" : "8.5"}
+                  fill={textColor} fontSize={size < 250 ? "8.5" : "10"}
                   fontWeight="bold" textAnchor="middle">
                   {lines[1]}
                 </SvgText>
@@ -403,7 +403,7 @@ export default function Cliente() {
   useEffect(() => {
     const initApp = async () => {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const APP_VERSION = '4.9.0-platinum-final-official';
+        const APP_VERSION = '4.9.5-platinum-pro-final';
         const savedVersion = localStorage.getItem('@app_version');
         if (savedVersion !== APP_VERSION) {
           localStorage.clear();
@@ -469,6 +469,13 @@ export default function Cliente() {
       setPremioGanho(null);
       setEtapaRoleta('nps');
       setRespostasNps({});
+
+      // Recarrega dados do servidor para sincronizar com premios salvos
+      const clean = cpf.replace(/\D/g, '');
+      if (clean) {
+        console.log('🔄 Sincronizando dados após fechar roleta...');
+        carregarDados(clean, loja_id && loja_id !== 'undefined' ? String(loja_id) : undefined);
+      }
 
       // Reinicia a animação idle do CTA
       const rodarCTA = () => {
@@ -678,23 +685,40 @@ export default function Cliente() {
   // ─── Função para salvar prêmio ganho ───────────────────────────────────────
   const salvarPremioGanho = async (premio: any, cpfCliente: string, lojaIdEfetiva: string | null) => {
     try {
-      const lid = lojaIdEfetiva || configLoja?.loja_id || '1';
+      const lid = String(lojaIdEfetiva || configLoja?.loja_id || '1');
+      console.log('🎁 Salvando prêmio:', { tipo: premio.tipo, valor: premio.valor, nome: premio.nome, loja_id: lid });
 
       if (premio.tipo === 'cashback') {
         // INSERT em cashbacks
-        const { error } = await supabase.from('cashbacks').insert([{
+        const { error, data } = await supabase.from('cashbacks').insert([{
           cliente_cpf: cpfCliente,
           loja_id: lid,
           valor: Number(premio.valor),
           usado: false,
-        }]);
-        if (error) console.error('Erro ao salvar cashback:', error);
-        else {
-          // Atualizar saldo imediatamente
-          setCashback(prev => prev + Number(premio.valor));
-          if (lid === loja_id || lid === configLoja?.loja_id) {
-            setCashbackLocal(prev => prev + Number(premio.valor));
+        }]).select();
+
+        if (error) {
+          console.error('❌ Erro ao salvar cashback:', error);
+        } else {
+          console.log('✅ Cashback salvo no BD:', data);
+          // Atualizar saldo imediatamente - SEM ASYNC!
+          const valorNum = Number(premio.valor);
+          console.log('💰 Atualizando cashback global:', valorNum);
+          setCashback(prev => {
+            const novo = prev + valorNum;
+            console.log(`💰 Cashback: ${prev} + ${valorNum} = ${novo}`);
+            return novo;
+          });
+
+          if (String(lid) === String(loja_id) || String(lid) === String(configLoja?.loja_id)) {
+            console.log('💰 Atualizando cashback local:', valorNum);
+            setCashbackLocal(prev => {
+              const novo = prev + valorNum;
+              console.log(`💰 Cashback Local: ${prev} + ${valorNum} = ${novo}`);
+              return novo;
+            });
           }
+          mostrarToast(`💰 +R$ ${valorNum.toFixed(2)} Cashback!`, 'sucesso');
         }
       } else if (premio.tipo === 'pontos') {
         // INSERT em bonus_pendentes com expiração
@@ -703,36 +727,55 @@ export default function Cliente() {
         const dataExpiracao = new Date();
         dataExpiracao.setDate(dataExpiracao.getDate() + diasExpiracao);
 
-        const { error } = await supabase.from('bonus_pendentes').insert([{
+        const { error, data } = await supabase.from('bonus_pendentes').insert([{
           cliente_cpf: cpfCliente,
           loja_id: lid,
           pontos: Number(premio.valor),
           data_expiracao: dataExpiracao.toISOString(),
           usado: false,
-        }]);
-        if (error) console.error('Erro ao salvar bonus:', error);
-        else {
-          // Atualizar saldo imediatamente
-          setSaldo(prev => prev + Number(premio.valor));
-          if (lid === loja_id || lid === configLoja?.loja_id) {
-            setSaldoLocal(prev => prev + Number(premio.valor));
+        }]).select();
+
+        if (error) {
+          console.error('❌ Erro ao salvar bonus:', error);
+        } else {
+          console.log('✅ Pontos salvos no BD:', data);
+          // Atualizar saldo imediatamente - SEM ASYNC!
+          const valorNum = Number(premio.valor);
+          console.log('✨ Atualizando saldo global:', valorNum);
+          setSaldo(prev => {
+            const novo = prev + valorNum;
+            console.log(`✨ Saldo: ${prev} + ${valorNum} = ${novo}`);
+            return novo;
+          });
+
+          if (String(lid) === String(loja_id) || String(lid) === String(configLoja?.loja_id)) {
+            console.log('✨ Atualizando saldo local:', valorNum);
+            setSaldoLocal(prev => {
+              const novo = prev + valorNum;
+              console.log(`✨ Saldo Local: ${prev} + ${valorNum} = ${novo}`);
+              return novo;
+            });
           }
+          mostrarToast(`✨ +${valorNum} Springs!`, 'sucesso');
         }
       } else if (premio.tipo === 'brinde') {
         // INSERT em brindes_pendentes
-        const { error } = await supabase.from('brindes_pendentes').insert([{
+        const { error, data } = await supabase.from('brindes_pendentes').insert([{
           cliente_cpf: cpfCliente,
           loja_id: lid,
           nome_brinde: premio.nome,
           resgatado: false,
-        }]);
-        if (error) console.error('Erro ao salvar brinde:', error);
-        else {
-          mostrarToast('🎁 Brinde reservado! Avise o lojista', 'sucesso');
+        }]).select();
+
+        if (error) {
+          console.error('❌ Erro ao salvar brinde:', error);
+        } else {
+          console.log('✅ Brinde salvo no BD:', data);
+          mostrarToast('🎁 Brinde reservado! Retire com o atendente', 'sucesso');
         }
       }
     } catch (err) {
-      console.error('Erro ao salvar prêmio:', err);
+      console.error('❌ Erro geral ao salvar prêmio:', err);
     }
   };
 
@@ -960,9 +1003,10 @@ export default function Cliente() {
       const lojaIdPremio = loja_id ? String(loja_id) : null;
       await salvarPremioGanho(premioSorteado, clean, lojaIdPremio);
 
-      Animated.spring(resultAnim, { toValue: 1, useNativeDriver: true, speed: 10, bounciness: 12 }).start();
+      // NÃO recarrega dados aqui - já atualizamos state acima!
+      // Se precisar sincronizar, carrega após fechar modal
 
-      await carregarDados(clean);
+      Animated.spring(resultAnim, { toValue: 1, useNativeDriver: true, speed: 10, bounciness: 12 }).start();
     });
   };
 
@@ -1008,7 +1052,7 @@ export default function Cliente() {
           <Text style={styles.buttonTextBig}>ACESSAR MINHA CARTEIRA</Text>
         </TouchableOpacity>
 
-        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v4.9.0-platinum-final-official</Text>
+        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v4.9.5-platinum-pro-final</Text>
       </ScrollView>
     );
   }
@@ -1047,7 +1091,7 @@ export default function Cliente() {
           </View>
 
           {/* CARD ENVOLVENTE CINZA CLARO - SALDOS + EXTRATO */}
-          <View style={{ paddingHorizontal: 0, marginTop: 25, marginHorizontal: 20, borderRadius: 24, backgroundColor: '#f3f4f6', padding: 16, borderWidth: 1, borderColor: '#e5e7eb' }}>
+          <View style={{ marginTop: 25, marginHorizontal: 0, borderRadius: 24, backgroundColor: '#f3f4f6', padding: 16, borderWidth: 1, borderColor: '#e5e7eb' }}>
 
             {/* Saldos globais */}
             <View style={{ flexDirection: 'row', gap: 12, marginBottom: loja_id ? 12 : 0 }}>
@@ -1228,7 +1272,7 @@ export default function Cliente() {
           <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>🚪 SAIR DA CONTA</Text>
         </TouchableOpacity>
         <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 16, marginBottom: 10 }}>
-          v4.9.0-platinum-final-official
+          v4.9.5-platinum-pro-final
         </Text>
       </ScrollView>
 
