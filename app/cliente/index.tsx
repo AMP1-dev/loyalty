@@ -450,6 +450,20 @@ export default function Cliente() {
       setPremioGanho(null);
       setEtapaRoleta('nps');
       setRespostasNps({});
+
+      // Reinicia a animação idle do CTA
+      const rodarCTA = () => {
+        rotateAnim.setValue(0);
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 18000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }).start(({ finished }) => {
+          if (finished) rodarCTA();
+        });
+      };
+      rodarCTA();
     }
   }, [mostrarRoletaModal]);
 
@@ -746,37 +760,31 @@ export default function Cliente() {
             </View>
           </View>
 
-          {/* Saldos globais + locais em um card separado */}
-          <View style={{
-            marginTop: 25, padding: 16, borderRadius: 24,
-            backgroundColor: c.card, borderWidth: 2, borderColor: c.neonVerde,
-            shadowColor: c.neonVerde, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8
-          }}>
-            {/* Globais */}
-            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 14 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold', marginBottom: 6 }}>SPRINGS (REDE)</Text>
-                <Text style={{ color: c.neonVerde, fontSize: 24, fontWeight: '900' }}>✨ {Math.floor(displaySaldo)}</Text>
+          <View style={{ flexDirection: 'row', gap: 12, marginTop: 25 }}>
+            <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, shadowColor: c.neonVerde, shadowOpacity: 0.2, shadowRadius: 10, elevation: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+              <View>
+                <Text style={{ color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>SPRINGS (REDE)</Text>
+                <Text style={{ color: c.neonVerde, fontSize: 28, fontWeight: '900', marginTop: 5 }}>✨ {Math.floor(displaySaldo)}</Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold', marginBottom: 6 }}>CASHBACK (REDE)</Text>
-                <Text style={{ color: c.neonAmarelo, fontSize: 20, fontWeight: '900' }}>💰 R$ {displayCash.toFixed(2)}</Text>
-              </View>
+              <TouchableOpacity onPress={() => setMostrarExtrato(!mostrarExtrato)} style={{ padding: 8 }}>
+                <Text style={{ fontSize: 20 }}>👁️</Text>
+              </TouchableOpacity>
             </View>
+            <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda }]}>
+              <Text style={{ color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>CASHBACK (REDE)</Text>
+              <Text style={{ color: c.neonAmarelo, fontSize: 24, fontWeight: '900', marginTop: 5 }}>💰 R$ {displayCash.toFixed(2)}</Text>
+            </View>
+          </View>
 
-            {/* Divisor */}
-            <View style={{ height: 1, backgroundColor: c.borda, marginBottom: 14 }} />
-
-            {/* Locais */}
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold', marginBottom: 6 }}>DISPONÍVEL NESTA LOJA</Text>
-                <Text style={{ color: c.neonVerde, fontSize: 16, fontWeight: '900' }}>{Math.floor(displaySaldoLocal)} Springs</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold', marginBottom: 6 }}>DISPONÍVEL NESTA LOJA</Text>
-                <Text style={{ color: c.neonAmarelo, fontSize: 14, fontWeight: '900' }}>R$ {displayCashLocal.toFixed(2)}</Text>
-              </View>
+          {/* Saldos locais */}
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+            <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, padding: 12, borderRadius: 16 }]}>
+              <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold' }}>DISPONÍVEL NESTA LOJA</Text>
+              <Text style={{ color: c.neonVerde, fontSize: 18, fontWeight: '900', marginTop: 3 }}>{Math.floor(displaySaldoLocal)} Springs</Text>
+            </View>
+            <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, padding: 12, borderRadius: 16 }]}>
+              <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold' }}>DISPONÍVEL NESTA LOJA</Text>
+              <Text style={{ color: c.neonAmarelo, fontSize: 16, fontWeight: '900', marginTop: 3 }}>R$ {displayCashLocal.toFixed(2)}</Text>
             </View>
           </View>
         </View>
@@ -1067,7 +1075,7 @@ const styles = StyleSheet.create({
   imageRec: { width: '100%', height: '100%', position: 'absolute', resizeMode: 'cover' },
   imagePlaceholder: { width: '100%', height: '100%', backgroundColor: '#1e293b', justifyContent: 'center', alignItems: 'center' },
   overlayRec: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 18, backgroundColor: 'rgba(0,0,0,0.85)' },
-  nomeRec: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+  nomeRec: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
   botaoRec: { padding: 12, borderRadius: 12, marginTop: 10, alignItems: 'center' },
   botaoTexto: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
   // Cards de propaganda
