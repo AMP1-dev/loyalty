@@ -1534,7 +1534,7 @@ const styles = StyleSheet.create({
   // Sair
   botaoSair: { marginTop: 28, padding: 18, alignItems: 'center', marginHorizontal: 20, borderWidth: 1, borderRadius: 16, borderColor: '#ef4444' },
   // Modal
-  modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 20, zIndex: 9999 },
+  modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20, zIndex: 9999 },
   modalCard: { backgroundColor: '#1e293b', width: '100%', maxWidth: 450, padding: 25, borderRadius: 24, borderWidth: 1, borderColor: '#334155' },
   modalTitle: { color: '#fff', fontSize: 26, fontWeight: '900', textAlign: 'center' },
   // Resultado
