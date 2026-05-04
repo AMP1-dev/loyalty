@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import bcrypt from 'bcryptjs';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -120,13 +121,13 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
                 {icon}
               </SvgText>
               <SvgText x={x} y={y + (lines.length > 1 ? 0 : 5)}
-                fill={textColor} fontSize={size < 200 ? "6" : "9"}
+                fill={textColor} fontSize={size < 200 ? "6" : "7.5"}
                 fontWeight="bold" textAnchor="middle">
                 {lines[0]}
               </SvgText>
               {lines[1] && (
                 <SvgText x={x} y={y + 10}
-                  fill={textColor} fontSize={size < 200 ? "6" : "9"}
+                  fill={textColor} fontSize={size < 200 ? "6" : "7.5"}
                   fontWeight="bold" textAnchor="middle">
                   {lines[1]}
                 </SvgText>
@@ -335,6 +336,14 @@ export default function Cliente() {
   const [mostrarExtrato, setMostrarExtrato] = useState(false);
   const [extrato, setExtrato] = useState<any[]>([]);
 
+  // ─── PIN States ───────────────────────────────────────────────────────────
+  const [mostrarPinModal, setMostrarPinModal] = useState(false);
+  const [pinDigitado, setPinDigitado] = useState(['', '', '', '']);
+  const [ehPrimeiroCadastro, setEhPrimeiroCadastro] = useState(false);
+  const [tentativasPinFalhadas, setTentativasPinFalhadas] = useState(0);
+  const [pinModoValidar, setPinModoValidar] = useState(true); // true = validar, false = criar novo
+  const pinInputRefs = useRef<any[]>([]);
+
   const [configLoja, setConfigLoja] = useState<any>(null);
 
   const [mostrarRoletaModal, setMostrarRoletaModal] = useState(false);
@@ -394,7 +403,7 @@ export default function Cliente() {
   useEffect(() => {
     const initApp = async () => {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const APP_VERSION = '4.6.10-platinum-sync';
+        const APP_VERSION = '4.7.5-platinum-secure';
         const savedVersion = localStorage.getItem('@app_version');
         if (savedVersion !== APP_VERSION) {
           localStorage.clear();
@@ -594,11 +603,36 @@ export default function Cliente() {
   const entrarFila = async () => {
     const clean = cpf.replace(/\D/g, '');
     if (!clean || clean.length < 10) return;
-    if (!loja_id) { await salvarStorage('cliente_cpf', clean); await carregarDados(clean); setStatus('finalizado'); return; }
-    await salvarStorage('cliente_cpf', clean);
-    await supabase.from('clientes').upsert({ cpf: clean });
-    await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]);
-    setStatus('aguardando');
+
+    setCarregando(true);
+    try {
+      // Verificar se é primeiro cadastro (sem PIN)
+      const { data: clienteExistente } = await supabase
+        .from('clientes')
+        .select('pin_hash')
+        .eq('cpf', clean)
+        .single();
+
+      const ehPrimeiro = !clienteExistente || !clienteExistente.pin_hash;
+
+      if (ehPrimeiro) {
+        // Primeiro cadastro - solicitar PIN
+        setEhPrimeiroCadastro(true);
+        setPinModoValidar(false);
+        setMostrarPinModal(true);
+        setCarregando(false);
+        return;
+      }
+
+      // Cliente já tem PIN - validar PIN
+      setPinModoValidar(true);
+      setMostrarPinModal(true);
+      setCarregando(false);
+    } catch (err) {
+      console.error('Erro ao verificar cliente:', err);
+      mostrarToast('❌ Erro ao processar', 'erro');
+      setCarregando(false);
+    }
   };
 
   // ─── Abrir Roleta (NPS primeiro) ───────────────────────────────────────────
@@ -669,6 +703,166 @@ export default function Cliente() {
     }
   };
 
+  // ─── Funções de PIN ────────────────────────────────────────────────────────
+  const hashPin = async (pin: string): Promise<string> => {
+    const salt = await bcrypt.genSalt(10);
+    return await bcrypt.hash(pin, salt);
+  };
+
+  const verificarPin = async (pinDigitadoStr: string, pinHashArmazenado: string): Promise<boolean> => {
+    return await bcrypt.compare(pinDigitadoStr, pinHashArmazenado);
+  };
+
+  const handlePinInput = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return; // apenas números
+    const newPin = [...pinDigitado];
+    newPin[index] = value.slice(-1); // apenas último dígito
+    setPinDigitado(newPin);
+
+    if (value && index < 3) {
+      setTimeout(() => pinInputRefs.current[index + 1]?.focus(), 50);
+    }
+  };
+
+  const handlePinBackspace = (index: number) => {
+    if (!pinDigitado[index] && index > 0) {
+      pinInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const criarNovoPin = async () => {
+    const pinStr = pinDigitado.join('');
+    if (pinStr.length !== 4) {
+      mostrarToast('⚠️ PIN deve ter 4 dígitos', 'erro');
+      return;
+    }
+
+    setCarregando(true);
+    try {
+      const pinHash = await hashPin(pinStr);
+      const clean = cpf.replace(/\D/g, '');
+
+      const { error } = await supabase
+        .from('clientes')
+        .update({ pin_hash: pinHash, tentativas_pin: 0, bloqueado_ate: null })
+        .eq('cpf', clean);
+
+      if (error) throw error;
+
+      mostrarToast('✅ PIN configurado com sucesso!', 'sucesso');
+      setMostrarPinModal(false);
+      setPinDigitado(['', '', '', '']);
+      setEhPrimeiroCadastro(false);
+
+      // Prosseguir com entrada na fila
+      await continuarAposPin();
+    } catch (err) {
+      console.error('Erro ao salvar PIN:', err);
+      mostrarToast('❌ Erro ao configurar PIN', 'erro');
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  const validarPin = async () => {
+    const pinStr = pinDigitado.join('');
+    if (pinStr.length !== 4) {
+      mostrarToast('⚠️ Digite o PIN de 4 dígitos', 'erro');
+      return;
+    }
+
+    setCarregando(true);
+    try {
+      const clean = cpf.replace(/\D/g, '');
+      const { data: cliente } = await supabase
+        .from('clientes')
+        .select('pin_hash, bloqueado_ate, tentativas_pin')
+        .eq('cpf', clean)
+        .single();
+
+      if (!cliente) {
+        mostrarToast('❌ Cliente não encontrado', 'erro');
+        return;
+      }
+
+      // Verificar bloqueio
+      if (cliente.bloqueado_ate) {
+        const agora = new Date();
+        const bloqueioAte = new Date(cliente.bloqueado_ate);
+        if (agora < bloqueioAte) {
+          const minRestantes = Math.ceil((bloqueioAte.getTime() - agora.getTime()) / 60000);
+          mostrarToast(`⏱️ Acesso bloqueado por ${minRestantes} minuto(s)`, 'erro');
+          setCarregando(false);
+          return;
+        }
+      }
+
+      // Verificar PIN
+      const pinValido = await verificarPin(pinStr, cliente.pin_hash);
+
+      if (pinValido) {
+        // Reset tentativas
+        await supabase
+          .from('clientes')
+          .update({ tentativas_pin: 0, bloqueado_ate: null })
+          .eq('cpf', clean);
+
+        mostrarToast('✅ Acesso liberado!', 'sucesso');
+        setMostrarPinModal(false);
+        setPinDigitado(['', '', '', '']);
+        await continuarAposPin();
+      } else {
+        // Incrementar tentativas
+        const novasTentativas = (cliente.tentativas_pin || 0) + 1;
+
+        if (novasTentativas >= 3) {
+          const bloqueioAte = new Date();
+          bloqueioAte.setMinutes(bloqueioAte.getMinutes() + 15);
+
+          await supabase
+            .from('clientes')
+            .update({ tentativas_pin: novasTentativas, bloqueado_ate: bloqueioAte.toISOString() })
+            .eq('cpf', clean);
+
+          mostrarToast('🔒 Acesso bloqueado por 15 minutos', 'erro');
+          setMostrarPinModal(false);
+          setPinDigitado(['', '', '', '']);
+        } else {
+          await supabase
+            .from('clientes')
+            .update({ tentativas_pin: novasTentativas })
+            .eq('cpf', clean);
+
+          const tentativasRestantes = 3 - novasTentativas;
+          mostrarToast(`❌ PIN incorreto (${tentativasRestantes} tentativa${tentativasRestantes > 1 ? 's' : ''} restante${tentativasRestantes > 1 ? 's' : ''})`, 'erro');
+          setPinDigitado(['', '', '', '']);
+          pinInputRefs.current[0]?.focus();
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao validar PIN:', err);
+      mostrarToast('❌ Erro ao validar PIN', 'erro');
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  const continuarAposPin = async () => {
+    const clean = cpf.replace(/\D/g, '');
+    await salvarStorage('cliente_cpf', clean);
+
+    if (!loja_id) {
+      await carregarDados(clean);
+      setStatus('finalizado');
+      return;
+    }
+
+    // Cliente leu QR code
+    await supabase.from('clientes').upsert({ cpf: clean });
+    await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]);
+    setStatus('aguardando');
+  };
+
   // ─── Girar Roleta ──────────────────────────────────────────────────────────
   const girarRoleta = async () => {
     if (rodando) return;
@@ -730,7 +924,7 @@ export default function Cliente() {
       setEtapaRoleta('resultado');
 
       // Salvar prêmio ganho no banco
-      await salvarPremioGanho(premioSorteado, clean, loja_id);
+      await salvarPremioGanho(premioSorteado, clean, loja_id || null);
 
       Animated.spring(resultAnim, { toValue: 1, useNativeDriver: true, speed: 10, bounciness: 12 }).start();
 
@@ -780,7 +974,7 @@ export default function Cliente() {
           <Text style={styles.buttonTextBig}>ACESSAR MINHA CARTEIRA</Text>
         </TouchableOpacity>
 
-        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v4.6.10-platinum-sync</Text>
+        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v4.7.5-platinum-secure</Text>
       </ScrollView>
     );
   }
@@ -1143,6 +1337,92 @@ export default function Cliente() {
       )}
 
       {/* TOAST */}
+      {mostrarPinModal && (
+        <View style={styles.modalOverlay}>
+          <View style={{ backgroundColor: c.card, borderRadius: 24, padding: 28, width: '100%', maxWidth: 350 }}>
+            <Text style={{ fontSize: 22, fontWeight: '900', color: c.texto, textAlign: 'center', marginBottom: 8 }}>
+              {pinModoValidar ? '🔐 Acesso Seguro' : '📱 Criar PIN'}
+            </Text>
+            <Text style={{ color: c.subtexto, textAlign: 'center', marginBottom: 24, fontSize: 13 }}>
+              {pinModoValidar ? 'Digite seu PIN de 4 dígitos' : 'Crie um PIN de 4 dígitos para sua carteira'}
+            </Text>
+
+            {/* 4 Input Boxes para PIN */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginBottom: 24 }}>
+              {[0, 1, 2, 3].map(i => (
+                <TextInput
+                  key={i}
+                  ref={input => {
+                    if (input) pinInputRefs.current[i] = input;
+                  }}
+                  value={pinDigitado[i]}
+                  onChangeText={v => handlePinInput(i, v)}
+                  onKeyPress={({ nativeEvent }) => {
+                    if (nativeEvent.key === 'Backspace') handlePinBackspace(i);
+                  }}
+                  keyboardType="numeric"
+                  maxLength={1}
+                  secureTextEntry={true}
+                  style={{
+                    width: 60, height: 60,
+                    borderRadius: 12,
+                    borderWidth: 2,
+                    borderColor: pinDigitado[i] ? c.neonVerde : c.borda,
+                    backgroundColor: c.bg,
+                    color: c.texto,
+                    fontSize: 28,
+                    fontWeight: '900',
+                    textAlign: 'center',
+                  }}
+                  placeholder="•"
+                  placeholderTextColor={c.subtexto}
+                />
+              ))}
+            </View>
+
+            {/* Botões */}
+            <View style={{ gap: 10 }}>
+              <TouchableOpacity
+                style={{ backgroundColor: c.neonVerde, padding: 16, borderRadius: 12, alignItems: 'center' }}
+                onPress={pinModoValidar ? validarPin : criarNovoPin}
+                disabled={carregando}
+              >
+                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>
+                  {carregando ? '⏳ Processando...' : (pinModoValidar ? 'CONFIRMAR' : 'CRIAR PIN')}
+                </Text>
+              </TouchableOpacity>
+
+              {!pinModoValidar && (
+                <TouchableOpacity
+                  style={{ backgroundColor: c.borda, padding: 14, borderRadius: 12, alignItems: 'center' }}
+                  onPress={() => {
+                    setMostrarPinModal(false);
+                    setPinDigitado(['', '', '', '']);
+                  }}
+                >
+                  <Text style={{ color: c.subtexto, fontWeight: '700', fontSize: 12 }}>CANCELAR</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* WhatsApp Recovery para PIN - quando estiver sem QR code */}
+            {!loja_id && pinModoValidar && (
+              <TouchableOpacity
+                style={{ marginTop: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: c.borda }}
+                onPress={() => {
+                  const numero = cpf.replace(/\D/g, '');
+                  const url = `https://wa.me/+55${numero}?text=Olá, esqueci meu PIN de acesso ao PALM SPRINGS`;
+                  // Abrir WhatsApp (em produção, usar Linking)
+                }}
+              >
+                <Text style={{ fontSize: 18 }}>💬</Text>
+                <Text style={{ color: c.neonVerde, fontWeight: '700', fontSize: 12 }}>Perdeu o PIN? Solicite via WhatsApp</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
+
       {toast.visible && (
         <Animated.View style={[styles.toast, {
           backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444',
