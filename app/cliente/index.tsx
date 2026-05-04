@@ -115,19 +115,20 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
             />
             {/* Conteúdo da fatia */}
             <G transform={`rotate(${rotation} ${x} ${y})`}>
+              {/* CTA (240px) → fonte NORMAL | Modal (288px) → fonte PEQUENA */}
               <SvgText x={x} y={y - (lines.length > 1 ? 11 : 6)}
-                fill={iconColor} fontSize={size <= 250 ? "8" : "9"}
+                fill={iconColor} fontSize={size === 240 ? "10" : size === 288 ? "9" : "8"}
                 fontWeight="900" textAnchor="middle">
                 {icon}
               </SvgText>
               <SvgText x={x} y={y + (lines.length > 1 ? 0 : 5)}
-                fill={textColor} fontSize={size <= 250 ? "5.5" : "6.5"}
+                fill={textColor} fontSize={size === 240 ? "8" : size === 288 ? "6.5" : "6"}
                 fontWeight="bold" textAnchor="middle">
                 {lines[0]}
               </SvgText>
               {lines[1] && (
                 <SvgText x={x} y={y + 10}
-                  fill={textColor} fontSize={size <= 250 ? "5.5" : "6.5"}
+                  fill={textColor} fontSize={size === 240 ? "8" : size === 288 ? "6.5" : "6"}
                   fontWeight="bold" textAnchor="middle">
                   {lines[1]}
                 </SvgText>
@@ -405,7 +406,7 @@ export default function Cliente() {
   useEffect(() => {
     const initApp = async () => {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const APP_VERSION = '5.4.0-platinum-diamond-final';
+        const APP_VERSION = '4.9.5-platinum-pro-final';
         const savedVersion = localStorage.getItem('@app_version');
         if (savedVersion !== APP_VERSION) {
           localStorage.clear();
@@ -1034,7 +1035,7 @@ export default function Cliente() {
       <TouchableOpacity style={styles.buttonBig} onPress={entrarFila} activeOpacity={0.8} disabled={carregando}>
         <Text style={styles.buttonTextBig}>{carregando ? 'CARREGANDO...' : 'ACESSAR MINHA CARTEIRA'}</Text>
       </TouchableOpacity>
-      <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v5.4.0-platinum-diamond-final</Text>
+      <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v4.9.5-platinum-pro-final</Text>
     </ScrollView>
   );
 
@@ -1250,7 +1251,7 @@ export default function Cliente() {
         <TouchableOpacity style={styles.botaoSair} onPress={sairDaCarteira}>
           <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>🚪 SAIR DA CONTA</Text>
         </TouchableOpacity>
-        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 16 }}>v5.4.0-platinum-diamond-final</Text>
+        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 16 }}>v4.9.5-platinum-pro-final</Text>
       </ScrollView>
     </View>
   );
@@ -1533,7 +1534,7 @@ const styles = StyleSheet.create({
   // Sair
   botaoSair: { marginTop: 28, padding: 18, alignItems: 'center', marginHorizontal: 20, borderWidth: 1, borderRadius: 16, borderColor: '#ef4444' },
   // Modal
-  modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center', padding: 20, zIndex: 9999 },
+  modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 20, zIndex: 9999 },
   modalCard: { backgroundColor: '#1e293b', width: '100%', maxWidth: 450, padding: 25, borderRadius: 24, borderWidth: 1, borderColor: '#334155' },
   modalTitle: { color: '#fff', fontSize: 26, fontWeight: '900', textAlign: 'center' },
   // Resultado
