@@ -115,22 +115,35 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
             />
             {/* Conteúdo da fatia */}
             <G transform={`rotate(${rotation} ${x} ${y})`}>
-              {/* CTA (240px) → fonte NORMAL | Modal (288px) → fonte PEQUENA */}
-              <SvgText x={x} y={y - (lines.length > 1 ? 11 : 6)}
-                fill={iconColor} fontSize={size === 240 ? "10" : size === 288 ? "9" : "8"}
-                fontWeight="900" textAnchor="middle">
+              {/* Ícone */}
+              <SvgText x={x} y={y - 12}
+                fill={iconColor} fontSize={size === 240 ? "11" : "10"}
+                fontWeight="900" textAnchor="middle" letterSpacing="0">
                 {icon}
               </SvgText>
-              <SvgText x={x} y={y + (lines.length > 1 ? 0 : 5)}
-                fill={textColor} fontSize={size === 240 ? "8" : size === 288 ? "6.5" : "6"}
-                fontWeight="bold" textAnchor="middle">
+
+              {/* Tipo (pontos/cashback/brinde) */}
+              <SvgText x={x} y={y - 1}
+                fill={textColor} fontSize={size === 240 ? "7.5" : "6.5"}
+                fontWeight="700" textAnchor="middle" letterSpacing="0.5">
                 {lines[0]}
               </SvgText>
+
+              {/* Valor/Descrição */}
               {lines[1] && (
-                <SvgText x={x} y={y + 10}
-                  fill={textColor} fontSize={size === 240 ? "8" : size === 288 ? "6.5" : "6"}
-                  fontWeight="bold" textAnchor="middle">
+                <SvgText x={x} y={y + 9}
+                  fill={textColor} fontSize={size === 240 ? "8" : "7"}
+                  fontWeight="bold" textAnchor="middle" letterSpacing="0">
                   {lines[1]}
+                </SvgText>
+              )}
+
+              {/* Terceira linha se existir */}
+              {lines[2] && (
+                <SvgText x={x} y={y + 18}
+                  fill={textColor} fontSize={size === 240 ? "6.5" : "5.5"}
+                  fontWeight="600" textAnchor="middle" letterSpacing="0">
+                  {lines[2]}
                 </SvgText>
               )}
             </G>
@@ -715,7 +728,7 @@ export default function Cliente() {
         const dataExpiracao = new Date();
         dataExpiracao.setDate(dataExpiracao.getDate() + diasExpiracao);
 
-        console.log('✨ [2.5/5] Inserindo bonus_pendentes...');
+        console.log('✨ [2.5/5] Inserindo bonus_pendentes...', { cliente_cpf: cpfCliente, loja_id: lid, pontos: Number(premio.valor) });
         const { error, data } = await supabase
           .from('bonus_pendentes')
           .insert([{
@@ -728,8 +741,8 @@ export default function Cliente() {
           .select();
 
         if (error) {
-          console.error('❌ [ERRO] bonus_pendentes falhou:', error);
-          mostrarToast('❌ Erro ao salvar pontos', 'erro');
+          console.error('❌ [ERRO] bonus_pendentes falhou:', { code: error.code, message: error.message, details: error.details });
+          mostrarToast(`❌ Erro ao salvar pontos: ${error.message}`, 'erro');
           return false;
         }
         console.log('✅ [3/5] bonus_pendentes inserido:', data);
