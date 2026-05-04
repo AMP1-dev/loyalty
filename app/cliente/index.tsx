@@ -116,18 +116,18 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
             {/* Conteúdo da fatia */}
             <G transform={`rotate(${rotation} ${x} ${y})`}>
               <SvgText x={x} y={y - (lines.length > 1 ? 11 : 6)}
-                fill={iconColor} fontSize={size <= 250 ? "10" : "13"}
+                fill={iconColor} fontSize={size <= 250 ? "8" : "9"}
                 fontWeight="900" textAnchor="middle">
                 {icon}
               </SvgText>
               <SvgText x={x} y={y + (lines.length > 1 ? 0 : 5)}
-                fill={textColor} fontSize={size <= 250 ? "8.5" : "11"}
+                fill={textColor} fontSize={size <= 250 ? "5.5" : "6.5"}
                 fontWeight="bold" textAnchor="middle">
                 {lines[0]}
               </SvgText>
               {lines[1] && (
                 <SvgText x={x} y={y + 10}
-                  fill={textColor} fontSize={size <= 250 ? "8.5" : "11"}
+                  fill={textColor} fontSize={size <= 250 ? "5.5" : "6.5"}
                   fontWeight="bold" textAnchor="middle">
                   {lines[1]}
                 </SvgText>
@@ -403,7 +403,7 @@ export default function Cliente() {
   useEffect(() => {
     const initApp = async () => {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const APP_VERSION = '5.1.2-diamond-secure';
+        const APP_VERSION = '5.2.0-diamond-ultra';
         const savedVersion = localStorage.getItem('@app_version');
         if (savedVersion !== APP_VERSION) {
           localStorage.clear();
@@ -734,15 +734,21 @@ export default function Cliente() {
         return true;
 
       } else if (premio.tipo === 'brinde') {
-        console.log('🎁 [2/5] Inserindo brinde...');
+        console.log('🎁 [2/5] Preparando brinde...', { cliente_cpf: cpfCliente, loja_id: lid, nome_brinde: premio.nome });
+
         const { error, data } = await supabase
           .from('brindes_pendentes')
-          .insert([{ cliente_cpf: cpfCliente, loja_id: lid, nome_brinde: premio.nome, resgatado: false }])
+          .insert([{
+            cliente_cpf: cpfCliente,
+            loja_id: lid,
+            nome_brinde: premio.nome || premio.descricao,
+            resgatado: false
+          }])
           .select();
 
         if (error) {
-          console.error('❌ [ERRO] Brinde falhou:', error);
-          mostrarToast('❌ Erro ao salvar brinde', 'erro');
+          console.error('❌ [ERRO] Brinde falhou:', { code: error.code, message: error.message, details: error.details });
+          mostrarToast('❌ Erro ao salvar brinde: ' + (error.message || 'desconhecido'), 'erro');
           return false;
         }
         console.log('✅ [3/5] Brinde inserido:', data);
@@ -1026,7 +1032,7 @@ export default function Cliente() {
       <TouchableOpacity style={styles.buttonBig} onPress={entrarFila} activeOpacity={0.8} disabled={carregando}>
         <Text style={styles.buttonTextBig}>{carregando ? 'CARREGANDO...' : 'ACESSAR MINHA CARTEIRA'}</Text>
       </TouchableOpacity>
-      <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v5.1.2-diamond-secure</Text>
+      <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v5.2.0-diamond-ultra</Text>
     </ScrollView>
   );
 
@@ -1041,8 +1047,7 @@ export default function Cliente() {
 
   // ─── TELA PRINCIPAL (DASHBOARD) ────────────────────────────────────────────
   const renderFinalizado = () => (
-    <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 60 }}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 60 }}>
 
         {/* ── 1. HEADER ── */}
         <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
@@ -1242,9 +1247,8 @@ export default function Cliente() {
         <TouchableOpacity style={styles.botaoSair} onPress={sairDaCarteira}>
           <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>🚪 SAIR DA CONTA</Text>
         </TouchableOpacity>
-        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 16 }}>v5.1.2-diamond-secure</Text>
-      </ScrollView>
-    </View>
+        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 16 }}>v5.2.0-diamond-ultra</Text>
+    </ScrollView>
   );
 
   return (
@@ -1264,13 +1268,13 @@ export default function Cliente() {
             {/* NPS */}
             {etapaRoleta === 'nps' && (
               <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={styles.modalTitle}>Antes de girar... 🎡</Text>
-                <Text style={{ color: '#94a3b8', textAlign: 'center', marginTop: 6, marginBottom: 10 }}>
+                <Text style={[styles.modalTitle, { color: c.texto }]}>Antes de girar... 🎡</Text>
+                <Text style={{ color: c.subtexto, textAlign: 'center', marginTop: 6, marginBottom: 10 }}>
                   Sua opinião vale muito pra gente!
                 </Text>
                 {perguntasNps.map(p => (
-                  <View key={p.id} style={{ marginTop: 20, backgroundColor: '#0f172a', padding: 20, borderRadius: 20 }}>
-                    <Text style={{ color: '#f8fafc', textAlign: 'center', fontWeight: 'bold', marginBottom: 15 }}>{p.pergunta}</Text>
+                  <View key={p.id} style={{ marginTop: 20, backgroundColor: c.card, padding: 20, borderRadius: 20, borderWidth: 1, borderColor: c.borda }}>
+                    <Text style={{ color: c.texto, textAlign: 'center', fontWeight: 'bold', marginBottom: 15 }}>{p.pergunta}</Text>
                     <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10 }}>
                       {[1, 2, 3, 4, 5].map(s => (
                         <TouchableOpacity key={s} onPress={() => setRespostasNps({ ...respostasNps, [p.id]: s })}>
@@ -1347,40 +1351,40 @@ export default function Cliente() {
                 }}>
                   {positivo ? (
                     // ── FESTIVO ──
-                    <LinearGradient colors={['#064e3b', '#065f46', '#0f172a']} style={styles.resultGradient}>
-                      <Text style={{ fontSize: 70, marginBottom: 10 }}>🎉</Text>
-                      <Text style={{ color: '#6ee7b7', fontSize: 14, fontWeight: '700', letterSpacing: 2, marginBottom: 8 }}>
+                    <View style={{ backgroundColor: c.card, borderRadius: 24, padding: 28, width: '100%', borderWidth: 1, borderColor: c.borda }}>
+                      <Text style={{ fontSize: 70, marginBottom: 10, textAlign: 'center' }}>🎉</Text>
+                      <Text style={{ color: c.verde, fontSize: 14, fontWeight: '700', letterSpacing: 2, marginBottom: 8, textAlign: 'center' }}>
                         PARABÉNS!
                       </Text>
-                      <Text style={{ color: '#fff', fontSize: 26, fontWeight: '900', textAlign: 'center', marginBottom: 6 }}>
+                      <Text style={{ color: c.texto, fontSize: 26, fontWeight: '900', textAlign: 'center', marginBottom: 6 }}>
                         {premioGanho.nome}
                       </Text>
-                      <Text style={{ color: '#6ee7b7', fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
+                      <Text style={{ color: c.subtexto, fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
                         {premioGanho.tipo === 'cashback' ? '💰 Cashback creditado na sua carteira!'
                           : premioGanho.tipo === 'pontos' ? '✨ Springs adicionados ao seu saldo!'
                             : '🎁 Retire seu brinde com o atendente!'}
                       </Text>
                       {/* Estrelinhas decorativas */}
-                      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24 }}>
+                      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24, justifyContent: 'center' }}>
                         {['🌟', '⭐', '🌟', '⭐', '🌟'].map((e, i) => (
                           <Text key={i} style={{ fontSize: 20 }}>{e}</Text>
                         ))}
                       </View>
-                    </LinearGradient>
+                    </View>
                   ) : (
                     // ── TRISTE ──
-                    <LinearGradient colors={['#1e1b4b', '#312e81', '#0f172a']} style={styles.resultGradient}>
-                      <Text style={{ fontSize: 70, marginBottom: 10 }}>😢</Text>
-                      <Text style={{ color: '#a5b4fc', fontSize: 14, fontWeight: '700', letterSpacing: 2, marginBottom: 8 }}>
+                    <View style={{ backgroundColor: c.card, borderRadius: 24, padding: 28, width: '100%', borderWidth: 1, borderColor: c.borda }}>
+                      <Text style={{ fontSize: 70, marginBottom: 10, textAlign: 'center' }}>😢</Text>
+                      <Text style={{ color: c.roxo, fontSize: 14, fontWeight: '700', letterSpacing: 2, marginBottom: 8, textAlign: 'center' }}>
                         OPS...
                       </Text>
-                      <Text style={{ color: '#fff', fontSize: 26, fontWeight: '900', textAlign: 'center', marginBottom: 6 }}>
+                      <Text style={{ color: c.texto, fontSize: 26, fontWeight: '900', textAlign: 'center', marginBottom: 6 }}>
                         {premioGanho.nome}
                       </Text>
-                      <Text style={{ color: '#a5b4fc', fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
+                      <Text style={{ color: c.subtexto, fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
                         Não foi dessa vez... Tente novamente na sua próxima visita!
                       </Text>
-                    </LinearGradient>
+                    </View>
                   )}
                   <TouchableOpacity style={[styles.buttonBig, { width: '100%', marginTop: 8 }]} onPress={() => setMostrarRoletaModal(false)}>
                     <Text style={styles.buttonTextBig}>FECHAR</Text>
