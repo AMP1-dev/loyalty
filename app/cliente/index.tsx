@@ -210,7 +210,7 @@ function RoletaCTA({ onPress, premiosRoleta, isDark, c }: any) {
   useEffect(() => {
     const rodar = () => {
       idleAnim.setValue(0);
-      Animated.timing(idleAnim, { toValue: 1, duration: 18000, easing: Easing.linear, useNativeDriver: true })
+      Animated.timing(idleAnim, { toValue: 1, duration: 18000, easing: Easing.linear, useNativeDriver: Platform.OS !== "web" })
         .start(({ finished }) => { if (finished) rodar(); });
     };
     rodar();
@@ -222,8 +222,8 @@ function RoletaCTA({ onPress, premiosRoleta, isDark, c }: any) {
     ).start();
   }, []);
 
-  const handlePressIn = () => Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: true, speed: 20 }).start();
-  const handlePressOut = () => Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 20 }).start();
+  const handlePressIn = () => Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: Platform.OS !== "web", speed: 20 }).start();
+  const handlePressOut = () => Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: Platform.OS !== "web", speed: 20 }).start();
 
   const wheelRotate = idleAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
   const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] });
@@ -395,9 +395,9 @@ export default function Cliente() {
   const mostrarToast = (mensagem: string, tipo: 'sucesso' | 'erro' = 'sucesso') => {
     setToast({ visible: true, message: mensagem, tipo });
     Animated.sequence([
-      Animated.spring(toastAnim, { toValue: Platform.OS === 'web' ? 20 : 50, useNativeDriver: true, speed: 12 }),
+      Animated.spring(toastAnim, { toValue: Platform.OS === 'web' ? 20 : 50, useNativeDriver: Platform.OS !== "web", speed: 12 }),
       Animated.delay(4000),
-      Animated.timing(toastAnim, { toValue: -150, duration: 400, useNativeDriver: true }),
+      Animated.timing(toastAnim, { toValue: -150, duration: 400, useNativeDriver: Platform.OS !== "web" }),
     ]).start(() => setToast({ visible: false, message: '', tipo: 'sucesso' }));
   };
 
@@ -405,7 +405,7 @@ export default function Cliente() {
   useEffect(() => {
     const initApp = async () => {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const APP_VERSION = '5.2.5-diamond-secure-fixed';
+        const APP_VERSION = '5.4.0-platinum-diamond-final';
         const savedVersion = localStorage.getItem('@app_version');
         if (savedVersion !== APP_VERSION) {
           localStorage.clear();
@@ -431,12 +431,12 @@ export default function Cliente() {
     if (status !== 'aguardando') return;
     rotateAnim.setValue(0); pulse.setValue(1);
     Animated.loop(Animated.sequence([
-      Animated.timing(pulse, { toValue: 1.15, duration: 800, useNativeDriver: true }),
-      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 1.15, duration: 800, useNativeDriver: Platform.OS !== "web" }),
+      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: Platform.OS !== "web" }),
     ])).start();
     const girarInf = () => {
       rotateAnim.setValue(0);
-      Animated.timing(rotateAnim, { toValue: 1, duration: 2000, easing: Easing.linear, useNativeDriver: true })
+      Animated.timing(rotateAnim, { toValue: 1, duration: 2000, easing: Easing.linear, useNativeDriver: Platform.OS !== "web" })
         .start(({ finished }) => { if (finished) girarInf(); });
     };
     girarInf();
@@ -479,7 +479,7 @@ export default function Cliente() {
           toValue: 1,
           duration: 18000,
           easing: Easing.linear,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== "web",
         }).start(({ finished }) => {
           if (finished) rodarCTA();
         });
@@ -970,7 +970,7 @@ export default function Cliente() {
       toValue: 1,
       duration: 6000,
       easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== "web",
     }).start(async () => {
       rotateAnim.removeListener(listener);
       if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -995,7 +995,7 @@ export default function Cliente() {
       await carregarDados(clean, loja_id && loja_id !== 'undefined' ? String(loja_id) : undefined);
       console.log('✅ [COMPLETO] Prêmio processado e saldos sincronizados!');
 
-      Animated.spring(resultAnim, { toValue: 1, useNativeDriver: true, speed: 10, bounciness: 12 }).start();
+      Animated.spring(resultAnim, { toValue: 1, useNativeDriver: Platform.OS !== "web", speed: 10, bounciness: 12 }).start();
     });
   };
 
@@ -1034,7 +1034,7 @@ export default function Cliente() {
       <TouchableOpacity style={styles.buttonBig} onPress={entrarFila} activeOpacity={0.8} disabled={carregando}>
         <Text style={styles.buttonTextBig}>{carregando ? 'CARREGANDO...' : 'ACESSAR MINHA CARTEIRA'}</Text>
       </TouchableOpacity>
-      <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v5.2.5-diamond-secure-fixed</Text>
+      <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v5.4.0-platinum-diamond-final</Text>
     </ScrollView>
   );
 
@@ -1250,8 +1250,19 @@ export default function Cliente() {
         <TouchableOpacity style={styles.botaoSair} onPress={sairDaCarteira}>
           <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>🚪 SAIR DA CONTA</Text>
         </TouchableOpacity>
-        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 16 }}>v5.2.5-diamond-secure-fixed</Text>
+        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 16 }}>v5.4.0-platinum-diamond-final</Text>
       </ScrollView>
+    </View>
+  );
+
+  return (
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+      {/* ── Conteúdo Dinâmico ── */}
+      {status === 'idle' && renderIdle()}
+      {status === 'aguardando' && renderAguardando()}
+      {status === 'finalizado' && renderFinalizado()}
+
+      {/* ── Modais Globais (Sempre acessíveis) ── */}
 
       {/* ── MODAL DA ROLETA ── */}
       {mostrarRoletaModal && (
