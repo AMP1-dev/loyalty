@@ -16,7 +16,7 @@ const salvarStorage = async (key: string, value: string) => {
   else await AsyncStorage.setItem(key, value);
 };
 
-// ─── Componente WheelSVG (reutilizado do cliente) ──────────────────────────────
+// ─── Componente WheelSVG (reutilizado) ────────────────────────────────────────
 function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDark: boolean }) {
   const CENTER = size / 2;
   const RADIUS = CENTER - 6;
@@ -113,7 +113,6 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
         })}
       </G>
 
-      {/* Centro metálico */}
       <Circle cx={CENTER} cy={CENTER} r={20} fill="url(#gCenterMesa)" />
     </Svg>
   );
@@ -137,7 +136,6 @@ export default function MesaRoleta() {
   const [nomeLojaAtual, setNomeLojaAtual] = useState('');
 
   const rotateAnim = useRef(new Animated.Value(0)).current;
-  const resultAnim = useRef(new Animated.Value(0)).current;
 
   const temaSistema = useColorScheme();
   const [isDark, setIsDark] = useState(temaSistema === 'dark');
@@ -153,7 +151,7 @@ export default function MesaRoleta() {
     neonAmarelo: '#facc15',
   };
 
-  // ─── Init: Carrega configurações da loja e prêmios da mesa ───────────────────
+  // ─── Init ─────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!loja_id || loja_id === 'undefined') return;
     carregarDadosMesa();
@@ -163,7 +161,6 @@ export default function MesaRoleta() {
     try {
       setCarregando(true);
 
-      // 1. Carrega configuração da loja
       const { data: config } = await supabase
         .from('configuracoes_loja')
         .select('*')
@@ -177,7 +174,6 @@ export default function MesaRoleta() {
         }
       }
 
-      // 2. Carrega dados da loja
       const { data: loja } = await supabase
         .from('lojas')
         .select('nome')
@@ -186,7 +182,6 @@ export default function MesaRoleta() {
 
       if (loja) setNomeLojaAtual(loja.nome);
 
-      // 3. Carrega prêmios da roleta MESA
       const { data: premios } = await supabase
         .from('roleta_premios_mesa')
         .select('*')
@@ -204,7 +199,40 @@ export default function MesaRoleta() {
     }
   };
 
-  // ─── Validar telefone ─────────────────────────────────────────────────────────
+  // ─── NOVA: Validar Jogo Diário (1x por dia) ────────────────────────────────
+  const validarJogueDiario = async (telefone: string, lojaId: string): Promise<boolean> => {
+    try {
+      const cleanTel = telefone.replace(/\D/g, '');
+      const hoje = new Date();
+      const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+      const fimHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + 1);
+
+      const { data, error } = await supabase
+        .from('roleta_mesa_participacoes')
+        .select('id')
+        .eq('loja_id', lojaId)
+        .eq('cliente_cpf', cleanTel)
+        .gte('created_at', inicioHoje.toISOString())
+        .lt('created_at', fimHoje.toISOString())
+        .limit(1);
+
+      if (error) {
+        console.error('Erro ao validar jogo diário:', error);
+        return true;
+      }
+
+      // Se encontrou = já jogou hoje
+      if (data && data.length > 0) {
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Erro na validação:', error);
+      return true;
+    }
+  };
+
   const validarTelefone = (tel: string): boolean => {
     const clean = tel.replace(/\D/g, '');
     return clean.length === 11;
@@ -215,10 +243,19 @@ export default function MesaRoleta() {
       alert('Por favor, digite um telefone válido (11 dígitos)');
       return;
     }
+
+    // ✨ NOVA: Validar jogo diário
+    const podeJogar = await validarJogueDiario(telefone, loja_id);
+
+    if (!podeJogar) {
+      alert('🎮 Você já jogou na mesa hoje!\\n\\nVolte amanhã para tentar novamente. Boa sorte! 🍀');
+      setTelefone('');
+      return;
+    }
+
     setEtapa('nps');
   };
 
-  // ─── NPS: Selecionar nota e avançar ───────────────────────────────────────────
   const avancarParaRoleta = () => {
     if (notaNps === 0) {
       alert('Por favor, selecione uma nota');
@@ -227,7 +264,6 @@ export default function MesaRoleta() {
     setEtapa('roleta');
   };
 
-  // ─── Girar roleta ─────────────────────────────────────────────────────────────
   const girarRoleta = async () => {
     if (rodando || premiosRoletaMesa.length === 0) return;
 
@@ -235,20 +271,17 @@ export default function MesaRoleta() {
     setEtapa('roleta');
 
     try {
-      // Sorteia prêmio baseado em probabilidade
       const premio = sortearPremio(premiosRoletaMesa);
       const targetIndex = premiosRoletaMesa.findIndex((p) => p.id === premio.id);
       const rotations = 5;
       const targetDeg = rotations * 360 + (targetIndex / premiosRoletaMesa.length) * 360;
 
-      // Anima roleta
       Animated.timing(rotateAnim, {
         toValue: targetDeg,
         duration: 3000,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: Platform.OS !== 'web',
       }).start(async () => {
-        // Salva participação
         const cleanTel = telefone.replace(/\D/g, '');
         await salvarParticipacaoMesa(cleanTel, premio);
         setPremioGanho(premio);
@@ -275,6 +308,7 @@ export default function MesaRoleta() {
 
   const salvarParticipacaoMesa = async (telefone: string, premio: any) => {
     try {
+      // 1. Salvar participação
       await supabase.from('roleta_mesa_participacoes').insert({
         loja_id: loja_id,
         cliente_cpf: telefone,
@@ -286,14 +320,62 @@ export default function MesaRoleta() {
         premio_resgatado: false,
       });
 
-      // Salva telefone no storage para não pedir de novo
+      // ✨ NOVA: Sync automático - criar/atualizar contato em remarketing
+      await sincronizarComRemarketig(telefone, premio);
+
       await salvarStorage(`mesa_telefone_${loja_id}`, telefone);
     } catch (error) {
       console.error('Erro ao salvar participação da mesa:', error);
     }
   };
 
-  // ─── Se nota = 5, oferece dobro ────────────────────────────────────────────────
+  // ✨ NOVA: Função de Sync para Remarketing
+  const sincronizarComRemarketig = async (telefone: string, premio: any) => {
+    try {
+      // Verificar se contato já existe
+      const { data: existente } = await supabase
+        .from('contatos_mesa_remarketing')
+        .select('id')
+        .eq('loja_id', loja_id)
+        .eq('cliente_cpf', telefone)
+        .limit(1);
+
+      if (existente && existente.length > 0) {
+        // Atualizar contato existente
+        await supabase
+          .from('contatos_mesa_remarketing')
+          .update({
+            premio_ganho: premio.nome,
+            nota_nps: notaNps,
+            data_ultimo_contato: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existente[0].id);
+      } else {
+        // Criar novo contato
+        const tags = [];
+        if (notaNps === 5) tags.push('5_estrelas');
+        if (premio.tipo === 'desconto') tags.push('desconto');
+        if (premio.tipo === 'brinde') tags.push('brinde');
+        if (premio.tipo === 'pontos_extra') tags.push('pontos_extra');
+
+        await supabase.from('contatos_mesa_remarketing').insert({
+          loja_id: loja_id,
+          cliente_cpf: telefone,
+          premio_ganho: premio.nome,
+          nota_nps: notaNps,
+          status: 'nao_contatado',
+          data_participacao: new Date().toISOString(),
+          tags: tags,
+          marketing_consentido: true,
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao sincronizar com remarketing:', error);
+      // Não bloqueia fluxo se sync falhar
+    }
+  };
+
   if (etapa === 'resultado' && notaNps === 5 && premioGanho) {
     return (
       <OfertaGoogle
@@ -307,7 +389,6 @@ export default function MesaRoleta() {
     );
   }
 
-  // ─── TELA 1: Captura Telefone ─────────────────────────────────────────────────
   if (etapa === 'telefone') {
     return (
       <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
@@ -317,7 +398,7 @@ export default function MesaRoleta() {
               🎮 JOGUE NA MESA!
             </Text>
             <Text style={{ fontSize: 14, color: c.subtexto, textAlign: 'center', marginBottom: 30 }}>
-              Diversão garantida enquanto você aguarda seu pedido
+              Uma vez por dia • Ganhe prêmios incríveis
             </Text>
 
             <View style={{ backgroundColor: c.card, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: c.borda, marginBottom: 20 }}>
@@ -349,9 +430,6 @@ export default function MesaRoleta() {
                 }}
                 keyboardType="phone-pad"
               />
-              <Text style={{ fontSize: 11, color: c.subtexto, marginTop: 8, marginLeft: 4 }}>
-                Usaremos para contato com as boas notícias!
-              </Text>
             </View>
 
             <TouchableOpacity
@@ -373,7 +451,6 @@ export default function MesaRoleta() {
     );
   }
 
-  // ─── TELA 2: Pesquisa NPS ─────────────────────────────────────────────────────
   if (etapa === 'nps') {
     return (
       <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
@@ -439,7 +516,6 @@ export default function MesaRoleta() {
     );
   }
 
-  // ─── TELA 3: Roleta Girando ───────────────────────────────────────────────────
   if (etapa === 'roleta' && premiosRoletaMesa.length > 0) {
     const spinStyle = {
       transform: [{ rotate: rotateAnim.interpolate({
@@ -477,7 +553,6 @@ export default function MesaRoleta() {
     );
   }
 
-  // ─── TELA 4: Resultado ───────────────────────────────────────────────────────
   if (etapa === 'resultado' && premioGanho) {
     return (
       <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
@@ -510,18 +585,6 @@ export default function MesaRoleta() {
             >
               <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>
                 JOGAR NOVAMENTE? 🎮
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => {
-                // Volta para app principal
-                // router.push('/cliente');
-              }}
-              style={{ marginTop: 15 }}
-            >
-              <Text style={{ color: c.subtexto, fontSize: 14, fontWeight: '600' }}>
-                Voltar ao App
               </Text>
             </TouchableOpacity>
           </View>
