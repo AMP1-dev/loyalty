@@ -33,7 +33,7 @@ export default function Merchant() {
   const manualInputRef = useRef<View>(null);
 
   const [lojaId, setLojaId] = useState<string>('');
-  const APP_VERSION = '4.6.2-pro-platinum';
+  const APP_VERSION = '5.5.0-qr-mesa';
   const [fila, setFila] = useState<any[]>([]);
   const [clienteFocadoId, setClienteFocadoId] = useState<string | null>(null);
 
