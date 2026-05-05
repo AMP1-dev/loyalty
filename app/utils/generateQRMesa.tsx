@@ -22,7 +22,6 @@ export const generateQRMesa = async (
     const qrDataUrl = await QRCode.toDataURL(url, {
       errorCorrectionLevel: 'H',
       type: 'image/png',
-      quality: 0.95,
       width: size.width,
       margin: 2,
       color: {

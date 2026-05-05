@@ -7,7 +7,7 @@ import {
   TouchableOpacity, useColorScheme, View, Linking
 } from 'react-native';
 import Svg, { Circle, Defs, G, Path, RadialGradient, LinearGradient as SvgLinearGradient, Stop, Text as SvgText, Filter, FeGaussianBlur, FeOffset, FeComponentTransfer, FeFuncA, FeMerge, FeMergeNode } from 'react-native-svg';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../../lib/supabase';
 import OfertaGoogle from './OfertaGoogle';
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────

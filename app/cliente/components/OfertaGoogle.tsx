@@ -4,7 +4,7 @@ import {
   Animated, Easing, Linking, Platform, ScrollView, StyleSheet, Text,
   TouchableOpacity, useColorScheme, View
 } from 'react-native';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '../../../lib/supabase';
 
 // ─── Componente OfertaGoogle ──────────────────────────────────────────────────
 interface OfertaGoogleProps {
