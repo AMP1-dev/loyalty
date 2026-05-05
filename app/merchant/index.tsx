@@ -168,6 +168,14 @@ export default function Merchant() {
   const [participacoesMesa, setParticipacoesMesa] = useState<any[]>([]);
   const [statsMesa, setStatsMesa] = useState({ total: 0, notas5: 0, googleValidadas: 0 });
 
+  // --- REMARKETING WHATSAPP ---
+  const [contatosMesa, setContatosMesa] = useState<any[]>([]);
+  const [templatesWA, setTemplatesWA] = useState<any[]>([]);
+  const [filtroStatus, setFiltroStatus] = useState('');
+  const [filtroNps, setFiltroNps] = useState(0);
+  const [templateSelecionado, setTemplateSelecionado] = useState('');
+  const [mostrarRemarketing, setMostrarRemarketing] = useState(false);
+
   // Carrega configuração QR Mesa
   const carregarConfigQrMesa = async (lojaId: string) => {
     try {
@@ -284,6 +292,70 @@ export default function Merchant() {
     } catch (error) {
       console.error('Erro ao carregar participações:', error);
     }
+  };
+
+  useEffect(() => {
+    if (mostrarRemarketing && lojaId) {
+      carregarContatosMesa(lojaId);
+      carregarTemplatesWA(lojaId);
+    }
+  }, [mostrarRemarketing, lojaId]);
+
+  // Carrega contatos remarketing
+  const carregarContatosMesa = async (lojaId: string) => {
+    try {
+      const { data } = await supabase
+        .from('contatos_mesa_remarketing')
+        .select('*')
+        .eq('loja_id', lojaId)
+        .order('created_at', { ascending: false });
+      setContatosMesa(data || []);
+    } catch (e) {
+      console.error('Erro carregar contatos', e);
+    }
+  };
+
+  // Carrega templates
+  const carregarTemplatesWA = async (lojaId: string) => {
+    try {
+      const { data } = await supabase
+        .from('templates_whatsapp')
+        .select('*')
+        .eq('loja_id', lojaId)
+        .order('ordem', { ascending: true });
+      setTemplatesWA(data || []);
+    } catch (e) {
+      console.error('Erro carregar templates', e);
+    }
+  };
+
+  const marcarComoContatado = async (id: string) => {
+    try {
+      await supabase.from('contatos_mesa_remarketing').update({ status: 'contatado', data_ultimo_contato: new Date().toISOString() }).eq('id', id);
+      carregarContatosMesa(lojaId);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const enviarWhatsApp = async (contato: any) => {
+    if (!templateSelecionado) { alert('Selecione um template antes de enviar!'); return; }
+    const template = templatesWA.find(t => t.id === templateSelecionado);
+    if (!template) return;
+
+    let msg = template.mensagem;
+    msg = msg.replace('{{PREMIO}}', contato.premio_ganho || '');
+    msg = msg.replace('{{LINK_GOOGLE}}', linkGoogleMeuNegocio || '');
+    msg = msg.replace('{{DATA_EXPIRACAO}}', '7 dias');
+    msg = msg.replace('{{CODIGO}}', 'GANHEI');
+    
+    const text = encodeURIComponent(msg);
+    const numero = contato.cliente_cpf.replace(/\D/g, '');
+    const url = `https://wa.me/55${numero}?text=${text}`;
+    
+    if (typeof window !== 'undefined') window.open(url, '_blank');
+    
+    await marcarComoContatado(contato.id);
   };
 
   const exportarTelefonesCSV = (lojaId: string) => {
@@ -1257,6 +1329,80 @@ export default function Merchant() {
                 ))}
               </View>
             </ScrollView>
+            </ScrollView>
+          </View>
+        </View>
+      )}
+
+      {mostrarRemarketing && (
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { width: '90%', maxWidth: 800, padding: 20, maxHeight: '90%' }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Text style={{ fontSize: 20, fontWeight: '900', color: '#8B5CF6' }}>📞 REMARKETING WHATSAPP</Text>
+              <TouchableOpacity onPress={() => setMostrarRemarketing(false)} style={styles.closeBtn}><Text style={styles.closeText}>✕</Text></TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 60 }}>
+              
+              {/* FILTROS E OPÇÕES */}
+              <View style={{ backgroundColor: '#1e293b', padding: 15, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: '#334155' }}>
+                 <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold', marginBottom: 10 }}>Filtros</Text>
+                 <View style={{ flexDirection: 'row', gap: 10 }}>
+                   <TouchableOpacity onPress={() => setFiltroStatus(filtroStatus === 'nao_contatado' ? '' : 'nao_contatado')} style={{ flex: 1, padding: 10, borderRadius: 8, backgroundColor: filtroStatus === 'nao_contatado' ? '#8B5CF6' : '#0f172a', alignItems: 'center' }}>
+                      <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>Pendentes</Text>
+                   </TouchableOpacity>
+                   <TouchableOpacity onPress={() => setFiltroStatus(filtroStatus === 'contatado' ? '' : 'contatado')} style={{ flex: 1, padding: 10, borderRadius: 8, backgroundColor: filtroStatus === 'contatado' ? '#10b981' : '#0f172a', alignItems: 'center' }}>
+                      <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>Já Contatados</Text>
+                   </TouchableOpacity>
+                   <TouchableOpacity onPress={() => setFiltroNps(filtroNps === 5 ? 0 : 5)} style={{ flex: 1, padding: 10, borderRadius: 8, backgroundColor: filtroNps === 5 ? '#facc15' : '#0f172a', alignItems: 'center' }}>
+                      <Text style={{ color: filtroNps === 5 ? '#000' : '#fff', fontSize: 12, fontWeight: 'bold' }}>Apenas 5 ⭐</Text>
+                   </TouchableOpacity>
+                 </View>
+              </View>
+
+              {/* SELEÇÃO DE TEMPLATE */}
+              <View style={{ backgroundColor: '#1e293b', padding: 15, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: '#334155' }}>
+                 <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold', marginBottom: 10 }}>Template de Mensagem</Text>
+                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+                   {templatesWA.map(t => (
+                     <TouchableOpacity key={t.id} onPress={() => setTemplateSelecionado(t.id)} style={{ padding: 10, borderRadius: 8, backgroundColor: templateSelecionado === t.id ? '#8B5CF6' : '#0f172a', minWidth: 150, borderWidth: 1, borderColor: '#334155' }}>
+                        <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>{t.emoji} {t.nome}</Text>
+                        <Text style={{ color: '#94a3b8', fontSize: 10 }}>{t.tipo}</Text>
+                     </TouchableOpacity>
+                   ))}
+                 </ScrollView>
+              </View>
+
+              {/* LISTA DE CONTATOS */}
+              <Text style={{ fontSize: 16, fontWeight: '900', color: '#F8FAFC', marginBottom: 12 }}>
+                Lista de Clientes da Mesa
+              </Text>
+              
+              {contatosMesa
+                .filter(c => (filtroStatus ? c.status === filtroStatus : true))
+                .filter(c => (filtroNps > 0 ? c.nota_nps === filtroNps : true))
+                .map((contato) => (
+                <View key={contato.id} style={{ backgroundColor: '#0f172a', borderRadius: 12, padding: 15, marginBottom: 10, borderWidth: 1, borderColor: '#334155', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff', marginBottom: 4 }}>{formatarTelefone(contato.cliente_cpf)}</Text>
+                    <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 2 }}>🎁 Prêmio Ganho: {contato.premio_ganho}</Text>
+                    <Text style={{ fontSize: 11, color: '#94A3B8' }}>⭐ NPS: {contato.nota_nps}/5 • Data: {new Date(contato.data_participacao).toLocaleDateString('pt-BR')}</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end', gap: 8 }}>
+                     <Text style={{ fontSize: 10, fontWeight: 'bold', color: contato.status === 'contatado' ? '#10b981' : '#f59e0b', backgroundColor: contato.status === 'contatado' ? '#10b98120' : '#f59e0b20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                       {contato.status === 'contatado' ? '✅ CONTATADO' : '⏳ PENDENTE'}
+                     </Text>
+                     <TouchableOpacity onPress={() => enviarWhatsApp(contato)} style={{ backgroundColor: '#25D366', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                       <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>📱 ENVIAR WA.ME</Text>
+                     </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+              
+              {contatosMesa.length === 0 && (
+                 <Text style={{ color: '#64748b', textAlign: 'center', marginTop: 20 }}>Nenhum contato encontrado.</Text>
+              )}
+            </ScrollView>
           </View>
         </View>
       )}
@@ -1370,10 +1516,13 @@ export default function Merchant() {
                <TouchableOpacity onPress={() => { buscarFila(); buscarStats(); buscarAvaliacoesERoleta(); mostrarToast('Dados Atualizados!', 'sucesso'); }} style={{ backgroundColor: '#1e293b', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#334155' }}>
                  <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold' }}>🔄 SINCRONIZAR</Text>
                </TouchableOpacity>
-                <TouchableOpacity onPress={() => { setMostrarMesa(true); setMostrarConfig(false); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <TouchableOpacity onPress={() => { setMostrarMesa(true); setMostrarConfig(false); setMostrarRemarketing(false); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={[styles.headerButton, { color: mostrarMesa ? '#8B5CF6' : '#94A3B8' }]}>📱 Mesa</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => { setMostrarConfig(!mostrarConfig); setMostrarMesa(false); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <TouchableOpacity onPress={() => { setMostrarRemarketing(true); setMostrarMesa(false); setMostrarConfig(false); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={[styles.headerButton, { color: mostrarRemarketing ? '#8B5CF6' : '#94A3B8' }]}>📞 Remarketing WA</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => { setMostrarConfig(!mostrarConfig); setMostrarMesa(false); setMostrarRemarketing(false); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={styles.headerButton}>⚙️ Configurações</Text>
                   <Text style={{ color: '#64748b', fontSize: 9, fontWeight: 'bold', backgroundColor: '#1e293b', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>v{APP_VERSION.split('-')[0]}</Text>
                 </TouchableOpacity>
