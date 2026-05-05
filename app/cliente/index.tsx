@@ -10,7 +10,7 @@ import {
   Vibration,
   View
 } from 'react-native';
-import Svg, { Circle, Defs, G, Path, RadialGradient, Stop, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Defs, FeComponentTransfer, FeFuncA, FeGaussianBlur, FeMerge, FeMergeNode, FeOffset, Filter, G, Path, RadialGradient, Stop, LinearGradient as SvgLinearGradient, Text as SvgText } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
@@ -89,110 +89,150 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
   return (
     <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       <Defs>
-        <RadialGradient id="gCenter" cx="50%" cy="50%" rx="50%" ry="50%">
-          <Stop offset="0%" stopColor="#ffffff" />
-          <Stop offset="100%" stopColor="#94a3b8" />
+        {/* Gradientes para profundidade nas fatias */}
+        {/* @ts-ignore */}
+        <SvgLinearGradient id="gradBege" x1="0%" y1="0%" x2="100%" y2="100%">
+          <Stop offset="0%" stopColor="#fdf8ec" />
+          <Stop offset="100%" stopColor="#f0e5d8" />
+        </SvgLinearGradient>
+        {/* @ts-ignore */}
+        <SvgLinearGradient id="gradVerde" x1="0%" y1="0%" x2="100%" y2="100%">
+          <Stop offset="0%" stopColor="#d1fae5" />
+          <Stop offset="100%" stopColor="#a7f3d0" />
+        </SvgLinearGradient>
+
+        {/* Gradiente radial para centro metálico */}
+        <RadialGradient id="gCenter" cx="50%" cy="30%" rx="60%" ry="60%">
+          <Stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
+          <Stop offset="50%" stopColor="#d1d5db" stopOpacity="0.8" />
+          <Stop offset="100%" stopColor="#6b7280" stopOpacity="1" />
         </RadialGradient>
+
+        {/* Sombra embaixo */}
+        <Filter id="dropShadow" x="-50%" y="-50%" width="200%" height="200%">
+          <FeGaussianBlur in="SourceAlpha" stdDeviation="3" />
+          <FeOffset dx="0" dy="8" result="offsetblur" />
+          <FeComponentTransfer>
+            <FeFuncA type="linear" slope="0.4" />
+          </FeComponentTransfer>
+          <FeMerge>
+            <FeMergeNode />
+            <FeMergeNode in="SourceGraphic" />
+          </FeMerge>
+        </Filter>
+
+        {/* Glow mais pronunciado */}
+        <Filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+          <FeGaussianBlur stdDeviation="4" result="coloredBlur" />
+          <FeMerge>
+            <FeMergeNode in="coloredBlur" />
+            <FeMergeNode in="SourceGraphic" />
+          </FeMerge>
+        </Filter>
       </Defs>
 
-      {prizes.map((prize: any, i: number) => {
-        const { x, y, rotation } = getTextPos(i);
-        const lines = (prize.nome || '').split('\n');
-        const icon = getIconePremio(prize.tipo);
-        const iconColor = prize.tipo === 'cashback' ? '#d97706'
-          : prize.tipo === 'pontos' ? '#10b981'
-            : prize.tipo === 'nada' ? '#ef4444'
-              : '#7c3aed';
+      {/* RODA COM SOMBRA */}
+      <G filter="url(#dropShadow)">
 
-        return (
-          <G key={i}>
-            {/* Fatia */}
-            <Path
-              d={buildSlicePath(i)}
-              fill={colors[i % colors.length]}
-              stroke={isDark ? '#475569' : '#94a3b8'}
-              strokeWidth="0.8"
-            />
-            {/* Conteúdo da fatia */}
-            <G transform={`rotate(${rotation} ${x} ${y})`}>
-              {/* Ícone */}
-              <SvgText x={x} y={y - 12}
-                fill={iconColor} fontSize={size === 240 ? "11" : "10"}
-                fontWeight="900" textAnchor="middle" letterSpacing="0">
-                {icon}
-              </SvgText>
+        {prizes.map((prize: any, i: number) => {
+          const { x, y, rotation } = getTextPos(i);
+          const lines = (prize.nome || '').split('\n');
+          const icon = getIconePremio(prize.tipo);
+          const iconColor = prize.tipo === 'cashback' ? '#d97706'
+            : prize.tipo === 'pontos' ? '#10b981'
+              : prize.tipo === 'nada' ? '#ef4444'
+                : '#7c3aed';
 
-              {/* Tipo (pontos/cashback/brinde) */}
-              <SvgText x={x} y={y - 1}
-                fill={textColor} fontSize={size === 240 ? "7.5" : "6.5"}
-                fontWeight="700" textAnchor="middle" letterSpacing="0.5">
-                {lines[0]}
-              </SvgText>
-
-              {/* Valor/Descrição */}
-              {lines[1] && (
-                <SvgText x={x} y={y + 9}
-                  fill={textColor} fontSize={size === 240 ? "8" : "7"}
-                  fontWeight="bold" textAnchor="middle" letterSpacing="0">
-                  {lines[1]}
+          return (
+            <G key={i}>
+              {/* Fatia com gradiente */}
+              <Path
+                d={buildSlicePath(i)}
+                fill={colors[i % colors.length] === '#fdf8ec' ? 'url(#gradBege)' : 'url(#gradVerde)'}
+                stroke={isDark ? '#475569' : '#94a3b8'}
+                strokeWidth="1.2"
+              />
+              {/* Conteúdo da fatia */}
+              <G transform={`rotate(${rotation} ${x} ${y})`}>
+                {/* Ícone */}
+                <SvgText x={x} y={y - 12}
+                  fill={iconColor} fontSize={size === 240 ? "8" : "11"}
+                  fontWeight="900" textAnchor="middle" letterSpacing="0">
+                  {icon}
                 </SvgText>
-              )}
 
-              {/* Terceira linha se existir */}
-              {lines[2] && (
-                <SvgText x={x} y={y + 18}
-                  fill={textColor} fontSize={size === 240 ? "6.5" : "5.5"}
-                  fontWeight="600" textAnchor="middle" letterSpacing="0">
-                  {lines[2]}
+                {/* Tipo (pontos/cashback/brinde) */}
+                <SvgText x={x} y={y - 1}
+                  fill={textColor} fontSize={size === 240 ? "5" : "7.5"}
+                  fontWeight="700" textAnchor="middle" letterSpacing="0">
+                  {lines[0]}
                 </SvgText>
-              )}
+
+                {/* Valor/Descrição */}
+                {lines[1] && (
+                  <SvgText x={x} y={y + 9}
+                    fill={textColor} fontSize={size === 240 ? "5.5" : "8.5"}
+                    fontWeight="bold" textAnchor="middle" letterSpacing="0">
+                    {lines[1]}
+                  </SvgText>
+                )}
+
+                {/* Terceira linha se existir */}
+                {lines[2] && (
+                  <SvgText x={x} y={y + 18}
+                    fill={textColor} fontSize={size === 240 ? "4.5" : "6.5"}
+                    fontWeight="600" textAnchor="middle" letterSpacing="0">
+                    {lines[2]}
+                  </SvgText>
+                )}
+              </G>
+              {/* Estrelinhas nas fatias pares */}
+              {i % 2 === 0 && (() => {
+                const starAngle = i * sliceAngle - Math.PI / 2 + sliceAngle / 2;
+                const sr = RADIUS * 0.92;
+                return (
+                  <SvgText
+                    x={CENTER + sr * Math.cos(starAngle)}
+                    y={CENTER + sr * Math.sin(starAngle) + 3}
+                    fill="#10b981" fontSize="7" textAnchor="middle">
+                    ★
+                  </SvgText>
+                );
+              })()}
             </G>
-            {/* Estrelinhas nas fatias pares */}
-            {i % 2 === 0 && (() => {
-              const starAngle = i * sliceAngle - Math.PI / 2 + sliceAngle / 2;
-              const sr = RADIUS * 0.92;
-              return (
-                <SvgText
-                  x={CENTER + sr * Math.cos(starAngle)}
-                  y={CENTER + sr * Math.sin(starAngle) + 3}
-                  fill="#10b981" fontSize="7" textAnchor="middle">
-                  ★
-                </SvgText>
-              );
-            })()}
-          </G>
-        );
-      })}
+          );
+        })}
 
-      {/* Divisórias */}
-      {prizes.map((_: any, i: number) => {
-        const angle = i * sliceAngle - Math.PI / 2;
-        return (
-          <Path key={`d${i}`}
-            d={`M${CENTER},${CENTER} L${CENTER + RADIUS * Math.cos(angle)},${CENTER + RADIUS * Math.sin(angle)}`}
-            stroke={isDark ? '#475569' : '#94a3b8'} strokeWidth="0.6" />
-        );
-      })}
+        {/* Divisórias */}
+        {prizes.map((_: any, i: number) => {
+          const angle = i * sliceAngle - Math.PI / 2;
+          return (
+            <Path key={`d${i}`}
+              d={`M${CENTER},${CENTER} L${CENTER + RADIUS * Math.cos(angle)},${CENTER + RADIUS * Math.sin(angle)}`}
+              stroke={isDark ? '#475569' : '#94a3b8'} strokeWidth="0.6" />
+          );
+        })}
 
-      {/* Centro metálico */}
-      <Circle cx={CENTER} cy={CENTER} r={size * 0.075} fill="url(#gCenter)" stroke={isDark ? '#475569' : '#94a3b8'} strokeWidth="1.5" />
-      <Circle cx={CENTER} cy={CENTER} r={size * 0.042} fill={isDark ? '#0f172a' : '#fff'} stroke={isDark ? '#334155' : '#cbd5e1'} strokeWidth="1" />
-      <SvgText x={CENTER} y={CENTER + size * 0.016} fill="#10b981" fontSize={size * 0.038} fontWeight="900" textAnchor="middle">✦</SvgText>
+        {/* Centro metálico */}
+        <Circle cx={CENTER} cy={CENTER} r={size * 0.075} fill="url(#gCenter)" stroke={isDark ? '#475569' : '#94a3b8'} strokeWidth="1.5" />
+        <Circle cx={CENTER} cy={CENTER} r={size * 0.042} fill={isDark ? '#0f172a' : '#fff'} stroke={isDark ? '#334155' : '#cbd5e1'} strokeWidth="1" />
+        <SvgText x={CENTER} y={CENTER + size * 0.016} fill="#10b981" fontSize={size * 0.038} fontWeight="900" textAnchor="middle">✦</SvgText>
 
-      {/* Rebites/Parafusos no aro metálico */}
-      {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {
-        const rad = (angle * Math.PI) / 180;
-        const rivetRadius = RADIUS + size * 0.04;
-        const rivetX = CENTER + rivetRadius * Math.cos(rad);
-        const rivetY = CENTER + rivetRadius * Math.sin(rad);
-        const rivetSize = size * 0.04;
-        return (
-          <G key={`rivet-${angle}`}>
-            <Circle cx={rivetX} cy={rivetY} r={rivetSize} fill={isDark ? '#64748b' : '#cbd5e1'} stroke={isDark ? '#334155' : '#94a3b8'} strokeWidth="0.5" />
-            <Circle cx={rivetX} cy={rivetY} r={rivetSize * 0.5} fill={isDark ? '#334155' : '#e2e8f0'} opacity="0.7" />
-          </G>
-        );
-      })}
+        {/* Rebites/Parafusos no aro metálico */}
+        {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {
+          const rad = (angle * Math.PI) / 180;
+          const rivetRadius = RADIUS + size * 0.04;
+          const rivetX = CENTER + rivetRadius * Math.cos(rad);
+          const rivetY = CENTER + rivetRadius * Math.sin(rad);
+          const rivetSize = size * 0.04;
+          return (
+            <G key={`rivet-${angle}`}>
+              <Circle cx={rivetX} cy={rivetY} r={rivetSize} fill={isDark ? '#64748b' : '#cbd5e1'} stroke={isDark ? '#334155' : '#94a3b8'} strokeWidth="0.5" />
+              <Circle cx={rivetX} cy={rivetY} r={rivetSize * 0.5} fill={isDark ? '#334155' : '#e2e8f0'} opacity="0.7" />
+            </G>
+          );
+        })}
+      </G>  {/* Fecha o grupo de sombra */}
     </Svg>
   );
 }
@@ -364,6 +404,18 @@ export default function Cliente() {
   const [etapaRoleta, setEtapaRoleta] = useState<'nps' | 'girando' | 'resultado'>('nps');
   const [perguntasNps, setPerguntasNps] = useState<any[]>([]);
   const [premiosRoleta, setPremiosRoleta] = useState<any[]>([]);
+
+  // Prêmios HARDCODED para CTA (exemplo decorativo que fica girando)
+  const premiosDisplay = [
+    { id: 'ex1', nome: '10\nSPG', tipo: 'pontos', valor: 10, probabilidade: 15, icone: '✨' },
+    { id: 'ex2', nome: 'Café\nGrátis', tipo: 'brinde', valor: 0, probabilidade: 12, icone: '☕' },
+    { id: 'ex3', nome: 'R$ 3\nCashback', tipo: 'cashback', valor: 3, probabilidade: 20, icone: '💰' },
+    { id: 'ex4', nome: '20\nSPG', tipo: 'pontos', valor: 20, probabilidade: 18, icone: '✨' },
+    { id: 'ex5', nome: 'R$ 5\nCashback', tipo: 'cashback', valor: 5, probabilidade: 15, icone: '💰' },
+    { id: 'ex6', nome: 'Brinde\nSurpresa', tipo: 'brinde', valor: 0, probabilidade: 10, icone: '🎁' },
+    { id: 'ex7', nome: '15\nSPG', tipo: 'pontos', valor: 15, probabilidade: 5, icone: '✨' },
+    { id: 'ex8', nome: 'Cappuccino\nPremium', tipo: 'brinde', valor: 0, probabilidade: 5, icone: '☕' },
+  ];
   const [respostasNps, setRespostasNps] = useState<any>({});
   const [premioGanho, setPremioGanho] = useState<any>(null);
   const [rodando, setRodando] = useState(false);
@@ -1196,10 +1248,18 @@ export default function Cliente() {
           </View>
         )}
 
-        {/* ── 4. CTA DA ROLETA ── */}
-        <View style={{ alignItems: 'center', marginVertical: 36, paddingHorizontal: 20 }}>
-          <RoletaCTA onPress={abrirRoleta} premiosRoleta={premiosRoleta} isDark={isDark} c={c} />
-        </View>
+        {/* ── 4. CTA DA ROLETA (APENAS COM QR CODE) ── */}
+        {loja_id && loja_id !== 'undefined' ? (
+          <View style={{ alignItems: 'center', marginVertical: 36, paddingHorizontal: 20 }}>
+            <RoletaCTA onPress={abrirRoleta} premiosRoleta={premiosDisplay} isDark={isDark} c={c} />
+          </View>
+        ) : (
+          <View style={{ alignItems: 'center', marginVertical: 20, paddingHorizontal: 20 }}>
+            <Text style={{ color: c.subtexto, fontSize: 12, fontStyle: 'italic', textAlign: 'center' }}>
+              🎡 A Roleta da Sorte está disponível apenas quando você faz login com o QR code na loja!
+            </Text>
+          </View>
+        )}
 
         {/* ── 5. BRINDES DA REDE ── */}
         {recompensasRede.length > 0 && (
