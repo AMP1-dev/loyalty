@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import Svg, { Circle, Defs, FeComponentTransfer, FeFuncA, FeGaussianBlur, FeMerge, FeMergeNode, FeOffset, Filter, G, Path, RadialGradient, Stop, LinearGradient as SvgLinearGradient, Text as SvgText } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
+import MesaRoleta from './components/MesaRoleta';
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
 const salvarStorage = async (key: string, value: string) => {
@@ -364,6 +365,11 @@ function RoletaCTA({ onPress, premiosRoleta, isDark, c }: any) {
 export default function Cliente() {
   const params = useLocalSearchParams();
   const loja_id = params?.loja_id;
+
+  // ─── ROTA /MESA: Renderizar componente MesaRoleta ────────────────────────────
+  if (params?.mesa === 'true' || (typeof window !== 'undefined' && window.location.pathname.includes('/mesa'))) {
+    return <MesaRoleta />;
+  }
 
   const [cpf, setCpf] = useState('');
   const [status, setStatus] = useState<'idle' | 'aguardando' | 'finalizado'>('idle');

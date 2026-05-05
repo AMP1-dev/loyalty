@@ -4,6 +4,8 @@ import { Alert, Animated, Image, Linking, Platform, ScrollView, StyleSheet, Swit
 import QRCode from 'react-native-qrcode-svg';
 import Svg, { Polyline } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
+import { downloadQRMesa, generateQRMesa } from '../../utils/generateQRMesa';
+import { QR_SIZES } from '../../utils/qrConfig';
 
 export default function Merchant() {
   const { width } = useWindowDimensions();
@@ -139,8 +141,186 @@ export default function Merchant() {
 
   const buscarFila = async () => {
     if (!lojaId) return;
+
+    // Carrega dados da Mesa
+    carregarConfigQrMesa(lojaId);
+    carregarPremiosMesa(lojaId);
+    carregarParticipacoesMesa(lojaId);
+
     const { data } = await supabase.from('checkins').select('*').eq('loja_id', lojaId).order('created_at', { ascending: true });
     setFila((data || []).filter(c => c.status === 'ativo' || c.status === 'aguardando'));
+  };
+
+  // --- QR MESA STATES ---
+  const [mostrarMesa, setMostrarMesa] = useState(false);
+  const [qrMesaAtivo, setQrMesaAtivo] = useState(false);
+  const [perguntaNpsMesa, setPerguntaNpsMesa] = useState('Como foi sua experiência?');
+  const [linkGoogleMeuNegocio, setLinkGoogleMeuNegocio] = useState('');
+  const [bonusMultiplicador, setBonusMultiplicador] = useState(2.0);
+  const [tamanhoQrMesa, setTamanhoQrMesa] = useState<keyof typeof QR_SIZES>('MEDIO');
+
+  // --- GERENCIAMENTO PRÊMIOS MESA ---
+  const [premiosMesa, setPremiosMesa] = useState<any[]>([]);
+  const [novoPremiomesa, setNovoPremiomesa] = useState({ nome: '', tipo: 'desconto', valor: 0, probabilidade: 10 });
+  const [editandoPremiomesa, setEditandoPremiomesa] = useState<string | null>(null);
+
+  // --- DASHBOARD MESA ---
+  const [participacoesMesa, setParticipacoesMesa] = useState<any[]>([]);
+  const [statsMesa, setStatsMesa] = useState({ total: 0, notas5: 0, googleValidadas: 0 });
+
+  // Carrega configuração QR Mesa
+  const carregarConfigQrMesa = async (lojaId: string) => {
+    try {
+      const { data } = await supabase
+        .from('configuracoes_loja')
+        .select('qr_mesa_ativo, pergunta_nps_mesa, link_google_meu_negocio, bonus_5_estrelas_multiplicador')
+        .eq('loja_id', lojaId)
+        .single();
+
+      if (data) {
+        setQrMesaAtivo(data.qr_mesa_ativo || false);
+        setPerguntaNpsMesa(data.pergunta_nps_mesa || 'Como foi sua experiência?');
+        setLinkGoogleMeuNegocio(data.link_google_meu_negocio || '');
+        setBonusMultiplicador(data.bonus_5_estrelas_multiplicador || 2.0);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar config QR Mesa:', error);
+    }
+  };
+
+  // Salva configuração QR Mesa
+  const salvarConfigQrMesa = async (lojaId: string) => {
+    try {
+      await supabase
+        .from('configuracoes_loja')
+        .update({
+          qr_mesa_ativo: qrMesaAtivo,
+          pergunta_nps_mesa: perguntaNpsMesa,
+          link_google_meu_negocio: linkGoogleMeuNegocio,
+          bonus_5_estrelas_multiplicador: bonusMultiplicador,
+        })
+        .eq('loja_id', lojaId);
+
+      mostrarToast('✅ Configurações da Mesa salvas!', 'sucesso');
+    } catch (error) {
+      console.error('Erro ao salvar config:', error);
+      mostrarToast('❌ Erro ao salvar', 'erro');
+    }
+  };
+
+  // Carrega prêmios da mesa
+  const carregarPremiosMesa = async (lojaId: string) => {
+    try {
+      const { data } = await supabase
+        .from('roleta_premios_mesa')
+        .select('*')
+        .eq('loja_id', lojaId)
+        .order('created_at', { ascending: false });
+
+      setPremiosMesa(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar prêmios mesa:', error);
+    }
+  };
+
+  // Adiciona prêmio mesa
+  const adicionarPremiomesa = async (lojaId: string) => {
+    if (!novoPremiomesa.nome || novoPremiomesa.valor <= 0) {
+      alert('Preencha todos os campos corretamente');
+      return;
+    }
+
+    try {
+      await supabase.from('roleta_premios_mesa').insert({
+        loja_id: lojaId,
+        nome: novoPremiomesa.nome,
+        tipo: novoPremiomesa.tipo,
+        valor: novoPremiomesa.valor,
+        probabilidade: novoPremiomesa.probabilidade,
+        ativo: true,
+      });
+
+      setNovoPremiomesa({ nome: '', tipo: 'desconto', valor: 0, probabilidade: 10 });
+      carregarPremiosMesa(lojaId);
+      mostrarToast('✅ Prêmio adicionado!', 'sucesso');
+    } catch (error) {
+      console.error('Erro ao adicionar prêmio:', error);
+      mostrarToast('❌ Erro ao adicionar', 'erro');
+    }
+  };
+
+  // Deleta prêmio mesa
+  const deletarPremiomesa = async (premioId: string, lojaId: string) => {
+    if (!window.confirm('Tem certeza? Isso não pode ser desfeito.')) return;
+
+    try {
+      await supabase.from('roleta_premios_mesa').delete().eq('id', premioId);
+      carregarPremiosMesa(lojaId);
+      mostrarToast('✅ Prêmio removido!', 'sucesso');
+    } catch (error) {
+      console.error('Erro:', error);
+      mostrarToast('❌ Erro', 'erro');
+    }
+  };
+
+  // Carrega participacoes da mesa
+  const carregarParticipacoesMesa = async (lojaId: string) => {
+    try {
+      const { data } = await supabase
+        .from('roleta_mesa_participacoes')
+        .select('*')
+        .eq('loja_id', lojaId)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      setParticipacoesMesa(data || []);
+
+      if (data) {
+        const total = data.length;
+        const notas5 = data.filter((p: any) => p.nota_nps === 5).length;
+        const googleValidadas = data.filter((p: any) => p.google_avaliacao_feita).length;
+        setStatsMesa({ total, notas5, googleValidadas });
+      }
+    } catch (error) {
+      console.error('Erro ao carregar participações:', error);
+    }
+  };
+
+  const exportarTelefonesCSV = (lojaId: string) => {
+    if (participacoesMesa.length === 0) {
+      alert('Nenhuma participação para exportar');
+      return;
+    }
+
+    const csv = [
+      ['Telefone', 'Data', 'Prêmio', 'Nota NPS', 'Status'].join(','),
+      ...participacoesMesa.map((p) =>
+        [
+          p.cliente_cpf,
+          new Date(p.created_at).toLocaleDateString('pt-BR'),
+          p.premio_nome,
+          p.nota_nps,
+          p.premio_resgatado ? 'Resgatado' : 'Pendente',
+        ].join(',')
+      ),
+    ].join('\\n');
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Mesa-Participacoes-${lojaId}-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
+  const fazerDownloadQrMesa = async (lojaId: string, nomeLoja: string) => {
+    try {
+      await downloadQRMesa(lojaId, tamanhoQrMesa, nomeLoja);
+      mostrarToast('✅ QR Code baixado!', 'sucesso');
+    } catch (error) {
+      console.error('Erro:', error);
+      mostrarToast('❌ Erro ao baixar', 'erro');
+    }
   };
 
   const buscarFinanceiroDetalhado = async (cpf: string, idFila?: string) => {
@@ -804,6 +984,111 @@ export default function Merchant() {
                 </View>
               </View>
 
+              {/* QR MESAS */}
+              <View style={{ marginBottom: 30, marginTop: 20 }}>
+                <View style={{
+                  borderRadius: 16, padding: 20, borderWidth: 1,
+                  borderColor: '#334155', backgroundColor: '#1e293b'
+                }}>
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: '#8B5CF6', marginBottom: 16 }}>
+                    🎡 MÓDULO QR MESAS
+                  </Text>
+
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <Text style={{ color: '#F8FAFC', fontWeight: '600' }}>Ativar QR Mesa</Text>
+                    <TouchableOpacity
+                      onPress={() => setQrMesaAtivo(!qrMesaAtivo)}
+                      style={{
+                        width: 50, height: 28, borderRadius: 14,
+                        backgroundColor: qrMesaAtivo ? '#10b981' : '#cbd5e1',
+                        justifyContent: 'center',
+                        alignItems: qrMesaAtivo ? 'flex-end' : 'flex-start',
+                        paddingHorizontal: 2,
+                      }}
+                    >
+                      <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#fff' }} />
+                    </TouchableOpacity>
+                  </View>
+
+                  {qrMesaAtivo && (
+                    <>
+                      <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginBottom: 8 }}>
+                        Pergunta da Pesquisa NPS:
+                      </Text>
+                      <TextInput
+                        placeholder="Digite a pergunta..."
+                        placeholderTextColor="#94A3B8"
+                        value={perguntaNpsMesa}
+                        onChangeText={setPerguntaNpsMesa}
+                        multiline
+                        style={{ borderWidth: 1, borderColor: '#334155', borderRadius: 8, padding: 12, color: '#F8FAFC', marginBottom: 16, minHeight: 50 }}
+                      />
+
+                      <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginBottom: 8 }}>
+                        Link Google Meu Negócio (4-5 Estrelas):
+                      </Text>
+                      <TextInput
+                        placeholder="https://g.page/..."
+                        placeholderTextColor="#94A3B8"
+                        value={linkGoogleMeuNegocio}
+                        onChangeText={setLinkGoogleMeuNegocio}
+                        style={{ borderWidth: 1, borderColor: '#334155', borderRadius: 8, padding: 12, color: '#F8FAFC', marginBottom: 16, fontFamily: 'monospace' }}
+                      />
+
+                      <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginBottom: 8 }}>
+                        Multiplicador Dobro (ex: 2.0 = 2x):
+                      </Text>
+                      <TextInput
+                        placeholder="2.0"
+                        placeholderTextColor="#94A3B8"
+                        value={bonusMultiplicador.toString()}
+                        onChangeText={(text) => setBonusMultiplicador(parseFloat(text) || 1.0)}
+                        keyboardType="decimal-pad"
+                        style={{ borderWidth: 1, borderColor: '#334155', borderRadius: 8, padding: 12, color: '#F8FAFC', marginBottom: 20 }}
+                      />
+
+                      <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginBottom: 8 }}>
+                        Tamanho do QR:
+                      </Text>
+                      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+                        {Object.entries(QR_SIZES).map(([key, value]: any) => (
+                          <TouchableOpacity
+                            key={key}
+                            onPress={() => setTamanhoQrMesa(key as any)}
+                            style={{
+                              flex: 1, paddingVertical: 10, borderRadius: 8, borderWidth: 2,
+                              borderColor: tamanhoQrMesa === key ? '#8B5CF6' : '#334155',
+                              backgroundColor: tamanhoQrMesa === key ? '#8B5CF620' : 'transparent',
+                              alignItems: 'center',
+                            }}
+                          >
+                            <Text style={{ fontSize: 11, color: tamanhoQrMesa === key ? '#8B5CF6' : '#94A3B8', fontWeight: '600' }}>
+                              {value.label}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+
+                      <View style={{ gap: 10 }}>
+                        <TouchableOpacity
+                          onPress={() => fazerDownloadQrMesa(lojaId || '', config?.nome_loja || 'loja')}
+                          style={{ backgroundColor: '#8B5CF6', borderRadius: 8, paddingVertical: 12, alignItems: 'center' }}
+                        >
+                          <Text style={{ color: '#fff', fontWeight: '700' }}>📥 BAIXAR QR MESA</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={() => salvarConfigQrMesa(lojaId || '')}
+                          style={{ backgroundColor: '#10b981', borderRadius: 8, paddingVertical: 12, alignItems: 'center' }}
+                        >
+                          <Text style={{ color: '#fff', fontWeight: '700' }}>💾 SALVAR CONFIGURAÇÕES</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  )}
+                </View>
+              </View>
+
               <Text style={[styles.label, { color: '#facc15', marginTop: 20 }]}>🔗 INTEGRAÇÕES E ACESSO:</Text>
               <View style={{ marginBottom: 10, width: '100%' }}>
                 <Text style={{ color: '#94a3b8', fontSize: 10 }}>LINK DO GOOGLE MEU NEGÓCIO (Para Avaliações 4 e 5 Estrelas)</Text>
@@ -821,6 +1106,150 @@ export default function Merchant() {
               </TouchableOpacity>
             </View>
           </ScrollView>
+        </View>
+      )}
+
+      {mostrarMesa && (
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { maxWidth: 800, width: '90%', maxHeight: '90%', padding: 0 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#334155' }}>
+              <Text style={styles.modalTitle}>📱 MESA - Participações e Prêmios</Text>
+              <TouchableOpacity onPress={() => setMostrarMesa(false)} style={styles.closeBtn}><Text style={styles.closeText}>✕</Text></TouchableOpacity>
+            </View>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
+              
+              {/* Dashboard Stats */}
+              <View>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: '#F8FAFC', marginBottom: 16 }}>
+                  📊 Dashboard Mesa
+                </Text>
+
+                <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
+                  <View style={{ flex: 1, backgroundColor: '#162032', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#334155' }}>
+                    <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginBottom: 4 }}>Total</Text>
+                    <Text style={{ fontSize: 24, fontWeight: '900', color: '#8B5CF6' }}>{statsMesa.total}</Text>
+                  </View>
+                  <View style={{ flex: 1, backgroundColor: '#162032', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#334155' }}>
+                    <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginBottom: 4 }}>5⭐</Text>
+                    <Text style={{ fontSize: 24, fontWeight: '900', color: '#d97706' }}>{statsMesa.notas5}</Text>
+                  </View>
+                  <View style={{ flex: 1, backgroundColor: '#162032', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#334155' }}>
+                    <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginBottom: 4 }}>Google ✅</Text>
+                    <Text style={{ fontSize: 24, fontWeight: '900', color: '#10b981' }}>{statsMesa.googleValidadas}</Text>
+                  </View>
+                </View>
+
+                {/* Exportar CSV */}
+                <TouchableOpacity
+                  onPress={() => exportarTelefonesCSV(lojaId || '')}
+                  style={{ backgroundColor: '#3b82f6', borderRadius: 8, paddingVertical: 12, alignItems: 'center', marginBottom: 20 }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>📥 EXPORTAR TELEFONES (CSV)</Text>
+                </TouchableOpacity>
+
+                {/* Lista de Participações */}
+                <Text style={{ fontSize: 16, fontWeight: '900', color: '#F8FAFC', marginBottom: 12 }}>
+                  📱 Participações Capturadas
+                </Text>
+
+                {participacoesMesa.map((p) => (
+                  <View key={p.id} style={{ backgroundColor: '#162032', borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: '#334155' }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#F8FAFC' }}>{formatarTelefone(p.cliente_cpf)}</Text>
+                      <Text style={{ fontSize: 12, color: p.premio_resgatado ? '#10b981' : '#f59e0b', fontWeight: '600' }}>
+                        {p.premio_resgatado ? '✅ Resgatado' : '⏳ Pendente'}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 4 }}>🎁 {p.premio_nome}</Text>
+                    <Text style={{ fontSize: 11, color: '#94A3B8' }}>⭐ Nota: {p.nota_nps}/5 • {new Date(p.created_at).toLocaleDateString('pt-BR')}</Text>
+                  </View>
+                ))}
+
+                {/* CRUD Prêmios Mesa */}
+                <Text style={{ fontSize: 16, fontWeight: '900', color: '#F8FAFC', marginTop: 20, marginBottom: 12 }}>
+                  🎁 Gerenciar Prêmios da Mesa
+                </Text>
+
+                <View style={{ backgroundColor: '#162032', borderRadius: 12, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: '#334155' }}>
+                  <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginBottom: 8 }}>Nome do Prêmio:</Text>
+                  <TextInput
+                    placeholder="Ex: +30% Desconto"
+                    placeholderTextColor="#94A3B8"
+                    value={novoPremiomesa.nome}
+                    onChangeText={(text) => setNovoPremiomesa({ ...novoPremiomesa, nome: text })}
+                    style={{ borderWidth: 1, borderColor: '#334155', borderRadius: 8, padding: 10, color: '#F8FAFC', marginBottom: 10 }}
+                  />
+
+                  <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginBottom: 8 }}>Tipo:</Text>
+                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+                    {['desconto', 'brinde', 'pontos'].map((tipo) => (
+                      <TouchableOpacity
+                        key={tipo}
+                        onPress={() => setNovoPremiomesa({ ...novoPremiomesa, tipo })}
+                        style={{
+                          flex: 1, paddingVertical: 8, borderRadius: 6, borderWidth: 1,
+                          borderColor: novoPremiomesa.tipo === tipo ? '#8B5CF6' : '#334155',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Text style={{ fontSize: 11, color: novoPremiomesa.tipo === tipo ? '#8B5CF6' : '#94A3B8', fontWeight: '600' }}>
+                          {tipo === 'desconto' ? '💰' : tipo === 'brinde' ? '🎁' : '✨'} {tipo}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600', marginBottom: 4 }}>Valor/Qtde:</Text>
+                      <TextInput
+                        placeholder="30"
+                        placeholderTextColor="#94A3B8"
+                        value={novoPremiomesa.valor.toString()}
+                        onChangeText={(text) => setNovoPremiomesa({ ...novoPremiomesa, valor: parseFloat(text) || 0 })}
+                        keyboardType="decimal-pad"
+                        style={{ borderWidth: 1, borderColor: '#334155', borderRadius: 6, padding: 8, color: '#F8FAFC' }}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600', marginBottom: 4 }}>Probabilidade (%):</Text>
+                      <TextInput
+                        placeholder="10"
+                        placeholderTextColor="#94A3B8"
+                        value={novoPremiomesa.probabilidade.toString()}
+                        onChangeText={(text) => setNovoPremiomesa({ ...novoPremiomesa, probabilidade: parseFloat(text) || 1 })}
+                        keyboardType="number-pad"
+                        style={{ borderWidth: 1, borderColor: '#334155', borderRadius: 6, padding: 8, color: '#F8FAFC' }}
+                      />
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => adicionarPremiomesa(lojaId || '')}
+                    style={{ backgroundColor: '#10b981', borderRadius: 8, paddingVertical: 10, alignItems: 'center', marginTop: 12 }}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>➕ ADICIONAR PRÊMIO</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Lista de Prêmios Criados */}
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#F8FAFC', marginBottom: 10 }}>Prêmios Criados:</Text>
+                {premiosMesa.map((premio) => (
+                  <View key={premio.id} style={{ backgroundColor: '#162032', borderRadius: 8, padding: 12, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: '#334155' }}>
+                    <View>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#F8FAFC' }}>{premio.nome}</Text>
+                      <Text style={{ fontSize: 10, color: '#94A3B8' }}>
+                        {premio.tipo === 'desconto' ? '💰' : premio.tipo === 'brinde' ? '🎁' : '✨'} {premio.valor} • Prob: {premio.probabilidade}%
+                      </Text>
+                    </View>
+                    <TouchableOpacity onPress={() => deletarPremiomesa(premio.id, lojaId || '')}>
+                      <Text style={{ fontSize: 18 }}>🗑️</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
         </View>
       )}
 
@@ -933,7 +1362,10 @@ export default function Merchant() {
                <TouchableOpacity onPress={() => { buscarFila(); buscarStats(); buscarAvaliacoesERoleta(); mostrarToast('Dados Atualizados!', 'sucesso'); }} style={{ backgroundColor: '#1e293b', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#334155' }}>
                  <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold' }}>🔄 SINCRONIZAR</Text>
                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setMostrarConfig(!mostrarConfig)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <TouchableOpacity onPress={() => { setMostrarMesa(true); setMostrarConfig(false); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={[styles.headerButton, { color: mostrarMesa ? '#8B5CF6' : '#94A3B8' }]}>📱 Mesa</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => { setMostrarConfig(!mostrarConfig); setMostrarMesa(false); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={styles.headerButton}>⚙️ Configurações</Text>
                   <Text style={{ color: '#64748b', fontSize: 9, fontWeight: 'bold', backgroundColor: '#1e293b', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>v{APP_VERSION.split('-')[0]}</Text>
                 </TouchableOpacity>
