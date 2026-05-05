@@ -713,6 +713,14 @@ export default function Merchant() {
     }
   };
 
+  const removerDaFila = async (id: string) => {
+    if (!window.confirm('Deseja realmente remover este cliente da fila?')) return;
+    await supabase.from('checkins').delete().eq('id', id);
+    setFila(prev => prev.filter(f => f.id !== id));
+    if (clienteFocadoId === id) setClienteFocadoId(null);
+    mostrarToast('❌ Cliente removido.', 'sucesso');
+  };
+
   const entregarBrinde = async (idBrinde: string, cpf: string) => {
     const { error } = await supabase.from('brindes_pendentes').update({ resgatado: true }).eq('id', idBrinde);
     if (error) { mostrarToast('Erro ao entregar brinde.', 'erro'); return; }
@@ -1381,7 +1389,12 @@ export default function Merchant() {
                   <View style={[styles.card, { flex: 1, backgroundColor: '#020617', padding: 20, minHeight: 130, justifyContent: 'center', borderColor: '#10b981', borderWidth: 2 }]}>
                      {clienteAtual ? (
                        <>
-                         <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 4 }}>ATENDENDO AGORA:</Text>
+                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                           <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>ATENDENDO AGORA:</Text>
+                           <TouchableOpacity onPress={() => removerDaFila(clienteAtual.id)} style={{ backgroundColor: '#ef444430', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#ef4444' }}>
+                             <Text style={{ color: '#ef4444', fontSize: 10, fontWeight: 'bold' }}>✕ REMOVER DA FILA</Text>
+                           </TouchableOpacity>
+                         </View>
                          <Text style={{ color: '#fff', fontSize: 48, fontWeight: '900', letterSpacing: -1 }}>{formatarTelefone(clienteAtual.cliente_cpf)}</Text>
                          <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
                            <Text style={{ color: '#10b981', fontSize: 12, fontWeight: 'bold' }}>✨ {Math.floor(cashbacks[clienteAtual.cliente_cpf]?.pontos || 0)} SPG</Text>
@@ -1399,13 +1412,17 @@ export default function Merchant() {
                          <Text style={{ color: '#334155', fontSize: 12, fontStyle: 'italic', marginTop: 10 }}>Ninguém aguardando...</Text>
                       ) : (
                          fila.filter(c => c.id !== (clienteAtual?.id)).map((c, i) => (
-                           <TouchableOpacity 
-                              key={c.id} 
-                              onPress={() => setClienteFocadoId(c.id)}
-                              style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1e293b', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                           <View key={c.id} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1e293b', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                               <Text style={{ color: '#cbd5e1', fontSize: 14, fontWeight: 'bold' }}>{i + 2}º • {formatarTelefone(c.cliente_cpf)}</Text>
-                              <Text style={{ color: '#38bdf8', fontSize: 10, fontWeight: 'bold' }}>PUXAR ⬆️</Text>
-                           </TouchableOpacity>
+                              <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                                <TouchableOpacity onPress={() => removerDaFila(c.id)} style={{ paddingHorizontal: 10, paddingVertical: 4 }}>
+                                  <Text style={{ color: '#ef4444', fontSize: 12, fontWeight: 'bold' }}>✕</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={() => setClienteFocadoId(c.id)} style={{ backgroundColor: '#38bdf820', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}>
+                                  <Text style={{ color: '#38bdf8', fontSize: 10, fontWeight: 'bold' }}>PUXAR ⬆️</Text>
+                                </TouchableOpacity>
+                              </View>
+                           </View>
                          ))
                       )}
                     </ScrollView>
