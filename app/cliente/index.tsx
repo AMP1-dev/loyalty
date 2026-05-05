@@ -439,11 +439,11 @@ export default function Cliente() {
   useEffect(() => { setIsDark(temaSistema === 'dark'); }, [temaSistema]);
 
   const c = {
-    bg: isDark ? '#020617' : '#F8FAFC',
-    card: isDark ? '#0f172a' : '#FFFFFF',
-    borda: isDark ? '#1e293b' : '#E2E8F0',
-    texto: isDark ? '#F8FAFC' : '#0F172A',
-    subtexto: isDark ? '#94a3b8' : '#64748B',
+    bg: isDark ? '#0f1622' : '#F8FAFC',
+    card: isDark ? '#1a2942' : '#FFFFFF',
+    borda: isDark ? '#334155' : '#E2E8F0',
+    texto: isDark ? '#F1F5F9' : '#0F172A',
+    subtexto: isDark ? '#cbd5e1' : '#64748B',
     neonVerde: '#10b981',
     neonAmarelo: '#facc15',
     verde: '#10b981',
@@ -1056,12 +1056,12 @@ export default function Cliente() {
 
       console.log('🎁 [4/5] Resultado do salvarPremioGanho:', sucessoAoSalvar);
 
-      // SEMPRE carrega dados após tentar salvar (sucesso ou erro)
+      // SEMPRE carrega dados após tentar salvar (sucesso ou erro) - MAS SEM BLOQUEAR!
       console.log('🎁 [5/5] Carregando dados para sincronizar...');
-      await carregarDados(clean, loja_id && loja_id !== 'undefined' ? String(loja_id) : undefined);
-      console.log('✅ [COMPLETO] Prêmio processado e saldos sincronizados!');
+      carregarDados(clean, loja_id && loja_id !== 'undefined' ? String(loja_id) : undefined);
+      console.log('✅ [COMPLETO] Prêmio processado e saldos sincronizando!');
 
-      Animated.spring(resultAnim, { toValue: 1, useNativeDriver: Platform.OS !== "web", speed: 10, bounciness: 12 }).start();
+      Animated.spring(resultAnim, { toValue: 1, useNativeDriver: Platform.OS !== "web", speed: 20, bounciness: 8 }).start();
     });
   };
 
@@ -1554,7 +1554,7 @@ export default function Cliente() {
                 }}
               >
                 <Text style={{ fontSize: 18 }}>💬</Text>
-                <Text style={{ color: c.neonVerde, fontWeight: '700', fontSize: 12 }}>Perdeu o PIN? Solicite via WhatsApp</Text>
+                <Text style={{ color: c.neonVerde, fontWeight: '700', fontSize: 12 }}>Perdeu o PIN? Vá até uma loja da rede para trocar.</Text>
               </TouchableOpacity>
             )}
           </View>
