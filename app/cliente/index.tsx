@@ -59,9 +59,6 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
   const numSlices = prizes.length;
   const sliceAngle = (2 * Math.PI) / numSlices;
 
-  const COLORS_LIGHT = ['#fdf8ec', '#d1fae5'];
-  const COLORS_DARK = ['#1e293b', '#134e4a'];
-  const colors = isDark ? COLORS_DARK : COLORS_LIGHT;
   const textColor = isDark ? '#e2e8f0' : '#334155';
 
   // Fatias começam no TOPO (-PI/2) e vão no sentido horário
@@ -92,13 +89,13 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
         {/* Gradientes para profundidade nas fatias */}
         {/* @ts-ignore */}
         <SvgLinearGradient id="gradBege" x1="0%" y1="0%" x2="100%" y2="100%">
-          <Stop offset="0%" stopColor="#fdf8ec" />
-          <Stop offset="100%" stopColor="#f0e5d8" />
+          <Stop offset="0%" stopColor={isDark ? "#1e293b" : "#fdf8ec"} />
+          <Stop offset="100%" stopColor={isDark ? "#0f172a" : "#f0e5d8"} />
         </SvgLinearGradient>
         {/* @ts-ignore */}
         <SvgLinearGradient id="gradVerde" x1="0%" y1="0%" x2="100%" y2="100%">
-          <Stop offset="0%" stopColor="#d1fae5" />
-          <Stop offset="100%" stopColor="#a7f3d0" />
+          <Stop offset="0%" stopColor={isDark ? "#134e4a" : "#d1fae5"} />
+          <Stop offset="100%" stopColor={isDark ? "#042f2e" : "#a7f3d0"} />
         </SvgLinearGradient>
 
         {/* Gradiente radial para centro metálico */}
@@ -148,7 +145,7 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
               {/* Fatia com gradiente */}
               <Path
                 d={buildSlicePath(i)}
-                fill={colors[i % colors.length] === '#fdf8ec' ? 'url(#gradBege)' : 'url(#gradVerde)'}
+                fill={i % 2 === 0 ? 'url(#gradBege)' : 'url(#gradVerde)'}
                 stroke={isDark ? '#475569' : '#94a3b8'}
                 strokeWidth="1.2"
               />
