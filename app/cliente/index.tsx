@@ -436,18 +436,35 @@ export default function Cliente() {
 
   const temaSistema = useColorScheme();
   const [isDark, setIsDark] = useState(temaSistema === 'dark');
-  useEffect(() => { setIsDark(temaSistema === 'dark'); }, [temaSistema]);
+
+  useEffect(() => {
+    const carregarTema = async () => {
+      const temaSalvo = await carregarStorage('@tema_pref');
+      if (temaSalvo) {
+        setIsDark(temaSalvo === 'dark');
+      } else {
+        setIsDark(temaSistema === 'dark');
+      }
+    };
+    carregarTema();
+  }, [temaSistema]);
+
+  const toggleTheme = async () => {
+    const novoTema = !isDark;
+    setIsDark(novoTema);
+    await salvarStorage('@tema_pref', novoTema ? 'dark' : 'light');
+  };
 
   const c = {
-    bg: isDark ? '#0f1622' : '#F8FAFC',
-    card: isDark ? '#1a2942' : '#FFFFFF',
-    borda: isDark ? '#334155' : '#E2E8F0',
-    texto: isDark ? '#F1F5F9' : '#0F172A',
-    subtexto: isDark ? '#cbd5e1' : '#64748B',
+    bg: isDark ? '#0B1120' : '#F4F7FA', // Escuro mais profundo, claro levemente acinzentado frio
+    card: isDark ? '#162032' : '#FFFFFF', // Menos contraste bruto
+    borda: isDark ? '#26334A' : '#E2E8F0',
+    texto: isDark ? '#F8FAFC' : '#1E293B',
+    subtexto: isDark ? '#94A3B8' : '#64748B',
     neonVerde: '#10b981',
-    neonAmarelo: '#facc15',
+    neonAmarelo: '#F59E0B', // Amarelo mais premium/âmbar
     verde: '#10b981',
-    roxo: '#a855f7',
+    roxo: '#8B5CF6', // Roxo vibrante moderno
   };
 
   // Spin da roleta real (de 0→1 mapeado para 0→targetDeg)
@@ -481,11 +498,20 @@ export default function Cliente() {
         }
       }
       const saved = await carregarStorage('cliente_cpf');
-      const lastLoja = await carregarStorage('@last_loja_id');
       if (saved) {
         setCpf(saved);
-        const finalLojaId = loja_id || lastLoja;
-        await carregarDados(saved, finalLojaId && finalLojaId !== 'undefined' ? String(finalLojaId) : undefined);
+
+        // Se leu QR code (tem loja_id) - NÃO faz login automático
+        // Deve ir para aguardando para aparecer no painel do lojista
+        if (loja_id) {
+          console.log('📱 [QR Detectado] Cliente recuperado do storage, aguardando lojista...');
+          setStatus('aguardando');
+          return;
+        }
+
+        // Se não tem loja_id - faz login automático
+        console.log('📱 [Login automático] Cliente recuperado do storage');
+        await carregarDados(saved);
         setStatus('finalizado');
       }
     };
@@ -586,7 +612,7 @@ export default function Cliente() {
 
     if (lidEfetivo && lidEfetivo !== 'undefined' && lidEfetivo !== 'null') {
       setNomeLojaAtual(mapLojas[lidEfetivo] || 'Loja Parceira');
-      await salvarStorage('@last_loja_id', lidEfetivo);
+      // NÃO salva loja_id no storage - deve vir sempre do QR code!
 
       // Verificar se tem brindes pendentes
       const { data: brindePendente } = await supabase
@@ -659,7 +685,7 @@ export default function Cliente() {
   };
 
   const sairDaCarteira = async () => {
-    if (typeof window !== 'undefined') { localStorage.removeItem('cliente_cpf'); localStorage.removeItem('@last_loja_id'); }
+    if (typeof window !== 'undefined') { localStorage.removeItem('cliente_cpf'); }
     setCpf(''); setStatus('idle'); setSaldo(0); setCashback(0); setExtrato([]);
     router.replace('/cliente');
   };
@@ -1071,50 +1097,60 @@ export default function Cliente() {
   const bannerGrande = banners.find(b => b.ordem === 3);
 
   // ─── TELA DE LOGIN ─────────────────────────────────────────────────────────
-  const renderIdle = () => (
-    <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={[styles.scroll, { justifyContent: 'flex-start', paddingTop: 60 }]}>
-      {/* CABEÇALHO FESTIVO PREMIUM */}
-      <View style={{ alignItems: 'center', marginBottom: 25 }}>
-        <View style={{ position: 'relative', padding: 20 }}>
-          <Text style={{ position: 'absolute', top: 0, left: 0, fontSize: 24 }}>✨</Text>
-          <Text style={{ position: 'absolute', top: -10, right: 10, fontSize: 18 }}>✨</Text>
-          <Text style={{ position: 'absolute', bottom: 10, left: -10, fontSize: 14 }}>✨</Text>
-          <Text style={{ position: 'absolute', bottom: 0, right: -5, fontSize: 22 }}>✨</Text>
-          <View style={{ alignItems: 'center' }}>
-            <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 2, lineHeight: 46 }}>PALM</Text>
-            <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 2, lineHeight: 46 }}>SPRINGS</Text>
+  if (status === 'idle') {
+    return (
+      <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={[styles.scroll, { justifyContent: 'flex-start', paddingTop: 60 }]}>
+
+        {/* CABEÇALHO FESTIVO PREMIUM */}
+        <View style={{ alignItems: 'center', marginBottom: 25 }}>
+          <View style={{ position: 'relative', padding: 20 }}>
+            {/* Estrelas flutuantes decorativas */}
+            <Text style={{ position: 'absolute', top: 0, left: 0, fontSize: 24 }}>✨</Text>
+            <Text style={{ position: 'absolute', top: -10, right: 10, fontSize: 18 }}>✨</Text>
+            <Text style={{ position: 'absolute', bottom: 10, left: -10, fontSize: 14 }}>✨</Text>
+            <Text style={{ position: 'absolute', bottom: 0, right: -5, fontSize: 22 }}>✨</Text>
+
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 2, lineHeight: 46 }}>PALM</Text>
+              <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 2, lineHeight: 46 }}>SPRINGS</Text>
+            </View>
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 5 }}>
+            <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
+            <Text style={{ color: c.subtexto, fontSize: 13, fontWeight: '600', letterSpacing: 0.5 }}>seu clube de benefícios premium</Text>
+            <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
           </View>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 5 }}>
-          <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
-          <Text style={{ color: c.subtexto, fontSize: 13, fontWeight: '600', letterSpacing: 0.5 }}>seu clube de benefícios premium</Text>
-          <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
-        </View>
-      </View>
-      <TextInput
-        placeholder="(19) 99999-9999" placeholderTextColor={c.subtexto}
-        value={cpf} onChangeText={formatarTelefone}
-        keyboardType="phone-pad" maxLength={15}
-        style={[styles.inputGigante, { backgroundColor: c.card, borderColor: c.borda, color: c.texto }]}
-      />
-      <TouchableOpacity style={styles.buttonBig} onPress={entrarFila} activeOpacity={0.8} disabled={carregando}>
-        <Text style={styles.buttonTextBig}>{carregando ? 'CARREGANDO...' : 'ACESSAR MINHA CARTEIRA'}</Text>
-      </TouchableOpacity>
-      <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v5.4.0-platinum-diamond-final</Text>
-    </ScrollView>
-  );
+
+        <TextInput
+          placeholder="(19) 99999-9999" placeholderTextColor={c.subtexto}
+          value={cpf} onChangeText={formatarTelefone}
+          keyboardType="phone-pad" maxLength={15}
+          style={[styles.inputGigante, { backgroundColor: c.card, borderColor: c.borda, color: c.texto }]}
+        />
+        <TouchableOpacity style={styles.buttonBig} onPress={entrarFila} activeOpacity={0.8}>
+          <Text style={styles.buttonTextBig}>ACESSAR MINHA CARTEIRA</Text>
+        </TouchableOpacity>
+
+        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v5.4.0-platinum-diamond-final</Text>
+      </ScrollView>
+    );
+  }
 
   // ─── TELA DE AGUARDANDO ────────────────────────────────────────────────────
-  const renderAguardando = () => (
-    <View style={[styles.center, { backgroundColor: c.bg }]}>
-      <Animated.View style={[styles.aiCircle, { transform: [{ scale: pulse }, { rotate: spinAguard }], borderColor: '#14b8a6', backgroundColor: c.card }]} />
-      <Text style={{ marginTop: 20, color: c.texto, fontWeight: 'bold' }}>Aguardando liberação do lojista...</Text>
-      <Text style={{ color: c.subtexto, fontSize: 12, marginTop: 5 }}>Você será redirecionado automaticamente</Text>
-    </View>
-  );
+  if (status === 'aguardando') {
+    return (
+      <View style={[styles.center, { backgroundColor: c.bg }]}>
+        <Animated.View style={[styles.aiCircle, { transform: [{ scale: pulse }, { rotate: spinAguard }], borderColor: '#14b8a6', backgroundColor: c.card }]} />
+        <Text style={{ marginTop: 20, color: c.texto, fontWeight: 'bold' }}>Aguardando liberação do lojista...</Text>
+        <Text style={{ color: c.subtexto, fontSize: 12, marginTop: 5 }}>Você será redirecionado automaticamente</Text>
+      </View>
+    );
+  }
 
-  // ─── TELA PRINCIPAL (DASHBOARD) ────────────────────────────────────────────
-  const renderFinalizado = () => (
+  // ─── TELA PRINCIPAL ────────────────────────────────────────────────────────
+  return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 60 }}>
 
@@ -1126,7 +1162,7 @@ export default function Cliente() {
               <Text style={{ color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>CLUBE DE VANTAGENS</Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-              <TouchableOpacity onPress={() => setIsDark(!isDark)} style={{ padding: 10, borderRadius: 12, backgroundColor: c.card, borderWidth: 1, borderColor: c.borda }}>
+              <TouchableOpacity onPress={toggleTheme} style={{ padding: 10, borderRadius: 12, backgroundColor: c.card, borderWidth: 1, borderColor: c.borda }}>
                 <Text style={{ fontSize: 18 }}>{isDark ? '☀️' : '🌙'}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setMostrarExtrato(!mostrarExtrato)} style={{ padding: 10, borderRadius: 12, backgroundColor: c.card, borderWidth: 1, borderColor: c.borda }}>
@@ -1324,19 +1360,10 @@ export default function Cliente() {
         <TouchableOpacity style={styles.botaoSair} onPress={sairDaCarteira}>
           <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>🚪 SAIR DA CONTA</Text>
         </TouchableOpacity>
-        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 16 }}>v5.4.0-platinum-diamond-final</Text>
+        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 16, marginBottom: 10 }}>
+          v5.4.0-platinum-diamond-final
+        </Text>
       </ScrollView>
-    </View>
-  );
-
-  return (
-    <View style={{ flex: 1, backgroundColor: c.bg }}>
-      {/* ── Conteúdo Dinâmico ── */}
-      {status === 'idle' && renderIdle()}
-      {status === 'aguardando' && renderAguardando()}
-      {status === 'finalizado' && renderFinalizado()}
-
-      {/* ── Modais Globais (Sempre acessíveis) ── */}
 
       {/* ── MODAL DA ROLETA ── */}
       {mostrarRoletaModal && (
