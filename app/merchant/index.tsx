@@ -4,8 +4,8 @@ import { Alert, Animated, Image, Linking, Platform, ScrollView, StyleSheet, Swit
 import QRCode from 'react-native-qrcode-svg';
 import Svg, { Polyline } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
-import { downloadQRMesa, generateQRMesa } from '../../utils/generateQRMesa';
-import { QR_SIZES } from '../../utils/qrConfig';
+import { downloadQRMesa, generateQRMesa } from '../utils/generateQRMesa';
+import { QR_SIZES } from '../utils/qrConfig';
 
 export default function Merchant() {
   const { width } = useWindowDimensions();
