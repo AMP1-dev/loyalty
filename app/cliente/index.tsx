@@ -453,9 +453,9 @@ export default function Cliente() {
   };
 
   const c = {
-    bg: isDark ? '#0B1120' : '#F4F7FA', // Escuro mais profundo, claro levemente acinzentado frio
-    card: isDark ? '#162032' : '#FFFFFF', // Menos contraste bruto
-    borda: isDark ? '#26334A' : '#E2E8F0',
+    bg: isDark ? '#0B1120' : '#F1F5F9', // Mais cinza no claro para destacar bem os blocos brancos
+    card: isDark ? '#162032' : '#FFFFFF',
+    borda: isDark ? '#26334A' : '#CBD5E1', // Borda mais forte no modo claro
     texto: isDark ? '#F8FAFC' : '#1E293B',
     subtexto: isDark ? '#94A3B8' : '#64748B',
     neonVerde: '#10b981',
