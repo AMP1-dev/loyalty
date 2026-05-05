@@ -1172,7 +1172,7 @@ export default function Cliente() {
           </View>
 
           {/* CARD ENVOLVENTE CINZA CLARO - SALDOS + EXTRATO */}
-          <View style={{ marginTop: 25, marginHorizontal: 0, borderRadius: 24, backgroundColor: '#f3f4f6', padding: 16, borderWidth: 1, borderColor: '#e5e7eb' }}>
+          <View style={{ marginTop: 25, marginHorizontal: 0, borderRadius: 24, backgroundColor: isDark ? '#0F172A' : '#f3f4f6', padding: 16, borderWidth: 1, borderColor: isDark ? '#1E293B' : '#e5e7eb' }}>
 
             {/* Saldos globais */}
             <View style={{ flexDirection: 'row', gap: 12, marginBottom: loja_id ? 12 : 0 }}>
@@ -1368,7 +1368,7 @@ export default function Cliente() {
       {/* ── MODAL DA ROLETA ── */}
       {mostrarRoletaModal && (
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { maxHeight: '90%' }]}>
+          <View style={[styles.modalCard, { maxHeight: '90%', backgroundColor: c.bg, borderColor: c.borda }]}>
 
             {/* NPS */}
             {etapaRoleta === 'nps' && (
@@ -1409,7 +1409,7 @@ export default function Cliente() {
             {/* GIRANDO — visual igual ao CTA mas com prêmios reais */}
             {etapaRoleta === 'girando' && (
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', marginBottom: 24 }}>BOA SORTE! 🍀</Text>
+                <Text style={{ color: c.texto, fontSize: 22, fontWeight: '900', marginBottom: 24 }}>BOA SORTE! 🍀</Text>
 
                 {/* Ponteiro */}
                 <View style={{ zIndex: 10, marginBottom: -12 }}>
@@ -1422,7 +1422,7 @@ export default function Cliente() {
                 {/* Aro metálico + roda animada */}
                 <View style={{
                   width: 308, height: 308, borderRadius: 154,
-                  backgroundColor: '#334155',
+                  backgroundColor: isDark ? '#334155' : '#94a3b8',
                   justifyContent: 'center', alignItems: 'center',
                   shadowColor: '#10b981', shadowOffset: { width: 0, height: 0 },
                   shadowOpacity: 0.5, shadowRadius: 20, elevation: 20,
