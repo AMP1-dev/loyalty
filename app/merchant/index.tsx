@@ -1970,12 +1970,11 @@ export default function Merchant() {
                 </View>
               </View>
 
-              {/* AÇÕES EM MASSA */}
-              {contatosFiltrados.length > 0 && (
-                <View style={{ backgroundColor: '#1e293b', borderRadius: 12, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: '#334155' }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#F8FAFC', marginBottom: 12 }}>
-                    📱 Envio em Massa
-                  </Text>
+              {/* AÇÕES EM MASSA E TEMPLATES */}
+              <View style={{ backgroundColor: '#1e293b', borderRadius: 12, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: '#334155' }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#F8FAFC', marginBottom: 12 }}>
+                  📱 Envio em Massa e Templates
+                </Text>
 
                   {/* Selecionar template */}
                   <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600', marginBottom: 8 }}>
@@ -2055,8 +2054,7 @@ export default function Merchant() {
                       </Text>
                     </TouchableOpacity>
                   </View>
-                </View>
-              )}
+              </View>
 
               {/* FILTROS */}
               <View style={{ backgroundColor: '#1e293b', borderRadius: 12, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: '#334155' }}>
