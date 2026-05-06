@@ -1573,7 +1573,6 @@ export default function Merchant() {
                 ))}
               </View>
             </ScrollView>
-            </ScrollView>
           </View>
         </View>
       )}
