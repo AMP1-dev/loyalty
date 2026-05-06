@@ -53,12 +53,12 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
     <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       <Defs>
         <SvgLinearGradient id="gradMesa1" x1="0%" y1="0%" x2="100%" y2="100%">
-          <Stop offset="0%" stopColor="#fdf8ec" />
-          <Stop offset="100%" stopColor="#f0e5d8" />
+          <Stop offset="0%" stopColor={isDark ? "#1e293b" : "#fdf8ec"} />
+          <Stop offset="100%" stopColor={isDark ? "#0f172a" : "#f0e5d8"} />
         </SvgLinearGradient>
         <SvgLinearGradient id="gradMesa2" x1="0%" y1="0%" x2="100%" y2="100%">
-          <Stop offset="0%" stopColor="#d1fae5" />
-          <Stop offset="100%" stopColor="#a7f3d0" />
+          <Stop offset="0%" stopColor={isDark ? "#134e4a" : "#d1fae5"} />
+          <Stop offset="100%" stopColor={isDark ? "#042f2e" : "#a7f3d0"} />
         </SvgLinearGradient>
         <RadialGradient id="gCenterMesa" cx="50%" cy="30%" rx="60%" ry="60%">
           <Stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
@@ -68,64 +68,49 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
         <Filter id="dropShadowMesa" x="-50%" y="-50%" width="200%" height="200%">
           <FeGaussianBlur in="SourceAlpha" stdDeviation="3" />
           <FeOffset dx="0" dy="8" result="offsetblur" />
-          <FeComponentTransfer>
-            <FeFuncA type="linear" slope="0.4" />
-          </FeComponentTransfer>
-          <FeMerge>
-            <FeMergeNode />
-            <FeMergeNode in="SourceGraphic" />
-          </FeMerge>
+          <FeComponentTransfer><FeFuncA type="linear" slope="0.4" /></FeComponentTransfer>
+          <FeMerge><FeMergeNode /><FeMergeNode in="SourceGraphic" /></FeMerge>
         </Filter>
       </Defs>
 
       <G filter="url(#dropShadowMesa)">
         {prizes.map((prize: any, i: number) => {
           const { x, y, rotation } = getTextPos(i);
-          const lines = (prize.nome || '').split('\n');
+          const words = (prize.nome || '').split(' ');
+          const displayLines = words.length > 2 ? [words.slice(0,2).join(' '), words.slice(2).join(' ')] : [prize.nome || ''];
 
           return (
             <G key={i}>
               <Path
                 d={buildSlicePath(i)}
                 fill={i % 2 === 0 ? 'url(#gradMesa1)' : 'url(#gradMesa2)'}
-                stroke="#ffffff"
+                stroke={isDark ? '#334155' : '#ffffff'}
                 strokeWidth="2"
               />
-              {(() => {
-                const words = (prize.nome || '').split(' ');
-                const displayLines = [];
-                if (words.length > 2) {
-                  displayLines.push(words.slice(0, 2).join(' '));
-                  displayLines.push(words.slice(2).join(' '));
-                } else {
-                  displayLines.push(prize.nome || '');
-                }
-
-                return displayLines.map((line, lineIdx) => {
-                  const fontSize = numSlices > 8 ? 9 : 11;
+              <G transform={`rotate(${rotation} ${x} ${y})`}>
+                {displayLines.map((line, lineIdx) => {
+                  const fontSize = numSlices > 8 ? 8 : 10;
                   const offsetY = (lineIdx - (displayLines.length - 1) / 2) * (fontSize + 2);
                   return (
                     <SvgText
-                      key={`${i}-${lineIdx}`}
+                      key={lineIdx}
                       x={x}
                       y={y + offsetY}
                       fontSize={fontSize}
                       fontWeight="900"
                       textAnchor="middle"
-                      fill="#1e293b"
-                      rotation={rotation}
+                      fill={isDark ? "#e2e8f0" : "#1e293b"}
                     >
                       {line.toUpperCase()}
                     </SvgText>
                   );
-                });
-              })()}
+                })}
+              </G>
             </G>
           );
         })}
       </G>
-
-      <Circle cx={CENTER} cy={CENTER} r={20} fill="url(#gCenterMesa)" />
+      <Circle cx={CENTER} cy={CENTER} r={18} fill="url(#gCenterMesa)" stroke="#fff" strokeWidth="2" />
     </Svg>
   );
 }
@@ -601,8 +586,14 @@ export default function MesaRoleta() {
             {rodando ? '🎡 GIRANDO...' : 'BOA SORTE!'}
           </Text>
 
-          <Animated.View style={[{ transform: [{ rotate: rotateAnim.interpolate({ inputRange: [0, 360], outputRange: ['0deg', '360deg'] }) }] }, { marginBottom: 30 }]}>
-            <WheelSVG prizes={premiosRoletaMesa} size={300} isDark={isDark} />
+          <View style={{ zIndex: 10, marginBottom: -15 }}>
+            <Svg width={40} height={40} viewBox="0 0 32 32">
+              <Path d="M16 28 L6 6 L26 6 Z" fill={c.roxo} stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
+            </Svg>
+          </View>
+
+          <Animated.View style={[{ transform: [{ rotate: rotateAnim.interpolate({ inputRange: [0, 360], outputRange: ['0deg', '360deg'] }) }] }, { marginBottom: 30, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 15, elevation: 10 }]}>
+            <WheelSVG prizes={premiosRoletaMesa} size={320} isDark={isDark} />
           </Animated.View>
 
           <TouchableOpacity
