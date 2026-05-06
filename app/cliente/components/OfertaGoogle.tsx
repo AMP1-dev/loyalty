@@ -26,6 +26,7 @@ export default function OfertaGoogle({
 }: OfertaGoogleProps) {
   const [foiAberto, setFoiAberto] = useState(false);
   const [countdownAbrir, setCountdownAbrir] = useState(5);
+  const [erroLink, setErroLink] = useState(false);
 
   const temaSistema = useColorScheme();
   const [isDark, setIsDark] = useState(temaSistema === 'dark');
@@ -81,7 +82,7 @@ export default function OfertaGoogle({
 
   const abrirGoogle = async () => {
     if (!linkGoogle || linkGoogle.trim() === '') {
-      alert('Link do Google não configurado. Contate o estabelecimento.');
+      setErroLink(true);
       return;
     }
 
@@ -170,7 +171,15 @@ export default function OfertaGoogle({
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* Header */}
             <View style={{ alignItems: 'center', marginBottom: 20 }}>
-              <Text style={{ fontSize: 48, marginBottom: 12 }}>✨</Text>
+              {erroLink ? (
+                <View style={{ backgroundColor: '#fee2e2', padding: 12, borderRadius: 12, marginBottom: 15, width: '100%' }}>
+                  <Text style={{ color: '#b91c1c', fontSize: 12, fontWeight: '800', textAlign: 'center' }}>
+                    ⚠️ Link do Google não configurado pela loja.
+                  </Text>
+                </View>
+              ) : (
+                <Text style={{ fontSize: 48, marginBottom: 12 }}>✨</Text>
+              )}
               <Text style={{ fontSize: 24, fontWeight: '900', color: c.neonOuro, textAlign: 'center' }}>
                 GANHE O DOBRO!
               </Text>

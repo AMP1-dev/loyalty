@@ -39,8 +39,9 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
   };
 
   const getTextPos = (index: number) => {
+    // Centraliza o texto no meio da fatia
     const midAngle = index * sliceAngle - Math.PI / 2 + sliceAngle / 2;
-    const r = RADIUS * 0.65;
+    const r = RADIUS * 0.7; // Distância do centro
     return {
       x: CENTER + r * Math.cos(midAngle),
       y: CENTER + r * Math.sin(midAngle),
@@ -137,9 +138,19 @@ export default function MesaRoleta() {
 
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
+  const [toast, setToast] = useState({ visivel: false, mensagem: '', tipo: 'erro' as 'sucesso' | 'erro' });
+  const toastAnim = useRef(new Animated.Value(-100)).current;
+
+  const mostrarToast = (mensagem: string, tipo: 'sucesso' | 'erro' = 'erro') => {
+    setToast({ visivel: true, mensagem, tipo });
+    Animated.sequence([
+      Animated.timing(toastAnim, { toValue: 20, duration: 400, useNativeDriver: true }),
+      Animated.delay(3000),
+      Animated.timing(toastAnim, { toValue: -100, duration: 400, useNativeDriver: true }),
+    ]).start(() => setToast({ visivel: false, mensagem: '', tipo }));
+  };
+
   const temaSistema = useColorScheme();
-  const [isDark, setIsDark] = useState(temaSistema === 'dark');
-  useEffect(() => { setIsDark(temaSistema === 'dark'); }, [temaSistema]);
 
   const c = {
     bg: isDark ? '#0f1622' : '#F8FAFC',
@@ -259,7 +270,12 @@ export default function MesaRoleta() {
 
   const avancarParaNPS = async () => {
     if (!validarTelefone(telefone)) {
-      alert('Por favor, digite um telefone válido (11 dígitos)');
+      const clean = telefone.replace(/\D/g, '');
+      if (clean.length !== 11) {
+        mostrarToast('Digite o telefone com DDD (11 dígitos) 📱', 'erro');
+      } else {
+        mostrarToast('DDD inválido! Use um DDD real (11-99) 🇧🇷', 'erro');
+      }
       return;
     }
 
@@ -267,7 +283,7 @@ export default function MesaRoleta() {
     const podeJogar = await validarJogueDiario(telefone, loja_id);
 
     if (!podeJogar) {
-      alert('🎮 Você já jogou na mesa hoje!\\n\\nVolte amanhã para tentar novamente. Boa sorte! 🍀');
+      mostrarToast('🎮 Você já jogou hoje! Volte amanhã. 🍀', 'erro');
       setTelefone('');
       return;
     }
@@ -277,7 +293,7 @@ export default function MesaRoleta() {
 
   const avancarParaRoleta = () => {
     if (notaNps === 0) {
-      alert('Por favor, selecione uma nota');
+      mostrarToast('Por favor, selecione uma nota ⭐', 'erro');
       return;
     }
     setEtapa('roleta');
@@ -320,7 +336,7 @@ export default function MesaRoleta() {
     } catch (error) {
       console.error('Erro ao iniciar giro da roleta:', error);
       setRodando(false);
-      alert("Erro ao girar a roleta. Tente recarregar a página.");
+      mostrarToast("Erro ao girar a roleta. Tente recarregar.", 'erro');
     }
   };
 
@@ -419,11 +435,25 @@ export default function MesaRoleta() {
     );
   }
 
-  if (etapa === 'telefone') {
-    return (
-      <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
-        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ width: '100%', maxWidth: 400 }}>
+  return (
+    <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: 'center', alignItems: 'center' }}>
+      {/* 🍞 TOAST CUSTOMIZADO */}
+      <Animated.View 
+        style={{ 
+          position: 'absolute', top: 20, left: 20, right: 20, zIndex: 9999,
+          transform: [{ translateY: toastAnim }],
+          backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444',
+          padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center',
+          shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10, elevation: 5
+        }}
+      >
+        <Text style={{ fontSize: 20, marginRight: 10 }}>{toast.tipo === 'sucesso' ? '✅' : '⚠️'}</Text>
+        <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14, flex: 1 }}>{toast.mensagem}</Text>
+      </Animated.View>
+
+      {etapa === 'telefone' && (
+        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+          <View style={{ width: '90%', maxWidth: 400 }}>
             <Text style={{ fontSize: 28, fontWeight: '900', color: c.roxo, textAlign: 'center', marginBottom: 10 }}>
               🎮 JOGUE NA MESA!
             </Text>
@@ -478,15 +508,11 @@ export default function MesaRoleta() {
             </TouchableOpacity>
           </View>
         </ScrollView>
-      </View>
-    );
-  }
+      )}
 
-  if (etapa === 'nps') {
-    return (
-      <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
-        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ width: '100%', maxWidth: 400 }}>
+      {etapa === 'nps' && (
+        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+          <View style={{ width: '90%', maxWidth: 400 }}>
             <Text style={{ fontSize: 20, fontWeight: '900', color: c.texto, textAlign: 'center', marginBottom: 8 }}>
               {perguntaCustom}
             </Text>
@@ -543,52 +569,38 @@ export default function MesaRoleta() {
             </TouchableOpacity>
           </View>
         </ScrollView>
-      </View>
-    );
-  }
+      )}
 
-  if (etapa === 'roleta' && premiosRoletaMesa.length > 0) {
-    const spinStyle = {
-      transform: [{ rotate: rotateAnim.interpolate({
-        inputRange: [0, 360],
-        outputRange: ['0deg', '360deg'],
-      })}],
-    };
-
-    return (
-      <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
-        <Text style={{ fontSize: 24, fontWeight: '900', color: c.roxo, marginBottom: 20 }}>
-          {rodando ? '🎡 GIRANDO...' : 'BOA SORTE!'}
-        </Text>
-
-        <Animated.View style={[spinStyle, { marginBottom: 30 }]}>
-          <WheelSVG prizes={premiosRoletaMesa} size={280} isDark={isDark} />
-        </Animated.View>
-
-        <TouchableOpacity
-          onPress={girarRoleta}
-          disabled={rodando}
-          style={{
-            backgroundColor: rodando ? '#ccc' : c.roxo,
-            borderRadius: 16,
-            paddingVertical: 18,
-            paddingHorizontal: 40,
-            alignItems: 'center',
-          }}
-        >
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>
-            {rodando ? 'GIRANDO...' : '🎰 GIRAR AGORA!'}
+      {etapa === 'roleta' && premiosRoletaMesa.length > 0 && (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+          <Text style={{ fontSize: 24, fontWeight: '900', color: c.roxo, marginBottom: 20 }}>
+            {rodando ? '🎡 GIRANDO...' : 'BOA SORTE!'}
           </Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
 
-  if (etapa === 'resultado' && premioGanho) {
-    return (
-      <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
-        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ alignItems: 'center' }}>
+          <Animated.View style={[{ transform: [{ rotate: rotateAnim.interpolate({ inputRange: [0, 360], outputRange: ['0deg', '360deg'] }) }] }, { marginBottom: 30 }]}>
+            <WheelSVG prizes={premiosRoletaMesa} size={300} isDark={isDark} />
+          </Animated.View>
+
+          <TouchableOpacity
+            onPress={girarRoleta}
+            disabled={rodando}
+            style={{
+              backgroundColor: rodando ? '#ccc' : c.roxo,
+              borderRadius: 16,
+              paddingVertical: 18,
+              paddingHorizontal: 40,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>
+              {rodando ? 'GIRANDO...' : '🎰 GIRAR AGORA!'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {etapa === 'resultado' && premioGanho && (
+        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+          <View style={{ alignItems: 'center', width: '90%' }}>
             <Text style={{ fontSize: 48, marginBottom: 20 }}>🎉</Text>
             <Text style={{ fontSize: 28, fontWeight: '900', color: c.roxo, textAlign: 'center', marginBottom: 12 }}>
               PARABÉNS!
@@ -620,29 +632,29 @@ export default function MesaRoleta() {
             </TouchableOpacity>
           </View>
         </ScrollView>
-      </View>
-    );
-  }
+      )}
 
-  return (
-    <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-      {carregando ? (
-        <Text style={{ color: c.texto, fontSize: 16, fontWeight: '700' }}>Carregando dados da mesa...</Text>
-      ) : (
-        <View style={{ alignItems: 'center' }}>
-          <Text style={{ fontSize: 40, marginBottom: 20 }}>⚠️</Text>
-          <Text style={{ color: c.texto, fontSize: 18, fontWeight: '900', textAlign: 'center', marginBottom: 10 }}>
-            Nenhum prêmio configurado!
-          </Text>
-          <Text style={{ color: c.subtexto, fontSize: 14, textAlign: 'center', marginBottom: 30 }}>
-            Peça ao gerente para ativar os prêmios da mesa no painel administrativo.
-          </Text>
-          <TouchableOpacity 
-            onPress={() => carregarDadosMesa()}
-            style={{ backgroundColor: c.roxo, padding: 15, borderRadius: 12 }}
-          >
-            <Text style={{ color: '#fff', fontWeight: 'bold' }}>Tentar Novamente 🔄</Text>
-          </TouchableOpacity>
+      {(etapa !== 'telefone' && etapa !== 'nps' && etapa !== 'roleta' && etapa !== 'resultado') && (
+        <View style={{ alignItems: 'center', padding: 20 }}>
+          {carregando ? (
+            <Text style={{ color: c.texto, fontSize: 16, fontWeight: '700' }}>Carregando dados da mesa...</Text>
+          ) : (
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ fontSize: 40, marginBottom: 20 }}>⚠️</Text>
+              <Text style={{ color: c.texto, fontSize: 18, fontWeight: '900', textAlign: 'center', marginBottom: 10 }}>
+                Nenhum prêmio configurado!
+              </Text>
+              <Text style={{ color: c.subtexto, fontSize: 14, textAlign: 'center', marginBottom: 30 }}>
+                Peça ao gerente para ativar os prêmios da mesa no painel administrativo.
+              </Text>
+              <TouchableOpacity 
+                onPress={() => carregarDadosMesa()}
+                style={{ backgroundColor: c.roxo, padding: 15, borderRadius: 12 }}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Tentar Novamente 🔄</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
     </View>

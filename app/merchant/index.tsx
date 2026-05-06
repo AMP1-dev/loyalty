@@ -1783,7 +1783,14 @@ export default function Merchant() {
 
               <TouchableOpacity 
                 style={[styles.buttonCenter, { backgroundColor: '#10b981', marginTop: 30 }]} 
-                onPress={() => { salvarConfig(); setMostrarConfig(false); }}>
+                onPress={() => { 
+                  if (qrMesaAtivo && (!config.link_google_meu_negocio || config.link_google_meu_negocio.trim() === '')) {
+                    mostrarToast('⚠️ Para ativar a Mesa, o link do Google é obrigatório.', 'erro');
+                    return;
+                  }
+                  salvarConfig(); 
+                  setMostrarConfig(false); 
+                }}>
                 <Text style={styles.buttonText}>{loadingSalvar ? 'SALVANDO...' : '✅ SALVAR ALTERAÇÕES'}</Text>
               </TouchableOpacity>
             </View>
@@ -1887,10 +1894,10 @@ export default function Merchant() {
                       <TextInput
                         placeholder="30"
                         placeholderTextColor="#94A3B8"
-                        value={novoPremiomesa.valor.toString()}
-                        onChangeText={(text) => setNovoPremiomesa({ ...novoPremiomesa, valor: parseFloat(text) || 0 })}
-                        keyboardType="decimal-pad"
-                        style={{ borderWidth: 1, borderColor: '#334155', borderRadius: 6, padding: 8, color: '#F8FAFC' }}
+                        value={novoPremiomesa.valor === 0 ? '' : novoPremiomesa.valor.toString()}
+                        onChangeText={(text) => setNovoPremiomesa({ ...novoPremiomesa, valor: parseFloat(text.replace(',', '.')) || 0 })}
+                        keyboardType="numeric"
+                        style={{ borderWidth: 1, borderColor: '#334155', borderRadius: 6, padding: 12, color: '#F8FAFC', fontSize: 16 }}
                       />
                     </View>
                     <View style={{ flex: 1 }}>
@@ -1898,10 +1905,10 @@ export default function Merchant() {
                       <TextInput
                         placeholder="10"
                         placeholderTextColor="#94A3B8"
-                        value={novoPremiomesa.probabilidade.toString()}
-                        onChangeText={(text) => setNovoPremiomesa({ ...novoPremiomesa, probabilidade: parseFloat(text) || 1 })}
-                        keyboardType="number-pad"
-                        style={{ borderWidth: 1, borderColor: '#334155', borderRadius: 6, padding: 8, color: '#F8FAFC' }}
+                        value={novoPremiomesa.probabilidade === 0 ? '' : novoPremiomesa.probabilidade.toString()}
+                        onChangeText={(text) => setNovoPremiomesa({ ...novoPremiomesa, probabilidade: parseFloat(text.replace(',', '.')) || 0 })}
+                        keyboardType="numeric"
+                        style={{ borderWidth: 1, borderColor: '#334155', borderRadius: 6, padding: 12, color: '#F8FAFC', fontSize: 16 }}
                       />
                     </View>
                   </View>
