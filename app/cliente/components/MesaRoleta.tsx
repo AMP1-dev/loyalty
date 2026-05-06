@@ -91,24 +91,35 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
                 stroke="#ffffff"
                 strokeWidth="2"
               />
-              {lines.map((line: string, lineIdx: number) => {
-                const offsetY = (lineIdx - (lines.length - 1) / 2) * 6;
-                const fontSize = size === 240 ? 5.5 : 8.5;
-                return (
-                  <SvgText
-                    key={`${i}-${lineIdx}`}
-                    x={x}
-                    y={y + offsetY}
-                    fontSize={fontSize}
-                    fontWeight="bold"
-                    textAnchor="middle"
-                    fill="#1e293b"
-                    rotation={rotation}
-                  >
-                    {line}
-                  </SvgText>
-                );
-              })}
+              {(() => {
+                const words = (prize.nome || '').split(' ');
+                const displayLines = [];
+                if (words.length > 2) {
+                  displayLines.push(words.slice(0, 2).join(' '));
+                  displayLines.push(words.slice(2).join(' '));
+                } else {
+                  displayLines.push(prize.nome || '');
+                }
+
+                return displayLines.map((line, lineIdx) => {
+                  const fontSize = numSlices > 8 ? 9 : 11;
+                  const offsetY = (lineIdx - (displayLines.length - 1) / 2) * (fontSize + 2);
+                  return (
+                    <SvgText
+                      key={`${i}-${lineIdx}`}
+                      x={x}
+                      y={y + offsetY}
+                      fontSize={fontSize}
+                      fontWeight="900"
+                      textAnchor="middle"
+                      fill="#1e293b"
+                      rotation={rotation}
+                    >
+                      {line.toUpperCase()}
+                    </SvgText>
+                  );
+                });
+              })()}
             </G>
           );
         })}
