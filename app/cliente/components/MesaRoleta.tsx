@@ -248,7 +248,13 @@ export default function MesaRoleta() {
 
   const validarTelefone = (tel: string): boolean => {
     const clean = tel.replace(/\D/g, '');
-    return clean.length === 11;
+    if (clean.length !== 11) return false;
+    
+    // Validação básica de DDD (primeiros 2 dígitos entre 11 e 99)
+    const ddd = parseInt(clean.substring(0, 2));
+    if (ddd < 11 || ddd > 99) return false;
+
+    return true;
   };
 
   const avancarParaNPS = async () => {
@@ -294,16 +300,27 @@ export default function MesaRoleta() {
         duration: 3000,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: Platform.OS !== 'web',
-      }).start(async () => {
-        const cleanTel = telefone.replace(/\D/g, '');
-        await salvarParticipacaoMesa(cleanTel, premio);
-        setPremioGanho(premio);
-        setEtapa('resultado');
-        setRodando(false);
+      }).start(async (result) => {
+        // Mesmo que a animação não termine perfeitamente, tentamos processar
+        try {
+          const cleanTel = telefone.replace(/\D/g, '');
+          
+          // Movemos o salvamento para ocorrer em paralelo ou logo antes de mudar a etapa
+          salvarParticipacaoMesa(cleanTel, premio).catch(e => console.error("Erro background save:", e));
+          
+          setPremioGanho(premio);
+          setEtapa('resultado');
+        } catch (e) {
+          console.error("Erro no callback da roleta:", e);
+          alert("Ocorreu um erro ao processar seu prêmio. Por favor, tente novamente.");
+        } finally {
+          setRodando(false);
+        }
       });
     } catch (error) {
-      console.error('Erro ao girar roleta:', error);
+      console.error('Erro ao iniciar giro da roleta:', error);
       setRodando(false);
+      alert("Erro ao girar a roleta. Tente recarregar a página.");
     }
   };
 
@@ -436,10 +453,11 @@ export default function MesaRoleta() {
                   borderWidth: 1,
                   borderColor: c.borda,
                   borderRadius: 12,
-                  padding: 14,
-                  fontSize: 16,
+                  padding: 18,
+                  fontSize: 20,
                   color: c.texto,
-                  fontWeight: '600',
+                  fontWeight: '900',
+                  textAlign: 'center',
                 }}
                 keyboardType="phone-pad"
               />
@@ -607,8 +625,26 @@ export default function MesaRoleta() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: 'center', alignItems: 'center' }}>
-      <Text style={{ color: c.texto, fontSize: 16 }}>Carregando...</Text>
+    <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+      {carregando ? (
+        <Text style={{ color: c.texto, fontSize: 16, fontWeight: '700' }}>Carregando dados da mesa...</Text>
+      ) : (
+        <View style={{ alignItems: 'center' }}>
+          <Text style={{ fontSize: 40, marginBottom: 20 }}>⚠️</Text>
+          <Text style={{ color: c.texto, fontSize: 18, fontWeight: '900', textAlign: 'center', marginBottom: 10 }}>
+            Nenhum prêmio configurado!
+          </Text>
+          <Text style={{ color: c.subtexto, fontSize: 14, textAlign: 'center', marginBottom: 30 }}>
+            Peça ao gerente para ativar os prêmios da mesa no painel administrativo.
+          </Text>
+          <TouchableOpacity 
+            onPress={() => carregarDadosMesa()}
+            style={{ backgroundColor: c.roxo, padding: 15, borderRadius: 12 }}
+          >
+            <Text style={{ color: '#fff', fontWeight: 'bold' }}>Tentar Novamente 🔄</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
