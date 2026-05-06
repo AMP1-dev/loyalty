@@ -198,7 +198,14 @@ export default function MesaRoleta() {
         .eq('ativo', true);
 
       if (premios && premios.length > 0) {
-        setPremiosRoletaMesa(premios);
+        // Garante que a roleta tenha um visual preenchido (mínimo 6 fatias)
+        let listaBonita = [...premios];
+        if (listaBonita.length > 0 && listaBonita.length < 6) {
+           while(listaBonita.length < 6) {
+             listaBonita = [...listaBonita, ...premios];
+           }
+        }
+        setPremiosRoletaMesa(listaBonita);
       }
 
       // ✨ NOVO: Carrega perguntas NPS ativas
@@ -309,8 +316,13 @@ export default function MesaRoleta() {
     try {
       const premio = sortearPremio(premiosRoletaMesa);
       const targetIndex = premiosRoletaMesa.findIndex((p) => p.id === premio.id);
-      const rotations = 5;
-      const targetDeg = rotations * 360 + (targetIndex / premiosRoletaMesa.length) * 360;
+      
+      const sliceDeg = 360 / premiosRoletaMesa.length;
+      const midSliceDeg = targetIndex * sliceDeg + sliceDeg / 2;
+      const finalOffset = (360 - (midSliceDeg % 360)) % 360;
+      
+      const rotations = 8;
+      const targetDeg = rotations * 360 + finalOffset;
 
       Animated.timing(rotateAnim, {
         toValue: targetDeg,
@@ -610,15 +622,24 @@ export default function MesaRoleta() {
               {premioGanho.nome}
             </Text>
 
-            <View style={{ backgroundColor: c.card, borderRadius: 16, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: c.borda, minWidth: 300 }}>
-              <Text style={{ fontSize: 12, color: c.subtexto, marginBottom: 8 }}>VOCÊ GANHOU</Text>
-              <Text style={{ fontSize: 32, fontWeight: '900', color: c.roxo }}>
+            <View style={{ backgroundColor: c.card, borderRadius: 16, padding: 25, marginBottom: 20, borderWidth: 1, borderColor: c.borda, minWidth: 300, alignItems: 'center' }}>
+              <Text style={{ fontSize: 13, color: c.subtexto, marginBottom: 12, fontWeight: '700', textAlign: 'center' }}>VOCÊ GANHOU</Text>
+              <Text style={{ fontSize: 36, fontWeight: '900', color: c.roxo, textAlign: 'center' }}>
                 {premioGanho.tipo === 'desconto' ? `${premioGanho.valor}%` : `${premioGanho.nome}`}
+              </Text>
+              <Text style={{ fontSize: 14, color: c.subtexto, marginTop: 10, textAlign: 'center' }}>
+                {premioGanho.tipo === 'desconto' ? 'de desconto para sua próxima visita!' : 'Retire seu brinde com o atendente'}
               </Text>
             </View>
 
             <TouchableOpacity
-              onPress={() => setEtapa('telefone')}
+              onPress={() => {
+                setEtapa('telefone');
+                setTelefone('');
+                setNotaNps(0);
+                setPremioGanho(null);
+                rotateAnim.setValue(0);
+              }}
               style={{
                 backgroundColor: c.roxo,
                 borderRadius: 12,
