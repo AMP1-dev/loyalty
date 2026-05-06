@@ -104,7 +104,7 @@ export default function Merchant() {
     limite_resgates_diario_cliente: '', tempo_bloqueio_minutos: '',
     telefone: '', endereco: '', numero: '', bairro: '', cidade: '', estado: '', cep: '',
     pontos_sobre_valor_bruto: true, usar_cashback_total: false, senha: '', bonus_retorno_pontos: '50', bonus_retorno_validade_dias: '3',
-    roleta_ativa: false, roleta_intervalo_dias: '1', link_google_review: '', qr_mesa_ativo: false, brinde_mesa: ''
+    roleta_ativa: false, roleta_intervalo_dias: '1', link_google_meu_negocio: '', qr_mesa_ativo: false, brinde_mesa: ''
   });
 
   interface DashboardStats {
@@ -1254,7 +1254,7 @@ export default function Merchant() {
       bairro: config.bairro, cidade: config.cidade, estado: config.estado, cep: config.cep,
       roleta_ativa: config.roleta_ativa, 
       roleta_intervalo_dias: config.roleta_intervalo_dias !== "" ? Number(config.roleta_intervalo_dias) : 1,
-      link_google_review: config.link_google_review || null
+      link_google_meu_negocio: config.link_google_meu_negocio || null
     }, { onConflict: 'loja_id' });
 
     if (config.senha && config.senha.trim() !== '') await supabase.from('lojas').update({ senha: config.senha }).eq('id', lojaId);
@@ -1774,7 +1774,7 @@ export default function Merchant() {
               <Text style={[styles.label, { color: '#facc15', marginTop: 20 }]}>🔗 INTEGRAÇÕES E ACESSO:</Text>
               <View style={{ marginBottom: 10, width: '100%' }}>
                 <Text style={{ color: '#94a3b8', fontSize: 10 }}>LINK DO GOOGLE MEU NEGÓCIO (Para Avaliações 4 e 5 Estrelas)</Text>
-                <TextInput value={config.link_google_review} onChangeText={(t) => setConfig({ ...config, link_google_review: t })} placeholder="https://g.page/r/..." placeholderTextColor="#475569" style={styles.input} />
+                <TextInput value={config.link_google_meu_negocio} onChangeText={(t) => setConfig({ ...config, link_google_meu_negocio: t })} placeholder="https://g.page/r/..." placeholderTextColor="#475569" style={styles.input} />
               </View>
               <View style={{ marginBottom: 10, width: '100%' }}>
                 <Text style={{ color: '#94a3b8', fontSize: 10 }}>NOVA SENHA DO PAINEL (Deixe em branco para manter a atual)</Text>
