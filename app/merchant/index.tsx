@@ -483,12 +483,22 @@ export default function Merchant() {
         .eq('ativo', true)
         .order('ordem', { ascending: true });
 
-      setTemplatesWA(data || []);
-
-      // Seleciona primeiro template por padrão
-      if (data && data.length > 0) {
-        setTemplateSelecionado(data[0].id);
-        setMensagemCustomizada(data[0].mensagem);
+      if (!data || data.length === 0) {
+        // Injeta templates padrão caso não existam
+        const defaultTemplates = [
+          { id: 't1', nome: 'Agradecimento NPS', emoji: '🌟', mensagem: 'Olá! Agradecemos muito pela sua visita e pela nota 5 estrelas. É um prazer ter você como cliente! Volte sempre. 😊', ordem: 1 },
+          { id: 't2', nome: 'Recuperação de Cliente', emoji: '❤️', mensagem: 'Olá! Vimos que sua última experiência não foi 100%. Pedimos desculpas e gostaríamos de te convidar para voltar. Na sua próxima visita, a sobremesa é por nossa conta! 🍨', ordem: 2 },
+          { id: 't3', nome: 'Promoção Exclusiva', emoji: '🔥', mensagem: 'Oi! Temos uma oferta especial para você que é cliente VIP: Ganhe 20% de desconto em qualquer pedido hoje! Basta apresentar esta mensagem. Aproveite! 🏷️', ordem: 3 }
+        ];
+        setTemplatesWA(defaultTemplates);
+        setTemplateSelecionado(defaultTemplates[0].id);
+        setMensagemCustomizada(defaultTemplates[0].mensagem);
+      } else {
+        setTemplatesWA(data);
+        if (data.length > 0) {
+          setTemplateSelecionado(data[0].id);
+          setMensagemCustomizada(data[0].mensagem);
+        }
       }
     } catch (error) {
       console.error('Erro ao carregar templates:', error);
@@ -625,12 +635,12 @@ export default function Merchant() {
   // Envia para múltiplos selecionados
   const enviarParaSelecionados = async (lojaId: string) => {
     if (selecionados.length === 0) {
-      alert('Selecione pelo menos um contato');
+      mostrarToast('⚠️ Selecione pelo menos um contato', 'erro');
       return;
     }
 
     if (!templateSelecionado) {
-      alert('Selecione um template');
+      mostrarToast('⚠️ Selecione um modelo de mensagem', 'erro');
       return;
     }
 
