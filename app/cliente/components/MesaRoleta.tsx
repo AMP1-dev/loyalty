@@ -151,6 +151,7 @@ export default function MesaRoleta() {
   };
 
   const temaSistema = useColorScheme();
+  const isDark = temaSistema === 'dark';
 
   const c = {
     bg: isDark ? '#0f1622' : '#F8FAFC',
