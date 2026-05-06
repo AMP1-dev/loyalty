@@ -156,6 +156,12 @@ export default function Merchant() {
   const [qrMesaAtivo, setQrMesaAtivo] = useState(false);
   const [perguntaNpsMesa, setPerguntaNpsMesa] = useState('Como foi sua experiência?');
   const [linkGoogleMeuNegocio, setLinkGoogleMeuNegocio] = useState('');
+
+  // --- PERGUNTAS NPS MESA (SISTEMA 3+) ---
+  const [perguntasNpsMesa, setPerguntasNpsMesa] = useState<any[]>([]);
+  const [novaPergunta, setNovaPergunta] = useState('');
+  const [novaPeruntaTipo, setNovaPerguntaTipo] = useState('geral');
+  const [editandoPergunta, setEditandoPergunta] = useState<string | null>(null);
   const [bonusMultiplicador, setBonusMultiplicador] = useState(2.0);
   const [tamanhoQrMesa, setTamanhoQrMesa] = useState<keyof typeof QR_SIZES>('MEDIO');
 
@@ -293,6 +299,114 @@ export default function Merchant() {
       mostrarToast('❌ Erro', 'erro');
     }
   };
+  // --- FUNÇÕES PERGUNTAS NPS MESA (SISTEMA 3+) ---
+  const carregarPerguntasNpsMesa = async (lojaId: string) => {
+    try {
+      const { data } = await supabase
+        .from('perguntas_nps_mesa')
+        .select('*')
+        .eq('loja_id', lojaId)
+        .order('ordem', { ascending: true });
+
+      setPerguntasNpsMesa(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar perguntas NPS:', error);
+    }
+  };
+
+  const adicionarPerguntaNps = async (lojaId: string) => {
+    if (!novaPergunta.trim()) {
+      alert('Digite uma pergunta');
+      return;
+    }
+
+    try {
+      const maxOrdem = Math.max(...perguntasNpsMesa.map((p) => p.ordem || 0), 0);
+
+      await supabase.from('perguntas_nps_mesa').insert({
+        loja_id: lojaId,
+        pergunta: novaPergunta,
+        tipo: novaPeruntaTipo,
+        ativa: true,
+        ordem: maxOrdem + 1,
+      });
+
+      setNovaPergunta('');
+      setNovaPerguntaTipo('geral');
+      carregarPerguntasNpsMesa(lojaId);
+      mostrarToast('✅ Pergunta adicionada!', 'sucesso');
+    } catch (error) {
+      console.error('Erro:', error);
+      mostrarToast('❌ Erro ao adicionar pergunta', 'erro');
+    }
+  };
+
+  const editarPerguntaNps = async (perguntaId: string, novaTexto: string, lojaId: string) => {
+    if (!novaTexto.trim()) {
+      alert('Digite um texto válido');
+      return;
+    }
+
+    try {
+      await supabase
+        .from('perguntas_nps_mesa')
+        .update({ pergunta: novaTexto, updated_at: new Date().toISOString() })
+        .eq('id', perguntaId);
+
+      setEditandoPergunta(null);
+      carregarPerguntasNpsMesa(lojaId);
+      mostrarToast('✅ Pergunta atualizada!', 'sucesso');
+    } catch (error) {
+      console.error('Erro:', error);
+      mostrarToast('❌ Erro ao editar', 'erro');
+    }
+  };
+
+  const togglePerguntaNps = async (perguntaId: string, ativaAtual: boolean, lojaId: string) => {
+    try {
+      await supabase
+        .from('perguntas_nps_mesa')
+        .update({ ativa: !ativaAtual })
+        .eq('id', perguntaId);
+
+      carregarPerguntasNpsMesa(lojaId);
+    } catch (error) {
+      console.error('Erro:', error);
+    }
+  };
+
+  const deletarPerguntaNps = async (perguntaId: string, lojaId: string) => {
+    if (!window.confirm('Tem certeza? Você precisa manter pelo menos 3 perguntas.')) return;
+
+    const ativasAtuais = perguntasNpsMesa.filter((p) => p.ativa).length;
+    if (ativasAtuais <= 3) {
+      alert('❌ Você precisa manter pelo menos 3 perguntas ativas!');
+      return;
+    }
+
+    try {
+      await supabase.from('perguntas_nps_mesa').delete().eq('id', perguntaId);
+      carregarPerguntasNpsMesa(lojaId);
+      mostrarToast('✅ Pergunta removida!', 'sucesso');
+    } catch (error) {
+      console.error('Erro:', error);
+      mostrarToast('❌ Erro ao remover', 'erro');
+    }
+  };
+
+  const reordenarPerguntas = async (perguntaId: string, novaOrdem: number, lojaId: string) => {
+    try {
+      await supabase
+        .from('perguntas_nps_mesa')
+        .update({ ordem: novaOrdem })
+        .eq('id', perguntaId);
+
+      carregarPerguntasNpsMesa(lojaId);
+    } catch (error) {
+      console.error('Erro:', error);
+    }
+  };
+
 
   // Carrega participacoes da mesa
   const carregarParticipacoesMesa = async (lojaId: string) => {
@@ -1336,18 +1450,262 @@ export default function Merchant() {
 
                   {qrMesaAtivo && (
                     <>
-                      <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginBottom: 8 }}>
-                        Pergunta da Pesquisa NPS:
-                      </Text>
-                      <TextInput
-                        placeholder="Digite a pergunta..."
-                        placeholderTextColor="#94A3B8"
-                        value={perguntaNpsMesa}
-                        onChangeText={setPerguntaNpsMesa}
-                        multiline
-                        style={{ borderWidth: 1, borderColor: '#334155', borderRadius: 8, padding: 12, color: '#F8FAFC', marginBottom: 16, minHeight: 50 }}
-                      />
+                      {/* GERENCIAR PERGUNTAS NPS MESA */}
+                      <View style={{ marginBottom: 30 }}>
+                        <View
+                          style={{
+                            borderRadius: 16,
+                            padding: 20,
+                            marginBottom: 20,
+                            backgroundColor: '#1e293b',
+                            borderWidth: 1,
+                            borderColor: '#334155',
+                          }}
+                        >
+                          <Text style={{ fontSize: 16, fontWeight: '900', color: '#8B5CF6', marginBottom: 16 }}>
+                            ❓ Gerenciar Perguntas NPS da Mesa
+                          </Text>
 
+                          {/* Info */}
+                          <View style={{ backgroundColor: '#1e293b', padding: 12, borderRadius: 8, marginBottom: 16, borderLeftWidth: 3, borderLeftColor: '#0284c7' }}>
+                            <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>
+                              💡 Dica: Mantenha pelo menos 3 perguntas ativas. O sistema sorteia uma aleatória a cada jogo!
+                            </Text>
+                          </View>
+
+                          {/* Adicionar nova pergunta */}
+                          <View style={{ backgroundColor: '#0f172a', padding: 14, borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: '#334155' }}>
+                            <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginBottom: 8 }}>
+                              ➕ Adicionar Nova Pergunta
+                            </Text>
+
+                            <TextInput
+                              placeholder="Ex: Como foi o atendimento?"
+                              placeholderTextColor="#94A3B8"
+                              value={novaPergunta}
+                              onChangeText={setNovaPergunta}
+                              multiline
+                              style={{
+                                borderWidth: 1,
+                                borderColor: '#334155',
+                                borderRadius: 8,
+                                padding: 10,
+                                color: '#F8FAFC',
+                                minHeight: 50,
+                                marginBottom: 10,
+                                fontSize: 12,
+                              }}
+                            />
+
+                            <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600', marginBottom: 8 }}>
+                              Tipo:
+                            </Text>
+                            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                              {['geral', 'atendimento', 'comida', 'ambiente', 'experiencia'].map((tipo) => (
+                                <TouchableOpacity
+                                  key={tipo}
+                                  onPress={() => setNovaPerguntaTipo(tipo)}
+                                  style={{
+                                    paddingVertical: 8,
+                                    paddingHorizontal: 12,
+                                    borderRadius: 6,
+                                    borderWidth: 1,
+                                    borderColor: novaPeruntaTipo === tipo ? '#8B5CF6' : '#334155',
+                                    backgroundColor: novaPeruntaTipo === tipo ? '#8B5CF620' : 'transparent',
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 10, color: novaPeruntaTipo === tipo ? '#8B5CF6' : '#94A3B8', fontWeight: '600' }}>
+                                    {tipo}
+                                  </Text>
+                                </TouchableOpacity>
+                              ))}
+                            </View>
+
+                            <TouchableOpacity
+                              onPress={() => adicionarPerguntaNps(lojaId || '')}
+                              style={{
+                                backgroundColor: '#10b981',
+                                borderRadius: 8,
+                                paddingVertical: 10,
+                                alignItems: 'center',
+                              }}
+                            >
+                              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>
+                                ➕ ADICIONAR
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+
+                          {/* Lista de perguntas */}
+                          <Text style={{ fontSize: 12, fontWeight: '700', color: '#F8FAFC', marginBottom: 10 }}>
+                            📋 Perguntas Criadas ({perguntasNpsMesa.length})
+                          </Text>
+
+                          {perguntasNpsMesa.length === 0 ? (
+                            <View style={{ padding: 20, alignItems: 'center' }}>
+                              <Text style={{ color: '#94A3B8', fontSize: 12 }}>
+                                Nenhuma pergunta criada ainda
+                              </Text>
+                            </View>
+                          ) : (
+                            perguntasNpsMesa.map((pergunta, idx) => (
+                              <View
+                                key={pergunta.id}
+                                style={{
+                                  backgroundColor: pergunta.ativa ? '#1e293b' : '#0f172a',
+                                  borderRadius: 10,
+                                  padding: 12,
+                                  marginBottom: 10,
+                                  borderWidth: 1,
+                                  borderColor: pergunta.ativa ? '#334155' : '#1e293b',
+                                  opacity: pergunta.ativa ? 1 : 0.6,
+                                }}
+                              >
+                                {/* Header */}
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                                  <Text style={{ fontSize: 12, fontWeight: '700', color: pergunta.ativa ? '#F8FAFC' : '#94A3B8', flex: 1 }}>
+                                    #{idx + 1} {pergunta.pergunta}
+                                  </Text>
+
+                                  {/* Toggle ativa */}
+                                  <TouchableOpacity
+                                    onPress={() => togglePerguntaNps(pergunta.id, pergunta.ativa, lojaId || '')}
+                                    style={{
+                                      width: 40,
+                                      height: 24,
+                                      borderRadius: 12,
+                                      backgroundColor: pergunta.ativa ? '#10b981' : '#cbd5e1',
+                                      justifyContent: 'center',
+                                      alignItems: pergunta.ativa ? 'flex-end' : 'flex-start',
+                                      paddingHorizontal: 2,
+                                    }}
+                                  >
+                                    <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff' }} />
+                                  </TouchableOpacity>
+                                </View>
+
+                                {/* Detalhes */}
+                                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+                                  <View style={{ backgroundColor: '#8B5CF630', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 4 }}>
+                                    <Text style={{ fontSize: 10, color: '#8B5CF6', fontWeight: '600' }}>
+                                      {pergunta.tipo}
+                                    </Text>
+                                  </View>
+                                  <Text style={{ fontSize: 10, color: '#94A3B8' }}>
+                                    Ordem: {pergunta.ordem}
+                                  </Text>
+                                </View>
+
+                                {/* Ações */}
+                                <View style={{ flexDirection: 'row', gap: 8 }}>
+                                  {/* Editar */}
+                                  <TouchableOpacity
+                                    onPress={() => setEditandoPergunta(pergunta.id)}
+                                    style={{
+                                      flex: 1,
+                                      paddingVertical: 8,
+                                      borderRadius: 6,
+                                      backgroundColor: '#3b82f6',
+                                      alignItems: 'center',
+                                    }}
+                                  >
+                                    <Text style={{ fontSize: 10, color: '#fff', fontWeight: '700' }}>
+                                      ✏️ Editar
+                                    </Text>
+                                  </TouchableOpacity>
+
+                                  {/* Up/Down ordem */}
+                                  <TouchableOpacity
+                                    onPress={() => {
+                                      if (pergunta.ordem > 1) {
+                                        reordenarPerguntas(pergunta.id, pergunta.ordem - 1, lojaId || '');
+                                      }
+                                    }}
+                                    style={{
+                                      paddingVertical: 8,
+                                      paddingHorizontal: 12,
+                                      borderRadius: 6,
+                                      backgroundColor: '#334155',
+                                      alignItems: 'center',
+                                    }}
+                                  >
+                                    <Text style={{ fontSize: 12, color: '#F8FAFC' }}>⬆️</Text>
+                                  </TouchableOpacity>
+
+                                  <TouchableOpacity
+                                    onPress={() => {
+                                      reordenarPerguntas(pergunta.id, pergunta.ordem + 1, lojaId || '');
+                                    }}
+                                    style={{
+                                      paddingVertical: 8,
+                                      paddingHorizontal: 12,
+                                      borderRadius: 6,
+                                      backgroundColor: '#334155',
+                                      alignItems: 'center',
+                                    }}
+                                  >
+                                    <Text style={{ fontSize: 12, color: '#F8FAFC' }}>⬇️</Text>
+                                  </TouchableOpacity>
+
+                                  {/* Delete */}
+                                  <TouchableOpacity
+                                    onPress={() => deletarPerguntaNps(pergunta.id, lojaId || '')}
+                                    style={{
+                                      paddingVertical: 8,
+                                      paddingHorizontal: 12,
+                                      borderRadius: 6,
+                                      backgroundColor: '#ef4444',
+                                      alignItems: 'center',
+                                    }}
+                                  >
+                                    <Text style={{ fontSize: 12 }}>🗑️</Text>
+                                  </TouchableOpacity>
+                                </View>
+
+                                {/* Modal de edição (simplificado) */}
+                                {editandoPergunta === pergunta.id && (
+                                  <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#334155' }}>
+                                    <TextInput
+                                      placeholder="Edite a pergunta..."
+                                      placeholderTextColor="#94A3B8"
+                                      defaultValue={pergunta.pergunta}
+                                      onChangeText={(text) => {
+                                        // Editar inline
+                                        if (text) {
+                                          editarPerguntaNps(pergunta.id, text, lojaId || '');
+                                        }
+                                      }}
+                                      style={{
+                                        borderWidth: 1,
+                                        borderColor: '#334155',
+                                        borderRadius: 6,
+                                        padding: 8,
+                                        color: '#F8FAFC',
+                                        marginBottom: 8,
+                                        fontSize: 11,
+                                      }}
+                                    />
+                                    <TouchableOpacity
+                                      onPress={() => setEditandoPergunta(null)}
+                                      style={{
+                                        paddingVertical: 6,
+                                        paddingHorizontal: 10,
+                                        borderRadius: 4,
+                                        backgroundColor: '#10b981',
+                                        alignItems: 'center',
+                                      }}
+                                    >
+                                      <Text style={{ fontSize: 10, color: '#fff', fontWeight: '700' }}>
+                                        ✅ Pronto
+                                      </Text>
+                                    </TouchableOpacity>
+                                  </View>
+                                )}
+                              </View>
+                            ))
+                          )}
+                        </View>
+                      </View>
                       <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginBottom: 8 }}>
                         Link Google Meu Negócio (4-5 Estrelas):
                       </Text>

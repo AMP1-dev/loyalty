@@ -169,9 +169,6 @@ export default function MesaRoleta() {
 
       if (config) {
         setConfigLoja(config);
-        if (config.pergunta_nps_mesa) {
-          setPerguntaCustom(config.pergunta_nps_mesa);
-        }
       }
 
       const { data: loja } = await supabase
@@ -190,6 +187,22 @@ export default function MesaRoleta() {
 
       if (premios && premios.length > 0) {
         setPremiosRoletaMesa(premios);
+      }
+
+      // ✨ NOVO: Carrega perguntas NPS ativas
+      const { data: perguntas } = await supabase
+        .from('perguntas_nps_mesa')
+        .select('*')
+        .eq('loja_id', loja_id)
+        .eq('ativa', true)
+        .order('ordem', { ascending: true });
+
+      if (perguntas && perguntas.length > 0) {
+        // Sorteia uma pergunta aleatória
+        const perguntaSorteada = perguntas[Math.floor(Math.random() * perguntas.length)];
+        setPerguntaCustom(perguntaSorteada.pergunta);
+      } else if (config && config.pergunta_nps_mesa) {
+        setPerguntaCustom(config.pergunta_nps_mesa); // Fallback para a antiga
       }
 
       setCarregando(false);
