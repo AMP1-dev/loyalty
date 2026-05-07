@@ -431,7 +431,7 @@ export default function MesaRoleta() {
     }
   };
 
-  if (etapa === 'resultado' && notaNps === 5 && premioGanho && !premioGanho.nome.toLowerCase().includes('tente')) {
+  if (etapa === 'resultado' && notaNps === 5 && premioGanho && !premioGanho.nome.toLowerCase().includes('tente') && premioGanho.tipo !== 'outro') {
     return (
       <OfertaGoogle
         premio={premioGanho}
@@ -617,10 +617,10 @@ export default function MesaRoleta() {
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
           <View style={{ alignItems: 'center', width: '90%' }}>
             <Text style={{ fontSize: 48, marginBottom: 20 }}>
-              {premioGanho.nome.toLowerCase().includes('tente') ? '😕' : '🎉'}
+              {(premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? '😕' : '🎉'}
             </Text>
-            <Text style={{ fontSize: 28, fontWeight: '900', color: premioGanho.nome.toLowerCase().includes('tente') ? '#64748B' : c.roxo, textAlign: 'center', marginBottom: 12 }}>
-              {premioGanho.nome.toLowerCase().includes('tente') ? 'QUASE LÁ!' : 'PARABÉNS!'}
+            <Text style={{ fontSize: 28, fontWeight: '900', color: (premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? '#64748B' : c.roxo, textAlign: 'center', marginBottom: 12 }}>
+              {(premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? 'QUASE LÁ!' : 'PARABÉNS!'}
             </Text>
             <Text style={{ fontSize: 18, fontWeight: '700', color: c.texto, textAlign: 'center', marginBottom: 20 }}>
               {premioGanho.nome}
@@ -628,12 +628,12 @@ export default function MesaRoleta() {
 
             <View style={{ backgroundColor: c.card, borderRadius: 16, padding: 25, marginBottom: 20, borderWidth: 1, borderColor: c.borda, minWidth: 300, alignItems: 'center' }}>
               <Text style={{ fontSize: 13, color: c.subtexto, marginBottom: 12, fontWeight: '700', textAlign: 'center' }}>
-                {premioGanho.nome.toLowerCase().includes('tente') ? 'RESULTADO' : 'VOCÊ GANHOU'}
+                {(premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? 'RESULTADO' : 'VOCÊ GANHOU'}
               </Text>
-              <Text style={{ fontSize: 36, fontWeight: '900', color: premioGanho.nome.toLowerCase().includes('tente') ? '#64748B' : c.roxo, textAlign: 'center' }}>
+              <Text style={{ fontSize: 36, fontWeight: '900', color: (premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? '#64748B' : c.roxo, textAlign: 'center' }}>
                 {premioGanho.tipo === 'desconto' ? `${premioGanho.valor}%` : `${premioGanho.nome}`}
               </Text>
-              {!premioGanho.nome.toLowerCase().includes('tente') && (
+              {(!premioGanho.nome.toLowerCase().includes('tente') && premioGanho.tipo !== 'outro') && (
                 <Text style={{ fontSize: 14, color: c.subtexto, marginTop: 10, textAlign: 'center' }}>
                   {premioGanho.tipo === 'desconto' ? 'de desconto para sua próxima visita!' : 'Retire seu brinde com o atendente'}
                 </Text>

@@ -2940,7 +2940,7 @@ export default function Merchant() {
                 <View style={[styles.editBox, { marginBottom: 20, borderColor: '#ec4899', borderWidth: 1, backgroundColor: '#020617' }]}>
                   <Text style={{ color: '#ec4899', fontWeight: 'bold', marginBottom: 15, fontSize: 16 }}>✨ Nova Fatia da Roleta</Text>
                   <TextInput placeholder="Ex: Ganhou 10 Springs" placeholderTextColor="#475569" value={formRoleta.nome || ''} onChangeText={(t) => setFormRoleta({ ...formRoleta, nome: t })} style={[styles.input, { marginBottom: 15 }]} />
-                  <TextInput placeholder="Tipo: pontos, cashback, brinde" placeholderTextColor="#475569" value={formRoleta.tipo || ''} onChangeText={(t) => setFormRoleta({ ...formRoleta, tipo: t })} style={[styles.input, { marginBottom: 15 }]} />
+                  <TextInput placeholder="Tipo: pontos, cashback, brinde, outro" placeholderTextColor="#475569" value={formRoleta.tipo || ''} onChangeText={(t) => setFormRoleta({ ...formRoleta, tipo: t })} style={[styles.input, { marginBottom: 15 }]} />
                   <View style={{ flexDirection: 'row', gap: 10, marginBottom: 5 }}>
                     <View style={{ flex: 1 }}>
                       <TextInput placeholder="Qtd" placeholderTextColor="#475569" value={formRoleta.valor || ''} onChangeText={(t) => setFormRoleta({ ...formRoleta, valor: t })} style={styles.input} keyboardType="numeric" />
