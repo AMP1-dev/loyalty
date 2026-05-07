@@ -431,7 +431,7 @@ export default function MesaRoleta() {
     }
   };
 
-  if (etapa === 'resultado' && notaNps === 5 && premioGanho) {
+  if (etapa === 'resultado' && notaNps === 5 && premioGanho && !premioGanho.nome.toLowerCase().includes('tente')) {
     return (
       <OfertaGoogle
         premio={premioGanho}
@@ -592,7 +592,7 @@ export default function MesaRoleta() {
             </Svg>
           </View>
 
-          <Animated.View style={[{ transform: [{ rotate: rotateAnim.interpolate({ inputRange: [0, 360], outputRange: ['0deg', '360deg'] }) }] }, { marginBottom: 30, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 15, elevation: 10 }]}>
+          <Animated.View style={[{ transform: [{ rotate: rotateAnim.interpolate({ inputRange: [0, 360], outputRange: ['0deg', '360deg'] }) }] }, { marginBottom: 30 }]}>
             <WheelSVG prizes={premiosRoletaMesa} size={320} isDark={isDark} />
           </Animated.View>
 
