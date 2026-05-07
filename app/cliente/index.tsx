@@ -874,12 +874,58 @@ export default function Cliente() {
         }
         console.log('✅ [3/5] Brinde inserido:', data);
         mostrarToast('🎁 Brinde reservado! Retire com o atendente', 'sucesso');
-        return true;
       }
+
+      // ✨ NOVA: Sincronização com Remarketing (Balcão)
+      await sincronizarComRemarketig(cpfCliente, premio, lid);
+
+      return true;
     } catch (err) {
       console.error('❌ [ERRO GERAL] salvarPremioGanho:', err);
       mostrarToast('❌ Erro ao salvar prêmio', 'erro');
       return false;
+    }
+  };
+
+  // ✨ NOVA: Função de Sync para Remarketing no Balcão
+  const sincronizarComRemarketig = async (telefone: string, premio: any, lojaId: string) => {
+    try {
+      const cleanTel = telefone.replace(/\D/g, '');
+      
+      // Verificar se contato já existe no remarketing desta loja
+      const { data: existente } = await supabase
+        .from('contatos_mesa_remarketing')
+        .select('id, total_mensagens')
+        .eq('loja_id', lojaId)
+        .eq('cliente_cpf', cleanTel)
+        .limit(1);
+
+      if (existente && existente.length > 0) {
+        // Se já existia (estava na lista de sumidos/pendentes), marca como CONVERTEU
+        await supabase
+          .from('contatos_mesa_remarketing')
+          .update({
+            status: 'converteu',
+            premio_ganho: premio.nome,
+            data_ultimo_contato: new Date().toISOString(),
+          })
+          .eq('id', existente[0].id);
+        
+        console.log('✅ [Remarketing] Contato do balcão sincronizado como CONVERTEU');
+      } else {
+        // Se não existia, cria o registro como 'converteu' direto (novo cliente trackeado)
+        await supabase.from('contatos_mesa_remarketing').insert({
+          loja_id: lojaId,
+          cliente_cpf: cleanTel,
+          premio_ganho: premio.nome,
+          nota_nps: 5, // Como ele jogou no balcão e ganhou, consideramos engajamento máximo
+          status: 'converteu',
+          data_participacao: new Date().toISOString(),
+        });
+        console.log('✅ [Remarketing] Novo contato do balcão registrado');
+      }
+    } catch (error) {
+      console.error('⚠️ [Remarketing Sync Error]:', error);
     }
   };
 
