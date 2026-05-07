@@ -211,6 +211,6 @@ const styles = StyleSheet.create({
 
   footer: { position: 'absolute', bottom: 30, color: '#1e293b', fontSize: 10, fontWeight: 'bold', letterSpacing: 2 },
 
-  toastContainer: { position: 'absolute', top: 50, left: 20, right: 20, zIndex: 9999, padding: 20, borderRadius: 20, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 30, elevation: 20 },
+  toastContainer: { position: 'absolute', top: 50, left: 20, right: 20, zIndex: 100000, padding: 20, borderRadius: 20, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 30, elevation: 20 },
   toastText: { color: '#fff', fontWeight: 'bold', fontSize: 15, flex: 1 },
 });

@@ -449,7 +449,7 @@ export default function MesaRoleta() {
       {/* 🍞 TOAST CUSTOMIZADO */}
       <Animated.View 
         style={{ 
-          position: 'absolute', top: 20, left: 20, right: 20, zIndex: 9999,
+          position: 'absolute', top: 20, left: 20, right: 20, zIndex: 100000,
           transform: [{ translateY: toastAnim }],
           backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444',
           padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center',

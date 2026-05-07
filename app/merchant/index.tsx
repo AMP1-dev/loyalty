@@ -3036,7 +3036,7 @@ const styles = StyleSheet.create({
   modalCard: { backgroundColor: '#1e293b', width: '100%', padding: 25, borderRadius: 20, borderWidth: 1, borderColor: '#334155', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.5, shadowRadius: 20, elevation: 15 },
   modalTitle: { color: '#fff', fontSize: 22, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' },
   modalSub: { color: '#94a3b8', fontSize: 16, textAlign: 'center', lineHeight: 22 },
-  toastContainer: { position: 'absolute', top: Platform.OS === 'web' ? 20 : 50, left: 20, right: 20, zIndex: 9999, padding: 18, borderRadius: 16, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 15 },
+  toastContainer: { position: 'absolute', top: Platform.OS === 'web' ? 20 : 50, left: 20, right: 20, zIndex: 100000, padding: 18, borderRadius: 16, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 15 },
   toastText: { color: '#fff', fontWeight: 'bold', fontSize: 15, flex: 1, lineHeight: 22 },
   topItem: { flexDirection: 'row', alignItems: 'center', marginTop: 6, paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: '#1e293b' },
   topTelefone: { color: '#e2e8f0', fontSize: 14, marginRight: 10, flex: 1 },
