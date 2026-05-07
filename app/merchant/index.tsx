@@ -2854,6 +2854,17 @@ export default function Merchant() {
                 </View>
               )}
 
+              {(premiosMesaPendentes[telefoneManual.replace(/\D/g, '')] || []).map((p: any) => (
+                <View key={p.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#8b5cf615', padding: 15, borderRadius: 15, marginTop: 10, borderWidth: 1, borderColor: '#8b5cf630' }}>
+                  <Text style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: 16 }}>🎡 PRÊMIO MESA: {p.premio_nome}</Text>
+                  <TouchableOpacity 
+                    onPress={() => resgatarPremioMesa(p.id, telefoneManual.replace(/\D/g, ''))}
+                    style={{ backgroundColor: '#8b5cf6', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10 }}>
+                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>RESGATAR</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+
               {valorManual !== '' && telefoneManual.replace(/\D/g, '').length >= 10 && (
                 <View style={styles.simulacaoCard}>
                   <View style={{ marginTop: 12 }}><Text style={styles.simulacaoTitulo}>💡 Resumo da venda</Text></View>
