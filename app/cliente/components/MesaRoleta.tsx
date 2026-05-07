@@ -461,22 +461,26 @@ export default function MesaRoleta() {
       </Animated.View>
 
       {etapa === 'telefone' && (
-        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
-          <View style={{ width: '90%', maxWidth: 400 }}>
-            <Text style={{ fontSize: 28, fontWeight: '900', color: c.roxo, textAlign: 'center', marginBottom: 10 }}>
-              🎮 JOGUE NA MESA!
-            </Text>
-            <Text style={{ fontSize: 14, color: c.subtexto, textAlign: 'center', marginBottom: 30 }}>
-              Uma vez por dia • Ganhe prêmios incríveis
-            </Text>
+        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 25, width: '100%' }}>
+          <View style={{ alignItems: 'center', marginBottom: 40 }}>
+            <Text style={{ color: c.roxo, fontSize: 32, fontWeight: '900', letterSpacing: 2 }}>PALM SPRINGS</Text>
+            <View style={{ backgroundColor: '#10b98120', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8, marginTop: 5 }}>
+              <Text style={{ color: '#10b981', fontSize: 10, fontWeight: '900', letterSpacing: 2 }}>MESA ROLETA</Text>
+            </View>
+          </View>
 
-            <View style={{ backgroundColor: c.card, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: c.borda, marginBottom: 20 }}>
-              <Text style={{ fontSize: 12, color: c.subtexto, fontWeight: '700', marginBottom: 8 }}>
-                📱 QUAL SEU TELEFONE?
-              </Text>
+          <View style={{ backgroundColor: isDark ? '#1e293b' : '#fff', padding: 25, borderRadius: 24, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 20, elevation: 5 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 25, justifyContent: 'center' }}>
+              <Text style={{ fontSize: 32 }}>🕹️</Text>
+              <Text style={{ fontSize: 24, fontWeight: '900', color: isDark ? '#fff' : '#1e293b' }}>JOGUE NA MESA</Text>
+            </View>
+
+            <View style={{ marginBottom: 25 }}>
+              <Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 11, fontWeight: 'bold', marginBottom: 10, marginLeft: 5, letterSpacing: 1 }}>WHATSAPP DO CLIENTE</Text>
               <TextInput
-                placeholder="(11) 99999-9999"
-                placeholderTextColor={c.subtexto}
+                placeholder="(00) 00000-0000"
+                placeholderTextColor={isDark ? "#475569" : "#94a3b8"}
+                keyboardType="phone-pad"
                 value={telefone}
                 onChangeText={(text) => {
                   const clean = text.replace(/\D/g, '').slice(0, 11);
@@ -489,16 +493,15 @@ export default function MesaRoleta() {
                   }
                 }}
                 style={{
-                  borderWidth: 1,
-                  borderColor: c.borda,
-                  borderRadius: 12,
+                  backgroundColor: isDark ? '#020617' : '#f8fafc',
+                  color: isDark ? '#fff' : '#1e293b',
                   padding: 18,
-                  fontSize: 20,
-                  color: c.texto,
-                  fontWeight: '900',
-                  textAlign: 'center',
+                  borderRadius: 15,
+                  fontSize: 18,
+                  fontWeight: 'bold',
+                  borderWidth: 1,
+                  borderColor: isDark ? '#1e293b' : '#e2e8f0'
                 }}
-                keyboardType="phone-pad"
               />
             </View>
 
@@ -506,16 +509,22 @@ export default function MesaRoleta() {
               onPress={avancarParaNPS}
               style={{
                 backgroundColor: c.roxo,
-                borderRadius: 12,
-                padding: 16,
+                padding: 20,
+                borderRadius: 15,
                 alignItems: 'center',
+                shadowColor: c.roxo,
+                shadowOpacity: 0.3,
+                shadowRadius: 15,
+                elevation: 5
               }}
             >
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>
-                CONTINUAR →
-              </Text>
+              <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', letterSpacing: 1 }}>CONTINUAR →</Text>
             </TouchableOpacity>
           </View>
+
+          <Text style={{ textAlign: 'center', color: isDark ? '#475569' : '#94a3b8', fontSize: 11, marginTop: 30, fontWeight: 'bold' }}>
+            SPRINGS LOYALTY • v2.0
+          </Text>
         </ScrollView>
       )}
 

@@ -96,6 +96,7 @@ export default function Merchant() {
   const [formRoleta, setFormRoleta] = useState<any>({});
   const [avaliacoes, setAvaliacoes] = useState<any[]>([]);
   const [mostrarAvaliacoesModal, setMostrarAvaliacoesModal] = useState(false);
+  const [premiosMesaPendentes, setPremiosMesaPendentes] = useState<any>({});
   const [mediaEstrelas, setMediaEstrelas] = useState(0);
 
   const [config, setConfig] = useState<any>({
@@ -796,6 +797,17 @@ export default function Merchant() {
 
     const { data: br } = await supabase.from('brindes_pendentes').select('*').eq('cliente_cpf', cpf).eq('loja_id', lojaId).eq('resgatado', false);
     setBrindesPendentes((prev: any) => ({ ...prev, [cpf]: br || [] }));
+
+    const { data: pm } = await supabase.from('roleta_mesa_participacoes').select('*').eq('cliente_cpf', cpf).eq('loja_id', lojaId).eq('premio_resgatado', false).order('created_at', { ascending: false });
+    setPremiosMesaPendentes((prev: any) => ({ ...prev, [cpf]: pm || [] }));
+  };
+
+  const resgatarPremioMesa = async (idPremio: string, cpf: string) => {
+    const { error } = await supabase.from('roleta_mesa_participacoes').update({ premio_resgatado: true }).eq('id', idPremio);
+    if (error) { mostrarToast('Erro ao resgatar prêmio.', 'erro'); return; }
+    mostrarToast('✅ Prêmio da Mesa Resgatado!', 'sucesso');
+    buscarFinanceiroDetalhado(cpf);
+    buscarParticipacoesMesa(lojaId);
   };
 
   const eHoje = (dataString: string) => {
@@ -2657,6 +2669,16 @@ export default function Merchant() {
                             onPress={() => entregarBrinde(b.id, c.cliente_cpf)}
                             style={{ backgroundColor: '#ec4899', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10 }}>
                             <Text style={{ color: '#fff', fontWeight: 'bold' }}>ENTREGAR</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                      {(premiosMesaPendentes[c.cliente_cpf] || []).map((p: any) => (
+                        <View key={p.id} style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#8b5cf615', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#8b5cf630' }}>
+                          <Text style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: 15 }}>🎡 MESA: {p.premio_nome}</Text>
+                          <TouchableOpacity 
+                            onPress={() => resgatarPremioMesa(p.id, c.cliente_cpf)}
+                            style={{ backgroundColor: '#8b5cf6', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10 }}>
+                            <Text style={{ color: '#fff', fontWeight: 'bold' }}>RESGATAR</Text>
                           </TouchableOpacity>
                         </View>
                       ))}
