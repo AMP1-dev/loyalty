@@ -461,25 +461,37 @@ export default function MesaRoleta() {
       </Animated.View>
 
       {etapa === 'telefone' && (
-        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 25, width: '100%' }}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 25, width: '100%', backgroundColor: '#020617' }}>
           <View style={{ alignItems: 'center', marginBottom: 40 }}>
-            <Text style={{ color: c.roxo, fontSize: 32, fontWeight: '900', letterSpacing: 2 }}>PALM SPRINGS</Text>
-            <View style={{ backgroundColor: '#10b98120', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8, marginTop: 5 }}>
-              <Text style={{ color: '#10b981', fontSize: 10, fontWeight: '900', letterSpacing: 2 }}>MESA ROLETA</Text>
+            <View style={{ position: 'relative' }}>
+              <Text style={{ color: '#fff', fontSize: 14, position: 'absolute', top: -15, left: -25 }}>✨</Text>
+              <Text style={{ color: '#fff', fontSize: 18, position: 'absolute', top: -5, right: -25 }}>✨</Text>
+              <Text style={{ color: '#fff', fontSize: 12, position: 'absolute', bottom: 10, left: -30 }}>✨</Text>
+              <Text style={{ color: '#fff', fontSize: 16, position: 'absolute', bottom: -5, right: -30 }}>✨</Text>
+              
+              <Text style={{ color: c.roxo, fontSize: 42, fontWeight: '900', letterSpacing: 1, textAlign: 'center' }}>PALM</Text>
+              <Text style={{ color: c.roxo, fontSize: 42, fontWeight: '900', letterSpacing: 1, textAlign: 'center', marginTop: -10 }}>SPRINGS</Text>
+            </View>
+            
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 15 }}>
+              <View style={{ height: 1, width: 30, backgroundColor: '#1e293b' }} />
+              <Text style={{ color: '#94a3b8', fontSize: 12, marginHorizontal: 10, fontWeight: '600' }}>seu clube de benefícios premium</Text>
+              <View style={{ height: 1, width: 30, backgroundColor: '#1e293b' }} />
             </View>
           </View>
 
-          <View style={{ backgroundColor: isDark ? '#1e293b' : '#fff', padding: 25, borderRadius: 24, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 20, elevation: 5 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 25, justifyContent: 'center' }}>
-              <Text style={{ fontSize: 32 }}>🕹️</Text>
-              <Text style={{ fontSize: 24, fontWeight: '900', color: isDark ? '#fff' : '#1e293b' }}>JOGUE NA MESA</Text>
-            </View>
-
-            <View style={{ marginBottom: 25 }}>
-              <Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 11, fontWeight: 'bold', marginBottom: 10, marginLeft: 5, letterSpacing: 1 }}>WHATSAPP DO CLIENTE</Text>
+          <View style={{ width: '100%', maxWidth: 400, alignSelf: 'center' }}>
+            <View style={{ 
+              backgroundColor: '#1e293b60', 
+              borderRadius: 24, 
+              padding: 4,
+              borderWidth: 1,
+              borderColor: '#1e293b',
+              marginBottom: 20
+            }}>
               <TextInput
                 placeholder="(00) 00000-0000"
-                placeholderTextColor={isDark ? "#475569" : "#94a3b8"}
+                placeholderTextColor="#475569"
                 keyboardType="phone-pad"
                 value={telefone}
                 onChangeText={(text) => {
@@ -493,14 +505,13 @@ export default function MesaRoleta() {
                   }
                 }}
                 style={{
-                  backgroundColor: isDark ? '#020617' : '#f8fafc',
-                  color: isDark ? '#fff' : '#1e293b',
-                  padding: 18,
-                  borderRadius: 15,
-                  fontSize: 18,
+                  backgroundColor: 'transparent',
+                  color: '#fff',
+                  padding: 22,
+                  borderRadius: 20,
+                  fontSize: 24,
                   fontWeight: 'bold',
-                  borderWidth: 1,
-                  borderColor: isDark ? '#1e293b' : '#e2e8f0'
+                  textAlign: 'center',
                 }}
               />
             </View>
@@ -509,22 +520,22 @@ export default function MesaRoleta() {
               onPress={avancarParaNPS}
               style={{
                 backgroundColor: c.roxo,
-                padding: 20,
-                borderRadius: 15,
+                padding: 22,
+                borderRadius: 22,
                 alignItems: 'center',
                 shadowColor: c.roxo,
-                shadowOpacity: 0.3,
+                shadowOpacity: 0.5,
                 shadowRadius: 15,
-                elevation: 5
+                elevation: 8
               }}
             >
-              <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', letterSpacing: 1 }}>CONTINUAR →</Text>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 1 }}>JOGUE NA MESA 🕹️</Text>
             </TouchableOpacity>
-          </View>
 
-          <Text style={{ textAlign: 'center', color: isDark ? '#475569' : '#94a3b8', fontSize: 11, marginTop: 30, fontWeight: 'bold' }}>
-            SPRINGS LOYALTY • v2.0
-          </Text>
+            <Text style={{ textAlign: 'center', color: '#1e293b', fontSize: 10, marginTop: 40, fontWeight: 'bold', letterSpacing: 1 }}>
+              SPRINGS LOYALTY • v2.0
+            </Text>
+          </View>
         </ScrollView>
       )}
 
