@@ -147,15 +147,17 @@ export default function MesaRoleta() {
   };
 
   const temaSistema = useColorScheme();
-  const isDark = temaSistema === 'dark';
+  const [isDark, setIsDark] = useState(temaSistema === 'dark');
+
+  const toggleTheme = () => setIsDark(!isDark);
 
   const c = {
-    bg: isDark ? '#0f1622' : '#F8FAFC',
-    card: isDark ? '#1a2942' : '#FFFFFF',
-    borda: isDark ? '#334155' : '#E2E8F0',
-    texto: isDark ? '#F1F5F9' : '#0F172A',
-    subtexto: isDark ? '#cbd5e1' : '#64748B',
-    roxo: '#a855f7',
+    bg: isDark ? '#020617' : '#f8fafc',
+    card: isDark ? '#1e293b' : '#ffffff',
+    borda: isDark ? '#334155' : '#e2e8f0',
+    texto: isDark ? '#ffffff' : '#1e293b',
+    subtexto: isDark ? '#94a3b8' : '#64748b',
+    roxo: '#8B5CF6',
     neonAmarelo: '#facc15',
   };
 
@@ -461,7 +463,16 @@ export default function MesaRoleta() {
       </Animated.View>
 
       {etapa === 'telefone' && (
-        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 25, width: '100%', backgroundColor: '#020617' }}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 25, width: '100%', backgroundColor: c.bg }}>
+          
+          {/* Botão de Tema Manual */}
+          <TouchableOpacity 
+            onPress={toggleTheme}
+            style={{ position: 'absolute', top: 20, right: 20, zIndex: 100, backgroundColor: c.card, padding: 12, borderRadius: 15, borderWidth: 1, borderColor: c.borda }}
+          >
+            <Text style={{ fontSize: 20 }}>{isDark ? '☀️' : '🌙'}</Text>
+          </TouchableOpacity>
+
           <View style={{ alignItems: 'center', marginBottom: 40 }}>
             <View style={{ position: 'relative' }}>
               <Text style={{ color: '#fff', fontSize: 14, position: 'absolute', top: -15, left: -25 }}>✨</Text>

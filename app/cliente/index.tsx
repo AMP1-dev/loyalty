@@ -661,11 +661,35 @@ export default function Cliente() {
       setRecompensas(rec || []);
     }
 
+    const { data: participacoesMesa } = await supabase.from('roleta_mesa_participacoes').select('*').eq('cliente_cpf', cpfBusca);
+    const { data: resgatesHistorico } = await supabase.from('resgates').select('*').eq('cliente_cpf', cpfBusca);
+
     const historicoMap: any = {};
+    
+    // 🛍️ Compras
     (trans || []).forEach(t => {
-      const chave = `${t.loja_id}_${t.created_at.substring(0, 16)}`;
-      historicoMap[chave] = { id: Math.random().toString(), tipo: 'compra', loja: mapLojas[t.loja_id] || 'Rede PALM', valor: t.valor, pontos: t.pontos_gerados, data: t.created_at };
+      const chave = `compra_${t.id}`;
+      historicoMap[chave] = { id: t.id, tipo: 'compra', icone: '🛍️', titulo: 'Compra Realizada', loja: mapLojas[t.loja_id] || 'Rede PALM', valor: t.valor, pontos: t.pontos_gerados, data: t.created_at };
     });
+
+    // 🎡 Prêmios da Mesa
+    (participacoesMesa || []).forEach(p => {
+      const chave = `mesa_${p.id}`;
+      historicoMap[chave] = { id: p.id, tipo: 'mesa', icone: '🎡', titulo: `Prêmio Mesa: ${p.premio_nome}`, loja: mapLojas[p.loja_id] || 'Rede PALM', valor: 0, pontos: p.nota_nps === 5 ? 'Especial' : p.nota_nps, data: p.created_at };
+    });
+
+    // 🎁 Bônus Pendentes (de retorno/outros)
+    (bonus || []).forEach((b, idx) => {
+      const chave = `bonus_${idx}_${b.loja_id}`;
+      historicoMap[chave] = { id: chave, tipo: 'bonus', icone: '✨', titulo: 'Bônus de Fidelidade', loja: mapLojas[b.loja_id] || 'Rede PALM', valor: 0, pontos: b.pontos, data: new Date().toISOString() };
+    });
+
+    // 📤 Resgates realizados
+    (resgatesHistorico || []).forEach(r => {
+      const chave = `resgate_${r.id}`;
+      historicoMap[chave] = { id: r.id, tipo: 'resgate', icone: '🎁', titulo: `Resgate: ${r.recompensa_nome || 'Prêmio'}`, loja: mapLojas[r.loja_id] || 'Rede PALM', valor: 0, pontos: -r.pontos_usados, data: r.created_at };
+    });
+
     const hist = Object.values(historicoMap);
     hist.sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
     setExtrato(hist);
@@ -1208,28 +1232,34 @@ export default function Cliente() {
 
             {/* EXTRATO */}
             {mostrarExtrato && (
-              <View style={{ marginTop: 10, borderTopWidth: 1, borderTopColor: c.borda, paddingTop: 12 }}>
-                <Text style={{ color: c.texto, fontWeight: '900', fontSize: 14, marginBottom: 12 }}>Histórico de Transações</Text>
-                <ScrollView style={{ maxHeight: 250 }} showsVerticalScrollIndicator={true}>
+              <View style={{ marginTop: 15, borderTopWidth: 1, borderTopColor: c.borda, paddingTop: 16 }}>
+                <Text style={{ color: c.texto, fontWeight: '900', fontSize: 16, marginBottom: 16 }}>Histórico de Atividade</Text>
+                <ScrollView style={{ maxHeight: 350 }} showsVerticalScrollIndicator={true}>
                   {extrato.length > 0 ? (
                     extrato.map((item: any) => (
-                      <View key={item.id} style={{ paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: c.borda, marginBottom: 10 }}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ color: c.texto, fontWeight: '700', fontSize: 12 }}>{item.loja}</Text>
-                            <Text style={{ color: c.subtexto, fontSize: 10, marginTop: 2 }}>
-                              {new Date(item.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })} {new Date(item.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                            </Text>
-                          </View>
-                          <View style={{ alignItems: 'flex-end' }}>
-                            <Text style={{ color: c.neonVerde, fontWeight: '900', fontSize: 12 }}>+{item.pontos} SPG</Text>
-                            <Text style={{ color: c.neonAmarelo, fontSize: 10, marginTop: 2 }}>R$ {Number(item.valor).toFixed(2)}</Text>
-                          </View>
+                      <View key={item.id} style={{
+                        backgroundColor: c.bg, borderRadius: 18, padding: 16, marginBottom: 12,
+                        borderWidth: 1, borderColor: c.borda, flexDirection: 'row', alignItems: 'center'
+                      }}>
+                        <View style={{ width: 45, height: 45, borderRadius: 22, backgroundColor: item.pontos > 0 ? '#10b98115' : item.pontos < 0 ? '#ef444415' : c.roxo + '15', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                          <Text style={{ fontSize: 20 }}>{item.icone || '🏷️'}</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: c.texto, fontWeight: 'bold', fontSize: 14 }}>{item.titulo || (item.tipo === 'compra' ? 'Compra' : 'Atividade')}</Text>
+                          <Text style={{ color: c.subtexto, fontSize: 12 }}>{item.loja} • {new Date(item.data).toLocaleDateString('pt-BR')} {new Date(item.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
+                        </View>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={{ color: item.pontos > 0 ? '#10b981' : item.pontos < 0 ? '#ef4444' : c.roxo, fontWeight: '900', fontSize: 16 }}>
+                            {item.pontos > 0 ? `+${item.pontos}` : item.pontos === 'Especial' ? '⭐' : item.pontos}
+                          </Text>
+                          <Text style={{ color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>SPRINGS</Text>
                         </View>
                       </View>
                     ))
                   ) : (
-                    <Text style={{ color: c.subtexto, textAlign: 'center', fontSize: 12 }}>Nenhuma transação ainda</Text>
+                    <View style={{ alignItems: 'center', padding: 20 }}>
+                      <Text style={{ color: c.subtexto, fontSize: 14 }}>Nenhuma atividade registrada ainda.</Text>
+                    </View>
                   )}
                 </ScrollView>
               </View>
@@ -1489,6 +1519,24 @@ export default function Cliente() {
                       <Text style={{ color: c.texto, fontSize: 26, fontWeight: '900', textAlign: 'center', marginBottom: 6 }}>
                         {premioGanho.nome}
                       </Text>
+                      <View key={item.id} style={{
+                        backgroundColor: c.bg, borderRadius: 18, padding: 16, marginBottom: 12,
+                        borderWidth: 1, borderColor: c.borda, flexDirection: 'row', alignItems: 'center'
+                      }}>
+                        <View style={{ width: 45, height: 45, borderRadius: 22, backgroundColor: item.pontos > 0 ? '#10b98115' : '#ef444415', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                          <Text style={{ fontSize: 20 }}>{item.icone || '🏷️'}</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: c.texto, fontWeight: 'bold', fontSize: 14 }}>{item.titulo || (item.tipo === 'compra' ? 'Compra' : 'Atividade')}</Text>
+                          <Text style={{ color: c.subtexto, fontSize: 12 }}>{item.loja} • {new Date(item.data).toLocaleDateString('pt-BR')} {new Date(item.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
+                        </View>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={{ color: item.pontos > 0 ? '#10b981' : item.pontos < 0 ? '#ef4444' : c.roxo, fontWeight: '900', fontSize: 16 }}>
+                            {item.pontos > 0 ? `+${item.pontos}` : item.pontos}
+                          </Text>
+                          <Text style={{ color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>SPRINGS</Text>
+                        </View>
+                      </View>
                       <Text style={{ color: c.subtexto, fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
                         Não foi dessa vez... Tente novamente na sua próxima visita!
                       </Text>
