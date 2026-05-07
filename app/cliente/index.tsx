@@ -675,7 +675,8 @@ export default function Cliente() {
     // 🎡 Prêmios da Mesa
     (participacoesMesa || []).forEach(p => {
       const chave = `mesa_${p.id}`;
-      historicoMap[chave] = { id: p.id, tipo: 'mesa', icone: '🎡', titulo: `Prêmio Mesa: ${p.premio_nome}`, loja: mapLojas[p.loja_id] || 'Rede PALM', valor: 0, pontos: p.nota_nps === 5 ? 'Especial' : p.nota_nps, data: p.created_at };
+      const pontosExibir = p.premio_valor > 0 ? `+${p.premio_valor}` : 'GIFT';
+      historicoMap[chave] = { id: p.id, tipo: 'mesa', icone: '🎡', titulo: `Prêmio Mesa: ${p.premio_nome}`, loja: mapLojas[p.loja_id] || 'Rede PALM', valor: 0, pontos: pontosExibir, data: p.created_at };
     });
 
     // 🎁 Bônus Pendentes (de retorno/outros)
@@ -1565,24 +1566,6 @@ export default function Cliente() {
                       <Text style={{ color: c.texto, fontSize: 26, fontWeight: '900', textAlign: 'center', marginBottom: 6 }}>
                         {premioGanho.nome}
                       </Text>
-                      <View key={item.id} style={{
-                        backgroundColor: c.bg, borderRadius: 18, padding: 16, marginBottom: 12,
-                        borderWidth: 1, borderColor: c.borda, flexDirection: 'row', alignItems: 'center'
-                      }}>
-                        <View style={{ width: 45, height: 45, borderRadius: 22, backgroundColor: item.pontos > 0 ? '#10b98115' : '#ef444415', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                          <Text style={{ fontSize: 20 }}>{item.icone || '🏷️'}</Text>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ color: c.texto, fontWeight: 'bold', fontSize: 14 }}>{item.titulo || (item.tipo === 'compra' ? 'Compra' : 'Atividade')}</Text>
-                          <Text style={{ color: c.subtexto, fontSize: 12 }}>{item.loja} • {new Date(item.data).toLocaleDateString('pt-BR')} {new Date(item.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
-                        </View>
-                        <View style={{ alignItems: 'flex-end' }}>
-                          <Text style={{ color: item.pontos > 0 ? '#10b981' : item.pontos < 0 ? '#ef4444' : c.roxo, fontWeight: '900', fontSize: 16 }}>
-                            {item.pontos > 0 ? `+${item.pontos}` : item.pontos}
-                          </Text>
-                          <Text style={{ color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>SPRINGS</Text>
-                        </View>
-                      </View>
                       <Text style={{ color: c.subtexto, fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
                         Não foi dessa vez... Tente novamente na sua próxima visita!
                       </Text>
