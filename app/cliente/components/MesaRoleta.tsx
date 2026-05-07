@@ -480,52 +480,47 @@ export default function MesaRoleta() {
               <Text style={{ color: '#fff', fontSize: 12, position: 'absolute', bottom: 10, left: -30 }}>✨</Text>
               <Text style={{ color: '#fff', fontSize: 16, position: 'absolute', bottom: -5, right: -30 }}>✨</Text>
               
-              <Text style={{ color: c.roxo, fontSize: 42, fontWeight: '900', letterSpacing: 1, textAlign: 'center' }}>PALM</Text>
-              <Text style={{ color: c.roxo, fontSize: 42, fontWeight: '900', letterSpacing: 1, textAlign: 'center', marginTop: -10 }}>SPRINGS</Text>
+              <Text style={{ color: c.roxo, fontSize: 48, fontWeight: '900', color: c.roxo, letterSpacing: 2, lineHeight: 46, textAlign: 'center' }}>PALM</Text>
+              <Text style={{ color: c.roxo, fontSize: 48, fontWeight: '900', color: c.roxo, letterSpacing: 2, lineHeight: 46, textAlign: 'center' }}>SPRINGS</Text>
             </View>
             
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 15 }}>
-              <View style={{ height: 1, width: 30, backgroundColor: '#1e293b' }} />
-              <Text style={{ color: '#94a3b8', fontSize: 12, marginHorizontal: 10, fontWeight: '600' }}>seu clube de benefícios premium</Text>
-              <View style={{ height: 1, width: 30, backgroundColor: '#1e293b' }} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 5 }}>
+              <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
+              <Text style={{ color: c.subtexto, fontSize: 13, fontWeight: '600', letterSpacing: 0.5 }}>seu clube de benefícios premium</Text>
+              <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
             </View>
           </View>
 
           <View style={{ width: '100%', maxWidth: 400, alignSelf: 'center' }}>
-            <View style={{ 
-              backgroundColor: '#1e293b60', 
-              borderRadius: 24, 
-              padding: 4,
-              borderWidth: 1,
-              borderColor: '#1e293b',
-              marginBottom: 20
-            }}>
-              <TextInput
-                placeholder="(00) 00000-0000"
-                placeholderTextColor="#475569"
-                keyboardType="phone-pad"
-                value={telefone}
-                onChangeText={(text) => {
-                  const clean = text.replace(/\D/g, '').slice(0, 11);
-                  if (clean.length <= 11) {
-                    const formatted =
-                      clean.length <= 2 ? `(${clean}` :
-                      clean.length <= 7 ? `(${clean.slice(0, 2)}) ${clean.slice(2)}` :
-                      `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
-                    setTelefone(formatted);
-                  }
-                }}
-                style={{
-                  backgroundColor: 'transparent',
-                  color: '#fff',
-                  padding: 22,
-                  borderRadius: 20,
-                  fontSize: 24,
-                  fontWeight: 'bold',
-                  textAlign: 'center',
-                }}
-              />
-            </View>
+            <TextInput
+              placeholder="(00) 00000-0000"
+              placeholderTextColor={c.subtexto}
+              keyboardType="phone-pad"
+              value={telefone}
+              maxLength={15}
+              onChangeText={(text) => {
+                const clean = text.replace(/\D/g, '').slice(0, 11);
+                if (clean.length <= 11) {
+                  const formatted =
+                    clean.length <= 2 ? `(${clean}` :
+                    clean.length <= 7 ? `(${clean.slice(0, 2)}) ${clean.slice(2)}` :
+                    `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
+                  setTelefone(formatted);
+                }
+              }}
+              style={{
+                backgroundColor: c.card,
+                borderColor: c.borda,
+                color: c.texto,
+                padding: 22,
+                borderRadius: 20,
+                fontSize: 32,
+                fontWeight: '900',
+                textAlign: 'center',
+                borderWidth: 2,
+                marginBottom: 20
+              }}
+            />
 
             <TouchableOpacity
               onPress={avancarParaNPS}
