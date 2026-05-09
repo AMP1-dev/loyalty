@@ -2,9 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import {
   Animated, Easing, Platform, ScrollView, StyleSheet, Text, TextInput,
-  TouchableOpacity, useColorScheme, View, Linking
+  TouchableOpacity, useColorScheme, View, Linking, ActivityIndicator
 } from 'react-native';
 import Svg, { Circle, Defs, G, Path, RadialGradient, LinearGradient as SvgLinearGradient, Stop, Text as SvgText, Filter, FeGaussianBlur, FeOffset, FeComponentTransfer, FeFuncA, FeMerge, FeMergeNode } from 'react-native-svg';
 import { supabase } from '../../../lib/supabase';
@@ -365,20 +364,49 @@ export default function MesaRoleta() {
       </Animated.View>
 
       {etapa === 'telefone' && (
-        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 25, width: '100%', backgroundColor: c.bg }}>
-          <TouchableOpacity onPress={toggleTheme} style={{ position: 'absolute', top: 20, right: 20, zIndex: 100, backgroundColor: c.card, padding: 12, borderRadius: 15, borderWidth: 1, borderColor: c.borda }}><Text style={{ fontSize: 20 }}>{isDark ? '☀️' : '🌙'}</Text></TouchableOpacity>
+        <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ padding: 25, paddingTop: 60 }}>
+          
           <View style={{ alignItems: 'center', marginBottom: 40 }}>
-            <Text style={{ color: c.roxo, fontSize: 48, fontWeight: '900', letterSpacing: 2, textAlign: 'center' }}>PALM SPRINGS</Text>
-            <Text style={{ color: c.subtexto, fontSize: 13, fontWeight: '600', marginTop: 5 }}>seu clube de benefícios premium</Text>
+            <Text style={{ fontSize: 48, fontWeight: '900', color: c.roxo }}>PALM</Text>
+            <Text style={{ fontSize: 48, fontWeight: '900', color: c.roxo }}>SPRINGS</Text>
           </View>
-          <View style={{ width: '100%', maxWidth: 400, alignSelf: 'center' }}>
-            <TextInput placeholder="(00) 00000-0000" placeholderTextColor={c.subtexto} keyboardType="phone-pad" value={telefone} maxLength={15} onChangeText={(text) => {
+          
+          <TextInput 
+            placeholder="(00) 00000-0000" 
+            placeholderTextColor={c.subtexto} 
+            value={telefone} 
+            onChangeText={(text) => {
               const clean = text.replace(/\D/g, '').slice(0, 11);
               const formatted = clean.length <= 2 ? `(${clean}` : clean.length <= 7 ? `(${clean.slice(0, 2)}) ${clean.slice(2)}` : `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
               setTelefone(formatted);
-            }} style={{ backgroundColor: c.card, borderColor: c.borda, color: c.texto, padding: 22, borderRadius: 20, fontSize: 32, fontWeight: '900', textAlign: 'center', borderWidth: 2, marginBottom: 20 }} />
-            <TouchableOpacity onPress={avancarParaNPS} style={{ backgroundColor: c.roxo, padding: 22, borderRadius: 22, alignItems: 'center', shadowColor: c.roxo, shadowOpacity: 0.5, shadowRadius: 15, elevation: 8 }}><Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>JOGUE NA MESA 🕹️</Text></TouchableOpacity>
-          </View>
+            }} 
+            keyboardType="phone-pad" 
+            maxLength={15} 
+            style={[styles.inputGigante, { backgroundColor: c.card, borderColor: c.borda, color: c.texto }]} 
+          />
+          
+          <TouchableOpacity 
+            style={styles.buttonBig} 
+            onPress={avancarParaNPS} 
+            activeOpacity={0.8} 
+            disabled={carregando}
+          >
+            {carregando ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonTextBig}>JOGUE NA MESA 🕹️</Text>}
+          </TouchableOpacity>
+          
+          <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 40 }}>{APP_VERSION}</Text>
+
+          {toast.visivel && (
+            <Animated.View style={{
+              position: 'absolute', top: toastAnim as any, left: 20, right: 20,
+              backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444',
+              padding: 16, borderRadius: 12, elevation: 10, zIndex: 9999,
+              flexDirection: 'row', alignItems: 'center',
+              transform: [{ translateY: toastAnim as any }]
+            }}>
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14, flex: 1 }}>{toast.mensagem}</Text>
+            </Animated.View>
+          )}
         </ScrollView>
       )}
 
@@ -428,4 +456,9 @@ export default function MesaRoleta() {
   );
 }
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  inputGigante: { padding: 22, borderRadius: 20, fontSize: 32, fontWeight: '900', textAlign: 'center', borderWidth: 2, marginBottom: 20 },
+  buttonBig: { padding: 22, borderRadius: 20, alignItems: 'center', backgroundColor: '#10b981' },
+  buttonTextBig: { color: '#fff', fontWeight: '900', fontSize: 16 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+});

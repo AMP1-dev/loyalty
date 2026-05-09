@@ -5,6 +5,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated, Easing,
   Modal,
   Platform, ScrollView, StyleSheet,
@@ -13,6 +14,15 @@ import {
 } from 'react-native';
 import Svg, { Circle, Defs, FeComponentTransfer, FeFuncA, FeGaussianBlur, FeMerge, FeMergeNode, FeOffset, Filter, G, Path, RadialGradient, Stop, LinearGradient as SvgLinearGradient, Text as SvgText } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
+import {
+  calcularSaldoCliente,
+  gerarToken,
+  tokenJaExiste,
+  tokenExpirou,
+  aplicarTaxa,
+  buscarCaixaAtivaCliente,
+  carregarHistoricoExchange
+} from '@/lib/exchange';
 import MesaRoleta from './components/MesaRoleta';
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
@@ -277,6 +287,19 @@ export default function Cliente() {
   const resultAnim = useRef(new Animated.Value(0)).current;
   const toastAnim = useRef(new Animated.Value(-150)).current;
   const [toast, setToast] = useState({ visible: false, message: '', tipo: 'sucesso' });
+
+  // ════════════════════════════════════════════════════════════════════
+  // STATES DO EXCHANGE
+  // ════════════════════════════════════════════════════════════════════
+  const [mostrarExchange, setMostrarExchange] = useState(false);
+  const [saldosPorLoja, setSaldosPorLoja] = useState<any[]>([]);
+  const [selecaoPontos, setSelecaoPontos] = useState<any>({}); // { loja_id: pontos_selecionados }
+  const [totalSelecionado, setTotalSelecionado] = useState(0);
+  const [lojasSelecionadas, setLojasSelecionadas] = useState<string[]>([]);
+  const [accordionAberto, setAccordionAberto] = useState<string | null>(null);
+  const [carregandoSaldos, setCarregandoSaldos] = useState(false);
+  const [caixaAtiva, setCaixaAtiva] = useState<any>(null); // Pontos temporários no balcão
+
   const temaSistema = useColorScheme();
   const [isDark, setIsDark] = useState(temaSistema === 'dark');
 
@@ -386,27 +409,98 @@ export default function Cliente() {
     }
   };
 
-  const gerarTokenIntercambio = async (selecionadas: any[]) => {
-    setCarregando(true);
-    const token = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const total = selecionadas.reduce((a, s) => a + s.pontos, 0);
-    const { data: tk, error } = await supabase.from('intercambio_tokens').insert([{ token, cliente_cpf: cpf.replace(/\D/g, ''), total_pontos_origem: total }]).select().single();
-    if (error) { mostrarToast('Erro ao gerar token', 'erro'); setCarregando(false); return; }
-    for (const s of selecionadas) {
-      await supabase.from('intercambio_itens').insert([{ token_id: tk.id, loja_origem_id: s.id, pontos: s.pontos }]);
-      await supabase.from('transacoes').insert([{ cliente_cpf: cpf.replace(/\D/g, ''), loja_id: s.id, pontos_usados: s.pontos, descricao: `RESERVA INTERCAMBIO (${token})` }]);
+  // ════════════════════════════════════════════════════════════════════
+  // 1. CARREGAR SALDOS POR LOJA
+  // ════════════════════════════════════════════════════════════════════
+  const carregarSaldosPorLoja = async () => {
+    try {
+      setCarregandoSaldos(true);
+      const clean = cpf.replace(/\D/g, '');
+      const { data: lojas } = await supabase.from('lojas').select('id, nome');
+      if (!lojas) return;
+      const saldos = [];
+      for (const loja of lojas) {
+        const saldo = await calcularSaldoCliente(clean, loja.id);
+        if (saldo > 0) {
+          saldos.push({
+            id: loja.id,
+            nome: loja.nome,
+            saldo_total: saldo,
+            saldo_selecionado: selecaoPontos[loja.id] || 0
+          });
+        }
+      }
+      setSaldosPorLoja(saldos);
+    } catch (error) {
+      console.error('Erro ao carregar saldos:', error);
+      mostrarToast('Erro ao carregar saldos.', 'erro');
+    } finally {
+      setCarregandoSaldos(false);
     }
-    setTokenAtivo(tk); setMostraIntercambio(false); setCarregando(false); carregarDados(cpf.replace(/\D/g, ''));
   };
 
-  const cancelarToken = async () => {
-    if (!tokenAtivo) return;
-    setCarregando(true);
-    const { data: itens } = await supabase.from('intercambio_itens').select('*').eq('token_id', tokenAtivo.id);
-    for (const i of itens || []) await supabase.from('transacoes').insert([{ cliente_cpf: cpf.replace(/\D/g, ''), loja_id: i.loja_origem_id, pontos_gerados: i.pontos, descricao: `CANCELAMENTO (${tokenAtivo.token})` }]);
-    await supabase.from('intercambio_tokens').update({ status: 'cancelado' }).eq('id', tokenAtivo.id);
-    setTokenAtivo(null); setCarregando(false); carregarDados(cpf.replace(/\D/g, ''));
+  // ════════════════════════════════════════════════════════════════════
+  // 2. ATUALIZAR SELEÇÃO DE PONTOS
+  // ════════════════════════════════════════════════════════════════════
+  const atualizarSelecao = (lojaId: string, novoValor: number) => {
+    const saldoLoja = saldosPorLoja.find(s => s.id === lojaId)?.saldo_total || 0;
+    const valorLimitado = Math.min(Math.max(0, novoValor), saldoLoja);
+    setSelecaoPontos((prev: any) => ({ ...prev, [lojaId]: valorLimitado }));
+    const novasSelecoes = { ...selecaoPontos, [lojaId]: valorLimitado };
+    const novasLojas = Object.keys(novasSelecoes).filter(id => novasSelecoes[id] > 0);
+    setLojasSelecionadas(novasLojas);
+    const total = Object.values(novasSelecoes).reduce((sum: number, val: any) => sum + val, 0);
+    setTotalSelecionado(total);
   };
+
+  // ════════════════════════════════════════════════════════════════════
+  // 3. GERAR TOKEN COM SELEÇÃO
+  // ════════════════════════════════════════════════════════════════════
+  const gerarTokenExchange = async () => {
+    if (totalSelecionado === 0) {
+      mostrarToast('Selecione pelo menos 1 ponto para importar.', 'erro');
+      return;
+    }
+    const clean = cpf.replace(/\D/g, '');
+    let token = gerarToken();
+    let tentativas = 0;
+    while (await tokenJaExiste(token) && tentativas < 10) { token = gerarToken(); tentativas++; }
+    if (tentativas >= 10) { mostrarToast('Erro ao gerar token. Tente novamente.', 'erro'); return; }
+
+    try {
+      const { data: tk, error: tokenError } = await supabase.from('intercambio_tokens').insert([{
+        token, cliente_cpf: clean, total_pontos_original: totalSelecionado, total_pontos_a_transferir: totalSelecionado, status: 'pendente',
+        criado_em: new Date().toISOString(), expira_em: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
+      }]).select().single();
+      if (tokenError) throw tokenError;
+
+      const itens = lojasSelecionadas.map(lojaId => ({
+        token_id: tk.id, cliente_cpf: clean, loja_origem_id: lojaId,
+        pontos_selecionados: selecaoPontos[lojaId], saldo_disponivel_origem: saldosPorLoja.find(s => s.id === lojaId)?.saldo_total || 0, status: 'pendente'
+      }));
+      const { error: itensError } = await supabase.from('intercambio_itens').insert(itens);
+      if (itensError) throw itensError;
+
+      mostrarToast(`✅ Código gerado: ${token}`, 'sucesso');
+      Alert.alert('🎉 Código de Importação Gerado!', `Código: ${token}\n\nLeve este código ao caixa da loja para importar ${totalSelecionado} SPG`,
+        [{ text: 'OK', onPress: () => { setMostrarExchange(false); setSelecaoPontos({}); setLojasSelecionadas([]); setTotalSelecionado(0); setAccordionAberto(null); } }]
+      );
+    } catch (error) {
+      console.error('Erro ao gerar token:', error);
+      mostrarToast('Erro ao gerar token.', 'erro');
+    }
+  };
+
+  const carregarCaixaAtiva = async () => {
+    try {
+      const clean = cpf.replace(/\D/g, '');
+      const caixa = await buscarCaixaAtivaCliente(clean);
+      setCaixaAtiva(caixa);
+    } catch (error) { console.error('Erro ao carregar caixa:', error); }
+  };
+
+  useEffect(() => { if (cpf) carregarCaixaAtiva(); }, [cpf]);
+
 
   const entrarFila = async () => {
     const clean = cpf.replace(/\D/g, '');
@@ -571,6 +665,27 @@ export default function Cliente() {
           <Text style={{ color: c.neonAmarelo, fontSize: 18, fontWeight: 'bold', marginTop: 10 }}>💰 R$ {cashback.toFixed(2)}</Text>
         </View>
 
+        {caixaAtiva && (
+          <View style={{ backgroundColor: `${c.neonVerde}20`, borderRadius: 12, padding: 16, marginVertical: 15, borderWidth: 2, borderColor: c.neonVerde }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ color: c.neonVerde, fontWeight: '900', fontSize: 16 }}>💰 PONTOS EM IMPORTAÇÃO</Text>
+              <Text style={{ color: c.neonVerde, fontSize: 12, fontWeight: '600' }}>{Math.round((new Date(caixaAtiva.expira_em).getTime() - new Date().getTime()) / 60000)}min</Text>
+            </View>
+            <Text style={{ color: c.texto, fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>{caixaAtiva.pontos_disponiveis} SPG disponíveis</Text>
+            <Text style={{ color: c.subtexto, fontSize: 11, marginBottom: 12 }}>Taxa aplicada: {caixaAtiva.taxa_em_pontos} SPG</Text>
+            <View style={{ height: 1, backgroundColor: c.borda, marginBottom: 12 }} />
+            <Text style={{ color: c.subtexto, fontSize: 10 }}>ℹ️ Use estes pontos para resgatar brindes. Válido por 24h após validação do caixa.</Text>
+          </View>
+        )}
+
+        <TouchableOpacity
+          onPress={() => { carregarSaldosPorLoja(); setMostrarExchange(true); }}
+          style={{ backgroundColor: c.roxo, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, marginVertical: 10 }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12, textAlign: 'center' }}>🔄 IMPORTAR PONTOS DE OUTRAS LOJAS</Text>
+        </TouchableOpacity>
+
+
         {loja_id && <RoletaCTA onPress={abrirRoleta} isDark={isDark} c={c} />}
 
         <Text style={{ color: c.texto, fontSize: 18, fontWeight: 'bold', marginTop: 30, marginBottom: 15 }}>🎁 Brindes Disponíveis</Text>
@@ -587,27 +702,51 @@ export default function Cliente() {
         </ScrollView>
       </ScrollView>
 
-      <Modal visible={mostraIntercambio} transparent animationType="slide">
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', padding: 20 }}>
-          <View style={{ backgroundColor: c.card, borderRadius: 24, padding: 24 }}>
-            <Text style={{ color: c.texto, fontSize: 20, fontWeight: 'bold', marginBottom: 20 }}>🌐 Intercâmbio de Pontos</Text>
-            {tokenAtivo ? (
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{ color: c.subtexto }}>CÓDIGO DE RESGATE:</Text>
-                <Text style={{ color: c.neonVerde, fontSize: 40, fontWeight: 'bold', marginVertical: 20 }}>{tokenAtivo.token}</Text>
-                <TouchableOpacity onPress={cancelarToken} style={{ padding: 10 }}><Text style={{ color: '#ef4444' }}>CANCELAR</Text></TouchableOpacity>
-              </View>
-            ) : (
-              <ScrollView>
-                {saldoPorLoja.map(s => (
-                  <TouchableOpacity key={s.id} style={{ padding: 15, borderBottomWidth: 1, borderColor: c.borda }} onPress={() => gerarTokenIntercambio([s])}>
-                    <Text style={{ color: c.texto }}>{s.nome}</Text>
-                    <Text style={{ color: c.neonVerde }}>{s.pontos} SPG</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-            <TouchableOpacity onPress={() => setMostraIntercambio(false)} style={{ marginTop: 20, alignItems: 'center' }}><Text style={{ color: c.subtexto }}>FECHAR</Text></TouchableOpacity>
+      <Modal visible={mostrarExchange} transparent animationType="slide">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: c.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '90%', borderWidth: 1, borderColor: c.borda }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Text style={{ fontSize: 20, fontWeight: '900', color: c.neonVerde }}>🔄 IMPORTAR PONTOS</Text>
+              <TouchableOpacity onPress={() => setMostrarExchange(false)}><Text style={{ fontSize: 24, color: '#ef4444' }}>✕</Text></TouchableOpacity>
+            </View>
+            <Text style={{ color: c.subtexto, fontSize: 12, marginBottom: 15 }}>Selecione quanto você quer trazer de cada loja:</Text>
+            <ScrollView nestedScrollEnabled style={{ marginBottom: 20, maxHeight: 400 }}>
+              {carregandoSaldos ? <ActivityIndicator color={c.neonVerde} size="large" style={{ marginVertical: 20 }} /> : saldosPorLoja.length === 0 ? <Text style={{ color: c.subtexto, textAlign: 'center', marginVertical: 20 }}>Você não tem pontos em outras lojas.</Text> : (
+                saldosPorLoja.map((loja) => (
+                  <View key={loja.id} style={{ marginBottom: 12 }}>
+                    <TouchableOpacity onPress={() => setAccordionAberto(accordionAberto === loja.id ? null : loja.id)} style={{ backgroundColor: c.bg, borderRadius: 12, padding: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: lojasSelecionadas.includes(loja.id) ? c.neonVerde : c.borda }}>
+                      <View><Text style={{ color: c.texto, fontWeight: '700', fontSize: 14 }}>{loja.nome}</Text><Text style={{ color: c.neonVerde, fontWeight: '900', fontSize: 16, marginTop: 4 }}>{loja.saldo_total} SPG</Text></View>
+                      <Text style={{ fontSize: 24, color: c.subtexto }}>{accordionAberto === loja.id ? '▼' : '▶'}</Text>
+                    </TouchableOpacity>
+                    {accordionAberto === loja.id && (
+                      <View style={{ backgroundColor: c.bg, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, padding: 14, borderWidth: 1, borderTopWidth: 0, borderColor: c.neonVerde, marginBottom: 10 }}>
+                        <Text style={{ color: c.subtexto, fontSize: 11, fontWeight: '600', marginBottom: 8 }}>Quanto você quer trazer?</Text>
+                        <TextInput value={selecaoPontos[loja.id]?.toString() || ''} onChangeText={(text) => atualizarSelecao(loja.id, parseInt(text) || 0)} placeholder="0" placeholderTextColor={c.subtexto} keyboardType="numeric" style={{ backgroundColor: c.card, borderWidth: 1, borderColor: c.borda, borderRadius: 8, padding: 12, color: c.texto, fontSize: 16, fontWeight: 'bold', marginBottom: 12 }} />
+                        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                          {[0.25, 0.5, 0.75, 1.0].map((percentual) => {
+                            const valor = Math.floor(loja.saldo_total * percentual);
+                            const isSelected = selecaoPontos[loja.id] === valor;
+                            return (
+                              <TouchableOpacity key={percentual} onPress={() => atualizarSelecao(loja.id, valor)} style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, backgroundColor: isSelected ? c.neonVerde : c.card, borderWidth: 1, borderColor: isSelected ? c.neonVerde : c.borda }}>
+                                <Text style={{ fontSize: 11, fontWeight: '600', color: isSelected ? '#0f172a' : c.texto }}>{Math.round(percentual * 100)}% ({valor})</Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                        {selecaoPontos[loja.id] > 0 && <View style={{ backgroundColor: `${c.neonVerde}20`, borderRadius: 8, padding: 10, borderWidth: 1, borderColor: c.neonVerde }}><Text style={{ color: c.neonVerde, fontWeight: '700', fontSize: 12 }}>✓ Selecionado: {selecaoPontos[loja.id]} SPG</Text></View>}
+                      </View>
+                    )}
+                  </View>
+                ))
+              )}
+            </ScrollView>
+            <View style={{ backgroundColor: `${c.neonVerde}20`, borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 2, borderColor: c.neonVerde }}>
+              <Text style={{ color: c.subtexto, fontSize: 11, fontWeight: '600', marginBottom: 6 }}>TOTAL A IMPORTAR</Text>
+              <Text style={{ color: c.neonVerde, fontSize: 32, fontWeight: '900' }}>{totalSelecionado} SPG</Text>
+            </View>
+            <TouchableOpacity onPress={gerarTokenExchange} disabled={totalSelecionado === 0} style={{ backgroundColor: totalSelecionado > 0 ? c.neonVerde : c.borda, borderRadius: 12, paddingVertical: 14, alignItems: 'center' }}>
+              <Text style={{ color: totalSelecionado > 0 ? '#0f172a' : c.subtexto, fontWeight: '900', fontSize: 16 }}>📱 GERAR CÓDIGO {totalSelecionado > 0 ? '✓' : '(SELECIONE)'}</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

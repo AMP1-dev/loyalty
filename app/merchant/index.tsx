@@ -4,6 +4,13 @@ import { supabase } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
 import QRCode from 'react-native-qrcode-svg';
 import Svg, { Polyline } from 'react-native-svg';
+import {
+  calcularSaldoCliente,
+  buscarTokenCompleto,
+  aplicarTaxa,
+  tokenExpirou,
+  buscarCaixaAtivaCliente
+} from '@/lib/exchange';
 
 const APP_VERSION = "v5.8.0-exchange";
 const { width } = Dimensions.get('window');
@@ -102,6 +109,16 @@ export default function MerchantPanel() {
   const [mostrarIntercambio, setMostrarIntercambio] = useState(false);
   const [tokenIntercambio, setTokenIntercambio] = useState('');
   const [carregandoIntercambio, setCarregandoIntercambio] = useState(false);
+
+  // ════════════════════════════════════════════════════════════════════
+  // STATES DO EXCHANGE (MERCHANT)
+  // ════════════════════════════════════════════════════════════════════
+  const [mostrarValidarToken, setMostrarValidarToken] = useState(false);
+  const [tokenParaValidar, setTokenParaValidar] = useState('');
+  const [carregandoValidacao, setCarregandoValidacao] = useState(false);
+  const [caixaAtiva, setCaixaAtiva] = useState<any>(null);
+  const [caixasAnteriores, setCaixasAnteriores] = useState<any[]>([]);
+
 
   // --- FUNÇÕES MESA & REMARKETING ---
   const buscarParticipacoesMesa = async () => {
@@ -807,21 +824,61 @@ export default function MerchantPanel() {
     setTimeout(() => { setMostrarConfig(false); }, 1000);
   };
 
-  const resgatarTokenIntercambio = async () => {
-    if (!tokenIntercambio || tokenIntercambio.length < 6) { mostrarToast('Digite um código de 6 dígitos.', 'erro'); return; }
-    setCarregandoIntercambio(true);
+  const validarTokenExchange = async () => {
+    if (tokenParaValidar.length !== 6) { mostrarToast('Token deve ter 6 dígitos.', 'erro'); return; }
+    setCarregandoValidacao(true);
     try {
-      const { data: tokenData, error: tokenError } = await supabase.from('intercambio_tokens').select('*, intercambio_itens(*)').eq('token', tokenIntercambio.toUpperCase()).eq('status', 'pendente').single();
-      if (tokenError || !tokenData) { mostrarToast('Token inválido ou utilizado.', 'erro'); setCarregandoIntercambio(false); return; }
-      const taxaDesagio = Number(config.intercambio_taxa) || 0.1;
-      const pontosConvertidos = Math.floor(tokenData.total_pontos_origem * (1 - taxaDesagio));
-      const { error: updateError } = await supabase.from('intercambio_tokens').update({ status: 'resgatado', loja_destino_id: lojaId, total_pontos_destino: pontosConvertidos }).eq('id', tokenData.id);
-      if (updateError) throw updateError;
-      await supabase.from('transacoes').insert([{ cliente_cpf: tokenData.cliente_cpf, loja_id: lojaId, valor_venda: 0, pontos_gerados: pontosConvertidos, descricao: `IMPORTAÇÃO REDE: ${tokenData.token}` }]);
-      mostrarToast(`✅ ${pontosConvertidos} SPG importados!`, 'sucesso');
-      setMostrarIntercambio(false); setTokenIntercambio(''); buscarFila();
-    } catch (err: any) { mostrarToast('Erro no intercâmbio.', 'erro'); } finally { setCarregandoIntercambio(false); }
+      const tokenData = await buscarTokenCompleto(tokenParaValidar);
+      if (!tokenData || tokenData.status !== 'pendente') { mostrarToast('Token inválido ou já utilizado.', 'erro'); setCarregandoValidacao(false); return; }
+      if (tokenExpirou(tokenData.expira_em)) { mostrarToast('⏰ Token expirou (máximo 48h).', 'erro'); setCarregandoValidacao(false); return; }
+      for (const item of tokenData.intercambio_itens) {
+        const saldo = await calcularSaldoCliente(tokenData.cliente_cpf, item.loja_origem_id);
+        if (saldo < item.pontos_selecionados) { mostrarToast(`⚠️ Saldo insuficiente nesta loja. Disponível: ${saldo}, Necessário: ${item.pontos_selecionados}`, 'erro'); setCarregandoValidacao(false); return; }
+      }
+      const taxaDesagio = 0.1; 
+      const { pontos_liquido, taxa_pontos } = aplicarTaxa(tokenData.total_pontos_a_transferir, taxaDesagio);
+      const { data: caixa, error: caixaError } = await supabase.from('intercambio_caixa').insert([{
+        token_id: tokenData.id, cliente_cpf: tokenData.cliente_cpf, loja_destino_id: lojaId, pontos_disponiveis: pontos_liquido, pontos_original: tokenData.total_pontos_a_transferir,
+        taxa_aplicada_percentual: taxaDesagio, taxa_em_pontos: taxa_pontos, status: 'ativo', criado_em: new Date().toISOString(),
+        expira_em: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), merchant_validou_em: new Date().toISOString(), merchant_validou_usuario: operadorLogado
+      }]).select().single();
+      if (caixaError) throw caixaError;
+      for (const item of tokenData.intercambio_itens) { await supabase.from('transacoes').insert([{ cliente_cpf: tokenData.cliente_cpf, loja_id: item.loja_origem_id, pontos_usados: item.pontos_selecionados, pontos_gerados: 0, descricao: `[RESERVA EXCHANGE] Token: ${tokenParaValidar}` }]); }
+      setCaixaAtiva(caixa); mostrarToast(`✅ Token validado!\n${pontos_liquido} SPG na caixa\nTaxa: ${taxa_pontos} SPG`, 'sucesso');
+      setTokenParaValidar(''); setMostrarValidarToken(false);
+    } catch (error) { console.error('Erro ao validar token:', error); mostrarToast('Erro ao validar token.', 'erro'); } finally { setCarregandoValidacao(false); }
   };
+
+  const resgatarBrinde = async (brinde: any, clienteCpf: string) => {
+    try {
+      const clean = clienteCpf.replace(/\D/g, '');
+      const activeCaixa = await buscarCaixaAtivaCliente(clean);
+      let usouCaixa = false;
+      if (activeCaixa && activeCaixa.pontos_disponiveis >= brinde.custo_pontos) {
+        await supabase.from('resgates').insert([{ cliente_cpf: clean, loja_id: lojaId, recompensa_id: brinde.id, pontos_usados: brinde.custo_pontos, valor_cashback: 0, descricao: `Resgate via EXCHANGE` }]);
+        const novoSaldo = activeCaixa.pontos_disponiveis - brinde.custo_pontos;
+        await supabase.from('intercambio_caixa').update({ pontos_disponiveis: novoSaldo, status: novoSaldo > 0 ? 'parcialmente_usado' : 'vazio', updated_at: new Date().toISOString() }).eq('id', activeCaixa.id);
+        const { data: itens } = await supabase.from('intercambio_itens').select('*').eq('token_id', activeCaixa.token_id);
+        for (const item of itens || []) {
+          await supabase.from('intercambio_historico_detalhado').insert([{
+            cliente_cpf: clean, token_id: activeCaixa.token_id, caixa_id: activeCaixa.id, loja_origem_id: item.loja_origem_id, loja_destino_id: activeCaixa.loja_destino_id,
+            pontos_saida_bruto: item.pontos_selecionados, taxa_desagio_percentual: activeCaixa.taxa_aplicada_percentual, taxa_em_pontos: activeCaixa.taxa_em_pontos,
+            pontos_chegada_liquido: activeCaixa.pontos_disponiveis, premio_resgatado_id: brinde.id, premio_resgatado_nome: brinde.nome, motivo: 'resgate_brinde', status_transacao: 'sucesso'
+          }]);
+        }
+        usouCaixa = true;
+      } else {
+        await supabase.from('resgates').insert([{ cliente_cpf: clean, loja_id: lojaId, recompensa_id: brinde.id, pontos_usados: brinde.custo_pontos }]);
+      }
+      mostrarToast(`✅ Brinde ${brinde.nome} resgatado!`, 'sucesso');
+      if (usouCaixa && activeCaixa) {
+        const novoSaldo = activeCaixa.pontos_disponiveis - brinde.custo_pontos;
+        if (novoSaldo <= 0) setCaixaAtiva(null);
+      }
+      buscarFila(); buscarStats();
+    } catch (error) { console.error('Erro ao resgatar:', error); mostrarToast('Erro ao resgatar brinde.', 'erro'); }
+  };
+
 
   const buscarRewards = async () => {
     if (!lojaId) return;
@@ -1330,7 +1387,9 @@ export default function MerchantPanel() {
             <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center' }}>
                <TouchableOpacity onPress={() => { buscarFila(); buscarStats(); buscarAvaliacoesERoleta(); mostrarToast('Dados Sincronizados!', 'sucesso'); }} style={{ backgroundColor: '#1e293b', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#334155' }}><Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold' }}>🔄 SINCRONIZAR</Text></TouchableOpacity>
                <TouchableOpacity onPress={() => { setMostrarMesa(true); setMostrarConfig(false); setMostrarRemarketing(false); }}><Text style={[styles.headerButton, { color: mostrarMesa ? '#8B5CF6' : '#94A3B8' }]}>📱 Mesa</Text></TouchableOpacity>
+               <TouchableOpacity onPress={() => setMostrarValidarToken(true)} style={{ backgroundColor: '#8b5cf6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}><Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>🌐 IMPORTAR REDE</Text></TouchableOpacity>
                <TouchableOpacity onPress={() => { setMostrarRemarketing(true); setMostrarMesa(false); setMostrarConfig(false); }}><Text style={[styles.headerButton, { color: mostrarRemarketing ? '#8B5CF6' : '#94A3B8' }]}>📞 Remarketing</Text></TouchableOpacity>
+
                <TouchableOpacity onPress={() => { setMostrarConfig(!mostrarConfig); setMostrarMesa(false); setMostrarRemarketing(false); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Text style={styles.headerButton}>⚙️ Config</Text><Text style={{ color: '#64748b', fontSize: 9, fontWeight: 'bold', backgroundColor: '#1e293b', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>{APP_VERSION}</Text></TouchableOpacity>
                <TouchableOpacity onPress={() => { localStorage.clear(); router.replace('/login'); }}><Text style={styles.closeText}>✕ SAIR</Text></TouchableOpacity>
             </View>
@@ -1421,7 +1480,28 @@ export default function MerchantPanel() {
                       {temBonus > 0 && (<View style={{ flex: 1, minWidth: 250, flexDirection: 'row', alignItems: 'center', backgroundColor: '#facc1515', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#facc1530' }}><Switch value={usarBonus[c.id] !== false} onValueChange={(v) => setUsarBonus((prev: any) => ({ ...prev, [c.id]: v }))} /><Text style={{ color: '#facc15', marginLeft: 12, fontWeight: 'bold', fontSize: 16 }}>🎁 BÔNUS: +{temBonus} SPG</Text></View>)}
                       {brindes.map((b: any) => (<View key={b.id} style={{ flex: 1, minWidth: 250, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ec489915', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#ec489930' }}><Text style={{ color: '#ec4899', fontWeight: 'bold', fontSize: 15 }}>🏆 Brinde: {b.nome_brinde}</Text><TouchableOpacity onPress={() => entregarBrinde(b.id, c.cliente_cpf)} style={{ backgroundColor: '#ec4899', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>ENTREGAR</Text></TouchableOpacity></View>))}
                       {(premiosMesaPendentes[c.cliente_cpf] || []).map((p: any) => (<View key={p.id} style={{ flex: 1, minWidth: 250, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#8b5cf615', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#8b5cf630' }}><Text style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: 15 }}>🎡 MESA: {p.premio_nome}</Text><TouchableOpacity onPress={() => resgatarPremioMesa(p.id, c.cliente_cpf)} style={{ backgroundColor: '#8b5cf6', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>RESGATAR</Text></TouchableOpacity></View>))}
+                      
+                      {/* CATÁLOGO DE PONTOS */}
+                      {rewards.map((r: any) => {
+                        const saldoTotal = (cashbacks[c.cliente_cpf]?.pontos || 0) + (caixaAtiva?.cliente_cpf === c.cliente_cpf ? (caixaAtiva?.pontos_disponiveis || 0) : 0);
+                        return (
+                          <View key={r.id} style={{ flex: 1, minWidth: 250, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#10b98110', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#10b98130' }}>
+                            <View>
+                              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>{r.nome}</Text>
+                              <Text style={{ color: '#10b981', fontSize: 12 }}>{r.custo_pontos} SPG</Text>
+                            </View>
+                            <TouchableOpacity 
+                              disabled={saldoTotal < r.custo_pontos}
+                              onPress={() => resgatarBrinde(r, c.cliente_cpf)} 
+                              style={{ backgroundColor: saldoTotal >= r.custo_pontos ? '#10b981' : '#334155', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10 }}
+                            >
+                              <Text style={{ color: saldoTotal >= r.custo_pontos ? '#0f172a' : '#94a3b8', fontWeight: 'bold', fontSize: 12 }}>RESGATAR</Text>
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      })}
                     </View>
+
                   );
                 }
                 return null;
@@ -1469,8 +1549,9 @@ export default function MerchantPanel() {
             <View style={styles.card} ref={manualInputRef}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                 <Text style={styles.title}>✍️ Lançamento Manual</Text>
-                <TouchableOpacity onPress={() => setMostrarIntercambio(true)} style={{ backgroundColor: '#8b5cf6', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 }}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>🌐 IMPORTAR</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => setMostrarValidarToken(true)} style={{ backgroundColor: '#8b5cf6', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 }}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>🔑 VALIDAR IMPORTAÇÃO</Text></TouchableOpacity>
               </View>
+
               <TextInput placeholder="WhatsApp do Cliente" placeholderTextColor="#94A3B8" keyboardType="numeric" value={formatarTelefone(telefoneManual)} onChangeText={(t) => { setTelefoneManual(t); const clean = t.replace(/\D/g, ''); if (clean.length >= 10) buscarFinanceiroDetalhado(clean, 'manual'); }} style={styles.input} />
               <TextInput placeholder="Valor: R$ 0,00" placeholderTextColor="#94A3B8" keyboardType="numeric" value={valorManual ? (parseInt(valorManual, 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : ''} onChangeText={(t) => setValorManual(t.replace(/\D/g, ''))} style={styles.inputValor} onSubmitEditing={atenderManual} />
               <TouchableOpacity style={[styles.buttonCenter, { backgroundColor: '#10b981' }]} onPress={atenderManual}><Text style={styles.buttonText}>LANÇAR VENDA MANUAL</Text></TouchableOpacity>
@@ -1531,22 +1612,37 @@ export default function MerchantPanel() {
         </View>
       </ScrollView>
 
-      <IntercambioModal visible={mostrarIntercambio} onClose={() => setMostrarIntercambio(false)} token={tokenIntercambio} setToken={setTokenIntercambio} onResgatar={resgatarTokenIntercambio} carregando={carregandoIntercambio} config={config} />
+      {mostrarValidarToken && (
+        <Modal visible={mostrarValidarToken} transparent animationType="fade">
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.9)' }}>
+            <View style={{ backgroundColor: '#1e293b', borderRadius: 20, padding: 24, width: '85%', maxWidth: 400, borderWidth: 1, borderColor: '#334155' }}>
+              <Text style={{ fontSize: 18, fontWeight: '900', color: '#10b981', marginBottom: 20, textAlign: 'center' }}>🔑 VALIDAR TOKEN</Text>
+              <Text style={{ color: '#94a3b8', fontSize: 12, marginBottom: 16, textAlign: 'center' }}>Digite os 6 dígitos que o cliente passou:</Text>
+              <TextInput placeholder="000000" placeholderTextColor="#94a3b8" value={tokenParaValidar.toUpperCase()} onChangeText={(t) => setTokenParaValidar(t.replace(/[^A-Z0-9]/g, '').slice(0, 6))} maxLength={6} style={{ backgroundColor: '#0f172a', borderWidth: 2, borderColor: '#10b981', color: '#fff', padding: 16, fontSize: 28, fontWeight: 'bold', textAlign: 'center', borderRadius: 12, marginBottom: 20, letterSpacing: 4 }} />
+              <TouchableOpacity onPress={validarTokenExchange} disabled={tokenParaValidar.length !== 6 || carregandoValidacao} style={{ backgroundColor: tokenParaValidar.length === 6 ? '#10b981' : '#334155', padding: 14, borderRadius: 12, alignItems: 'center', marginBottom: 12 }}>{carregandoValidacao ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#0f172a', fontWeight: '900', fontSize: 14 }}>✓ VALIDAR</Text>}</TouchableOpacity>
+              <TouchableOpacity onPress={() => { setMostrarValidarToken(false); setTokenParaValidar(''); }} disabled={carregandoValidacao}><Text style={{ color: '#ef4444', textAlign: 'center', fontWeight: 'bold' }}>CANCELAR</Text></TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {caixaAtiva && (
+        <View style={{ position: 'absolute', bottom: 20, right: 20, width: 300, backgroundColor: '#1e293b', borderRadius: 12, padding: 16, borderWidth: 2, borderColor: '#10b981', elevation: 10, zIndex: 10000 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <Text style={{ color: '#10b981', fontWeight: '900', fontSize: 16 }}>💰 CAIXA ATIVA (IMPORTAÇÃO)</Text>
+            <TouchableOpacity onPress={() => setCaixaAtiva(null)} style={{ padding: 4 }}><Text style={{ color: '#ef4444', fontSize: 18, fontWeight: 'bold' }}>✕</Text></TouchableOpacity>
+          </View>
+          <View style={{ backgroundColor: '#0f172a', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+            <Text style={{ color: '#94a3b8', fontSize: 11, marginBottom: 4 }}>CLIENTE: {caixaAtiva.cliente_cpf}</Text>
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>Pontos: {caixaAtiva.pontos_disponiveis}</Text>
+            <Text style={{ color: '#94a3b8', fontSize: 10 }}>Taxa: -{caixaAtiva.taxa_em_pontos} SPG</Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
 
-const IntercambioModal = ({ visible, onClose, token, setToken, onResgatar, carregando, config }: any) => (
-  <Modal visible={visible} transparent animationType="fade">
-    <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-      <View style={{ backgroundColor: '#1e293b', borderRadius: 24, padding: 24, width: '100%', maxWidth: 400, borderWidth: 1, borderColor: '#334155' }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>🌐 Importar da Rede</Text><TouchableOpacity onPress={onClose}><Text style={{ color: '#94a3b8', fontSize: 24 }}>✕</Text></TouchableOpacity></View>
-        <TextInput placeholder="CÓDIGO (6 DÍGITOS)" placeholderTextColor="#64748b" value={token} onChangeText={(t) => setToken(t.toUpperCase())} maxLength={6} style={{ backgroundColor: '#0f172a', color: '#fff', padding: 20, borderRadius: 16, fontSize: 24, fontWeight: 'bold', textAlign: 'center', borderWidth: 1, borderColor: '#8b5cf6', marginBottom: 20 }} />
-        <TouchableOpacity onPress={onResgatar} disabled={token.length < 6 || carregando} style={{ backgroundColor: token.length === 6 ? '#8b5cf6' : '#334155', padding: 18, borderRadius: 16, alignItems: 'center' }}>{carregando ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontWeight: 'bold' }}>IMPORTAR PONTOS</Text>}</TouchableOpacity>
-      </View>
-    </View>
-  </Modal>
-);
 
 const styles = StyleSheet.create({
   modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(2, 6, 23, 0.85)', zIndex: 9999, justifyContent: 'center', alignItems: 'center' },
