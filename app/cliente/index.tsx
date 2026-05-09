@@ -380,6 +380,11 @@ export default function Cliente() {
     const { data: rec } = await supabase.from('recompensas').select('*').eq('ativo', true).order('custo_pontos');
     setRecompensas((rec || []).filter(r => r.loja_id === lid));
     setRecompensasRede((rec || []).map(r => ({ ...r, nomeLoja: mapLojas[r.loja_id] })));
+
+    if (lid && tk && tk.status === 'pendente') {
+      setMostraIntercambio(true);
+      mostrarToast('🔄 Você tem pontos em outras lojas! Clique em REDE para importar.', 'sucesso');
+    }
   };
 
   const gerarTokenIntercambio = async (selecionadas: any[]) => {
@@ -517,13 +522,32 @@ export default function Cliente() {
         {carregando ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonTextBig}>ACESSAR MINHA CARTEIRA</Text>}
       </TouchableOpacity>
       <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 40 }}>v5.8.0-exchange</Text>
+
+      {toast.visible && (
+        <Animated.View style={{ 
+          position: 'absolute', top: toastAnim, left: 20, right: 20, 
+          backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444', 
+          padding: 16, borderRadius: 12, elevation: 10, zIndex: 9999,
+          flexDirection: 'row', alignItems: 'center'
+        }}>
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14, flex: 1 }}>{toast.message}</Text>
+        </Animated.View>
+      )}
     </ScrollView>
   );
 
   if (status === 'aguardando') return (
     <View style={[styles.center, { backgroundColor: c.bg }]}>
       <ActivityIndicator size="large" color={c.neonVerde} />
-      <Text style={{ marginTop: 20, color: c.texto }}>Aguardando liberação...</Text>
+      <Text style={{ marginTop: 20, color: c.texto, fontWeight: 'bold' }}>Aguardando liberação...</Text>
+      <Text style={{ marginTop: 10, color: c.subtexto, fontSize: 12, textAlign: 'center', paddingHorizontal: 40 }}>O atendente já foi notificado e logo irá liberar seu acesso. ⏳</Text>
+      
+      <TouchableOpacity 
+        onPress={() => { setStatus('idle'); salvarStorage('cliente_cpf', ''); }}
+        style={{ marginTop: 40, padding: 10 }}
+      >
+        <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>CANCELAR CHECK-IN</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -668,6 +692,17 @@ export default function Cliente() {
           </View>
         </View>
       </Modal>
+
+      {toast.visible && (
+        <Animated.View style={{ 
+          position: 'absolute', top: toastAnim, left: 20, right: 20, 
+          backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444', 
+          padding: 16, borderRadius: 12, elevation: 10, zIndex: 9999,
+          flexDirection: 'row', alignItems: 'center'
+        }}>
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14, flex: 1 }}>{toast.message}</Text>
+        </Animated.View>
+      )}
     </View>
   );
 }

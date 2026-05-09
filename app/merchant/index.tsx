@@ -428,11 +428,14 @@ export default function MerchantPanel() {
       setHistoricoCRM(atrasados);
       setClientesAtrasados(atrasados.length);
 
+      const pontosGeradosMes = vendasMes.reduce((a: any, v: any) => a + (v.pontos_gerados || 0), 0);
+      const roi = pontosGeradosMes > 0 ? (totalMes / (pontosGeradosMes * (Number(config.reais_por_ponto) || 1))) : 0;
+
       setStats({
         totalMes, totalDia, vendasCount: vendasHoje.length, vendasCountTotal: vendas.length,
         ticketMedio, totalClientesDia: clientesUnicosHoje, resgatesHojeLista, resgatesMesLista,
         resgatesAgrupados: resgatesSumarizados, pontosResgatadosHoje, ultimosResgates, vendasDiaFormatada,
-        resgatesSumarizados, resgatesListados
+        resgatesSumarizados, resgatesListados, roi
       });
 
     } catch (error) {
@@ -1347,20 +1350,20 @@ export default function MerchantPanel() {
                     <ScrollView nestedScrollEnabled={true}>
                       {fila.filter(c => c.id !== (clienteAtual?.id)).length === 0 ? (<Text style={{ color: '#334155', fontSize: 12, fontStyle: 'italic', marginTop: 10 }}>Ninguém aguardando...</Text>) : (
                          fila.filter(c => c.id !== (clienteAtual?.id)).map((c, i) => (
-                           <View key={c.id} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1e293b', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Text style={{ color: '#cbd5e1', fontSize: 14, fontWeight: 'bold' }}>{i + 2}º • {formatarTelefone(c.cliente_cpf)}</Text>
-                              <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}><TouchableOpacity onPress={() => removerDaFila(c.id)} style={{ paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: '#ef4444', fontSize: 12, fontWeight: 'bold' }}>✕</Text></TouchableOpacity><TouchableOpacity onPress={() => setClienteFocadoId(c.id)} style={{ backgroundColor: '#38bdf820', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}><Text style={{ color: '#38bdf8', fontSize: 10, fontWeight: 'bold' }}>PUXAR ⬆️</Text></TouchableOpacity></View>
-                           </View>
-                         ))
-                      )}
+                            <View key={c.id} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1e293b', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                               <Text style={{ color: '#cbd5e1', fontSize: 14, fontWeight: 'bold' }}>{i + 2}º • {formatarTelefone(c.cliente_cpf)}</Text>
+                               <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}><TouchableOpacity onPress={() => removerDaFila(c.id)} style={{ paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: '#ef4444', fontSize: 12, fontWeight: 'bold' }}>✕</Text></TouchableOpacity><TouchableOpacity onPress={() => setClienteFocadoId(c.id)} style={{ backgroundColor: '#38bdf820', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}><Text style={{ color: '#38bdf8', fontSize: 10, fontWeight: 'bold' }}>PUXAR ⬆️</Text></TouchableOpacity></View>
+                            </View>
+                          ))
+                       )}
                     </ScrollView>
                   </View>
                 </View>
 
                 <View style={{ flex: 2, minWidth: 320, gap: 15 }}>
                   <View style={[styles.card, { backgroundColor: '#020617', padding: 15, minHeight: 130, justifyContent: 'center', borderColor: '#10b981', borderWidth: 1 }]}>
-                     <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 'bold', position: 'absolute', top: 15, left: 15 }}>VALOR DA VENDA (R$):</Text>
-                     <TextInput placeholder="R$ 0,00" placeholderTextColor="#1e293b" keyboardType="numeric" value={clienteAtual ? (valorVenda[clienteAtual.id] ? (parseInt(valorVenda[clienteAtual.id], 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '') : ''} onChangeText={(t) => { if (clienteAtual) setValorVenda({ ...valorVenda, [clienteAtual.id]: t.replace(/\D/g, '') }); }} onSubmitEditing={() => { if (clienteAtual) atender(clienteAtual.id); }} style={{ color: '#10b981', fontSize: 64, fontWeight: '900', textAlign: 'right', width: '100%', height: '100%', outlineStyle: 'none', borderWidth: 0 } as any} />
+                     <Text style={{ color: '#10b981', fontSize: 12, fontWeight: 'bold', position: 'absolute', top: 15, left: 15, zIndex: 10 }}>VALOR DA VENDA (R$):</Text>
+                     <TextInput placeholder="R$ 0,00" placeholderTextColor="#1e293b" keyboardType="numeric" value={clienteAtual ? (valorVenda[clienteAtual.id] ? (parseInt(valorVenda[clienteAtual.id], 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '') : ''} onChangeText={(t) => { if (clienteAtual) setValorVenda({ ...valorVenda, [clienteAtual.id]: t.replace(/\D/g, '') }); }} onSubmitEditing={() => { if (clienteAtual) atender(clienteAtual.id); }} style={{ color: '#10b981', fontSize: 64, fontWeight: '900', textAlign: 'right', width: '100%', height: '100%', outlineStyle: 'none', borderWidth: 0, marginTop: 10 } as any} />
                   </View>
                   <View style={[styles.card, { flex: 1, padding: 25, backgroundColor: '#1e293b', minHeight: 150, justifyContent: 'space-between' }]}>
                     <View><View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}><Text style={{ color: '#10b981', fontSize: 32, fontWeight: '900' }}>{formatarMoeda(stats.totalMes)}</Text><View style={{ alignItems: 'flex-end' }}><Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>{new Date().toLocaleDateString('pt-BR')}</Text><Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>TOTAL DO MÊS</Text></View></View></View>
@@ -1375,7 +1378,7 @@ export default function MerchantPanel() {
 
                 <View style={{ flex: 1.5, minWidth: 250, gap: 15 }}>
                   <TouchableOpacity onPress={() => clienteAtual && atender(clienteAtual.id)} style={[styles.card, { backgroundColor: clienteAtual ? '#10b981' : '#334155', minHeight: 130, alignItems: 'center', justifyContent: 'center' }]}><Text style={{ color: '#0f172a', fontWeight: 'bold', fontSize: 20 }}>ATENDER</Text></TouchableOpacity>
-                  <View style={[styles.card, { flex: 1, padding: 25, backgroundColor: '#1e293b', minHeight: 150 }]}>
+                  <View style={[styles.card, { flex: 1, padding: 25, backgroundColor: '#1e293b', minHeight: 150, justifyContent: 'space-between' }]}>
                      {clienteAtual && valorVenda[clienteAtual.id] ? (
                        <View style={{ height: '100%', justifyContent: 'space-between' }}>
                          <View style={{ flex: 1 }}>
@@ -1449,6 +1452,7 @@ export default function MerchantPanel() {
                  )}
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setMostrarCRM(!mostrarCRM)} style={[styles.card, { flex: 1, minWidth: 200, borderColor: '#8b5cf6' }]}><Text style={{ color: '#8b5cf6', fontSize: 32, fontWeight: '900' }}>{clientesAtrasados}</Text><Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>REMARKETING</Text><Text style={{ color: '#fff', fontSize: 11, marginTop: 10 }}>Clientes ausentes que precisam de atenção.</Text></TouchableOpacity>
+              <View style={[styles.card, { flex: 1, minWidth: 200, borderColor: '#10b981' }]}><Text style={{ color: '#10b981', fontSize: 32, fontWeight: '900' }}>{stats.roi ? stats.roi.toFixed(1) : '0.0'}x</Text><Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>ROI ESTIMADO</Text><Text style={{ color: '#fff', fontSize: 11, marginTop: 10 }}>Retorno sobre cada R$ 1,00 investido em pontos.</Text></View>
               <View style={[styles.card, { flex: 1, minWidth: 200, borderColor: '#334155', backgroundColor: '#020617' }]}><Text style={{ color: '#fff', fontSize: 24, fontWeight: '900', textAlign: 'center' }}>⚡ {operadorLogado}</Text><Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', textAlign: 'center' }}>OPERADOR ATIVO</Text><TouchableOpacity onPress={() => { localStorage.clear(); router.replace('/login'); }} style={{ marginTop: 15, backgroundColor: '#ef444420', padding: 8, borderRadius: 10, borderWidth: 1, borderColor: '#ef4444' }}><Text style={{ color: '#ef4444', fontWeight: 'bold', textAlign: 'center', fontSize: 10 }}>SAIR</Text></TouchableOpacity></View>
           </View>
 
