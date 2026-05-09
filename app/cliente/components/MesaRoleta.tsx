@@ -16,7 +16,7 @@ const salvarStorage = async (key: string, value: string) => {
   else await AsyncStorage.setItem(key, value);
 };
 
-// ─── Componente WheelSVG (reutilizado) ────────────────────────────────────────
+// ─── Componente WheelSVG ──────────────────────────────────────────────────────
 function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDark: boolean }) {
   const CENTER = size / 2;
   const RADIUS = CENTER - 6;
@@ -39,9 +39,8 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
   };
 
   const getTextPos = (index: number) => {
-    // Centraliza o texto no meio da fatia
     const midAngle = index * sliceAngle - Math.PI / 2 + sliceAngle / 2;
-    const r = RADIUS * 0.7; // Distância do centro
+    const r = RADIUS * 0.7; 
     return {
       x: CENTER + r * Math.cos(midAngle),
       y: CENTER + r * Math.sin(midAngle),
@@ -161,7 +160,6 @@ export default function MesaRoleta() {
     neonAmarelo: '#facc15',
   };
 
-  // ─── Init ─────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!loja_id || loja_id === 'undefined') return;
     carregarDadosMesa();
@@ -170,33 +168,15 @@ export default function MesaRoleta() {
   const carregarDadosMesa = async () => {
     try {
       setCarregando(true);
+      const { data: config } = await supabase.from('configuracoes_loja').select('*').eq('loja_id', loja_id).single();
+      if (config) setConfigLoja(config);
 
-      const { data: config } = await supabase
-        .from('configuracoes_loja')
-        .select('*')
-        .eq('loja_id', loja_id)
-        .single();
-
-      if (config) {
-        setConfigLoja(config);
-      }
-
-      const { data: loja } = await supabase
-        .from('lojas')
-        .select('nome')
-        .eq('id', loja_id)
-        .single();
-
+      const { data: loja } = await supabase.from('lojas').select('nome').eq('id', loja_id).single();
       if (loja) setNomeLojaAtual(loja.nome);
 
-      const { data: premios } = await supabase
-        .from('roleta_premios_mesa')
-        .select('*')
-        .eq('loja_id', loja_id)
-        .eq('ativo', true);
+      const { data: premios } = await supabase.from('roleta_mesa_premios').select('*').eq('loja_id', loja_id).eq('ativo', true);
 
       if (premios && premios.length > 0) {
-        // Garante que a roleta tenha um visual preenchido (mínimo 6 fatias)
         let listaBonita = [...premios];
         if (listaBonita.length > 0 && listaBonita.length < 6) {
            while(listaBonita.length < 6) {
@@ -206,20 +186,11 @@ export default function MesaRoleta() {
         setPremiosRoletaMesa(listaBonita);
       }
 
-      // ✨ NOVO: Carrega perguntas NPS ativas
-      const { data: perguntas } = await supabase
-        .from('perguntas_nps_mesa')
-        .select('*')
-        .eq('loja_id', loja_id)
-        .eq('ativa', true)
-        .order('ordem', { ascending: true });
+      const { data: perguntas } = await supabase.from('perguntas_nps').select('*').eq('loja_id', loja_id).eq('ativa', true).order('ordem', { ascending: true });
 
       if (perguntas && perguntas.length > 0) {
-        // Sorteia uma pergunta aleatória
         const perguntaSorteada = perguntas[Math.floor(Math.random() * perguntas.length)];
         setPerguntaCustom(perguntaSorteada.pergunta);
-      } else if (config && config.pergunta_nps_mesa) {
-        setPerguntaCustom(config.pergunta_nps_mesa); // Fallback para a antiga
       }
 
       setCarregando(false);
@@ -229,7 +200,6 @@ export default function MesaRoleta() {
     }
   };
 
-  // ─── NOVA: Validar Jogo Diário (1x por dia) ────────────────────────────────
   const validarJogueDiario = async (telefone: string, lojaId: string): Promise<boolean> => {
     try {
       const cleanTel = telefone.replace(/\D/g, '');
@@ -246,19 +216,10 @@ export default function MesaRoleta() {
         .lt('created_at', fimHoje.toISOString())
         .limit(1);
 
-      if (error) {
-        console.error('Erro ao validar jogo diário:', error);
-        return true;
-      }
-
-      // Se encontrou = já jogou hoje
-      if (data && data.length > 0) {
-        return false;
-      }
-
+      if (error) return true;
+      if (data && data.length > 0) return false;
       return true;
     } catch (error) {
-      console.error('Erro na validação:', error);
       return true;
     }
   };
@@ -266,34 +227,22 @@ export default function MesaRoleta() {
   const validarTelefone = (tel: string): boolean => {
     const clean = tel.replace(/\D/g, '');
     if (clean.length !== 11) return false;
-    
-    // Validação básica de DDD (primeiros 2 dígitos entre 11 e 99)
     const ddd = parseInt(clean.substring(0, 2));
     if (ddd < 11 || ddd > 99) return false;
-
     return true;
   };
 
   const avancarParaNPS = async () => {
     if (!validarTelefone(telefone)) {
-      const clean = telefone.replace(/\D/g, '');
-      if (clean.length !== 11) {
-        mostrarToast('Digite o telefone com DDD (11 dígitos) 📱', 'erro');
-      } else {
-        mostrarToast('DDD inválido! Use um DDD real (11-99) 🇧🇷', 'erro');
-      }
+      mostrarToast('Digite o telefone com DDD (11 dígitos) 📱', 'erro');
       return;
     }
-
-    // ✨ NOVA: Validar jogo diário
     const podeJogar = await validarJogueDiario(telefone, loja_id);
-
     if (!podeJogar) {
       mostrarToast('🎮 Você já jogou hoje! Volte amanhã. 🍀', 'erro');
       setTelefone('');
       return;
     }
-
     setEtapa('nps');
   };
 
@@ -307,18 +256,15 @@ export default function MesaRoleta() {
 
   const girarRoleta = async () => {
     if (rodando || premiosRoletaMesa.length === 0) return;
-
     setRodando(true);
     setEtapa('roleta');
 
     try {
       const premio = sortearPremio(premiosRoletaMesa);
       const targetIndex = premiosRoletaMesa.findIndex((p) => p.id === premio.id);
-      
       const sliceDeg = 360 / premiosRoletaMesa.length;
       const midSliceDeg = targetIndex * sliceDeg + sliceDeg / 2;
       const finalOffset = (360 - (midSliceDeg % 360)) % 360;
-      
       const rotations = 8;
       const targetDeg = rotations * 360 + finalOffset;
 
@@ -327,45 +273,31 @@ export default function MesaRoleta() {
         duration: 3000,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: Platform.OS !== 'web',
-      }).start(async (result) => {
-        // Mesmo que a animação não termine perfeitamente, tentamos processar
-        try {
-          const cleanTel = telefone.replace(/\D/g, '');
-          
-          // Movemos o salvamento para ocorrer em paralelo ou logo antes de mudar a etapa
-          salvarParticipacaoMesa(cleanTel, premio).catch(e => console.error("Erro background save:", e));
-          
-          setPremioGanho(premio);
-          setEtapa('resultado');
-        } catch (e) {
-          console.error("Erro no callback da roleta:", e);
-          alert("Ocorreu um erro ao processar seu prêmio. Por favor, tente novamente.");
-        } finally {
-          setRodando(false);
-        }
+      }).start(async () => {
+        const cleanTel = telefone.replace(/\D/g, '');
+        salvarParticipacaoMesa(cleanTel, premio).catch(e => console.error("Erro background save:", e));
+        setPremioGanho(premio);
+        setEtapa('resultado');
+        setRodando(false);
       });
     } catch (error) {
-      console.error('Erro ao iniciar giro da roleta:', error);
       setRodando(false);
-      mostrarToast("Erro ao girar a roleta. Tente recarregar.", 'erro');
+      mostrarToast("Erro ao girar a roleta.", 'erro');
     }
   };
 
   const sortearPremio = (premios: any[]) => {
     const totalProb = premios.reduce((sum, p) => sum + (p.probabilidade || 1), 0);
     let random = Math.random() * totalProb;
-
     for (const premio of premios) {
       random -= premio.probabilidade || 1;
       if (random <= 0) return premio;
     }
-
     return premios[0];
   };
 
   const salvarParticipacaoMesa = async (telefone: string, premio: any) => {
     try {
-      // 1. Salvar participação
       await supabase.from('roleta_mesa_participacoes').insert({
         loja_id: loja_id,
         cliente_cpf: telefone,
@@ -376,60 +308,27 @@ export default function MesaRoleta() {
         oferta_google_dobro: notaNps === 5,
         premio_resgatado: false,
       });
-
-      // ✨ NOVA: Sync automático - criar/atualizar contato em remarketing
       await sincronizarComRemarketig(telefone, premio);
-
       await salvarStorage(`mesa_telefone_${loja_id}`, telefone);
     } catch (error) {
-      console.error('Erro ao salvar participação da mesa:', error);
+      console.error('Erro ao salvar participação:', error);
     }
   };
 
-  // ✨ NOVA: Função de Sync para Remarketing
   const sincronizarComRemarketig = async (telefone: string, premio: any) => {
     try {
-      // Verificar se contato já existe
-      const { data: existente } = await supabase
-        .from('contatos_mesa_remarketing')
-        .select('id')
-        .eq('loja_id', loja_id)
-        .eq('cliente_cpf', telefone)
-        .limit(1);
-
+      const { data: existente } = await supabase.from('contatos_mesa_remarketing').select('id').eq('loja_id', loja_id).eq('cliente_cpf', telefone).limit(1);
       if (existente && existente.length > 0) {
-        // Atualizar contato existente
-        await supabase
-          .from('contatos_mesa_remarketing')
-          .update({
-            premio_ganho: premio.nome,
-            nota_nps: notaNps,
-            data_ultimo_contato: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', existente[0].id);
+        await supabase.from('contatos_mesa_remarketing').update({ premio_ganho: premio.nome, nota_nps: notaNps, data_ultimo_contato: new Date().toISOString() }).eq('id', existente[0].id);
       } else {
-        // Criar novo contato
         const tags = [];
         if (notaNps === 5) tags.push('5_estrelas');
         if (premio.tipo === 'desconto') tags.push('desconto');
         if (premio.tipo === 'brinde') tags.push('brinde');
-        if (premio.tipo === 'pontos_extra') tags.push('pontos_extra');
-
-        await supabase.from('contatos_mesa_remarketing').insert({
-          loja_id: loja_id,
-          cliente_cpf: telefone,
-          premio_ganho: premio.nome,
-          nota_nps: notaNps,
-          status: 'nao_contatado',
-          data_participacao: new Date().toISOString(),
-          tags: tags,
-          marketing_consentido: true,
-        });
+        await supabase.from('contatos_mesa_remarketing').insert({ loja_id: loja_id, cliente_cpf: telefone, premio_ganho: premio.nome, nota_nps: notaNps, status: 'nao_contatado', data_participacao: new Date().toISOString(), tags: tags, marketing_consentido: true });
       }
     } catch (error) {
-      console.error('Erro ao sincronizar com remarketing:', error);
-      // Não bloqueia fluxo se sync falhar
+      console.error('Erro ao sincronizar remarketing:', error);
     }
   };
 
@@ -448,99 +347,25 @@ export default function MesaRoleta() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg, justifyContent: 'center', alignItems: 'center' }}>
-      {/* 🍞 TOAST CUSTOMIZADO */}
-      <Animated.View 
-        style={{ 
-          position: 'absolute', top: 20, left: 20, right: 20, zIndex: 100000,
-          transform: [{ translateY: toastAnim }],
-          backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444',
-          padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center',
-          shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10, elevation: 5
-        }}
-      >
+      <Animated.View style={{ position: 'absolute', top: 20, left: 20, right: 20, zIndex: 100000, transform: [{ translateY: toastAnim as any }], backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444', padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10, elevation: 5 }}>
         <Text style={{ fontSize: 20, marginRight: 10 }}>{toast.tipo === 'sucesso' ? '✅' : '⚠️'}</Text>
         <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14, flex: 1 }}>{toast.mensagem}</Text>
       </Animated.View>
 
       {etapa === 'telefone' && (
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 25, width: '100%', backgroundColor: c.bg }}>
-          
-          {/* Botão de Tema Manual */}
-          <TouchableOpacity 
-            onPress={toggleTheme}
-            style={{ position: 'absolute', top: 20, right: 20, zIndex: 100, backgroundColor: c.card, padding: 12, borderRadius: 15, borderWidth: 1, borderColor: c.borda }}
-          >
-            <Text style={{ fontSize: 20 }}>{isDark ? '☀️' : '🌙'}</Text>
-          </TouchableOpacity>
-
+          <TouchableOpacity onPress={toggleTheme} style={{ position: 'absolute', top: 20, right: 20, zIndex: 100, backgroundColor: c.card, padding: 12, borderRadius: 15, borderWidth: 1, borderColor: c.borda }}><Text style={{ fontSize: 20 }}>{isDark ? '☀️' : '🌙'}</Text></TouchableOpacity>
           <View style={{ alignItems: 'center', marginBottom: 40 }}>
-            <View style={{ position: 'relative' }}>
-              <Text style={{ color: '#fff', fontSize: 14, position: 'absolute', top: -15, left: -25 }}>✨</Text>
-              <Text style={{ color: '#fff', fontSize: 18, position: 'absolute', top: -5, right: -25 }}>✨</Text>
-              <Text style={{ color: '#fff', fontSize: 12, position: 'absolute', bottom: 10, left: -30 }}>✨</Text>
-              <Text style={{ color: '#fff', fontSize: 16, position: 'absolute', bottom: -5, right: -30 }}>✨</Text>
-              
-              <Text style={{ color: c.roxo, fontSize: 48, fontWeight: '900', color: c.roxo, letterSpacing: 2, lineHeight: 46, textAlign: 'center' }}>PALM</Text>
-              <Text style={{ color: c.roxo, fontSize: 48, fontWeight: '900', color: c.roxo, letterSpacing: 2, lineHeight: 46, textAlign: 'center' }}>SPRINGS</Text>
-            </View>
-            
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 5 }}>
-              <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
-              <Text style={{ color: c.subtexto, fontSize: 13, fontWeight: '600', letterSpacing: 0.5 }}>seu clube de benefícios premium</Text>
-              <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
-            </View>
+            <Text style={{ color: c.roxo, fontSize: 48, fontWeight: '900', letterSpacing: 2, textAlign: 'center' }}>PALM SPRINGS</Text>
+            <Text style={{ color: c.subtexto, fontSize: 13, fontWeight: '600', marginTop: 5 }}>seu clube de benefícios premium</Text>
           </View>
-
           <View style={{ width: '100%', maxWidth: 400, alignSelf: 'center' }}>
-            <TextInput
-              placeholder="(00) 00000-0000"
-              placeholderTextColor={c.subtexto}
-              keyboardType="phone-pad"
-              value={telefone}
-              maxLength={15}
-              onChangeText={(text) => {
-                const clean = text.replace(/\D/g, '').slice(0, 11);
-                if (clean.length <= 11) {
-                  const formatted =
-                    clean.length <= 2 ? `(${clean}` :
-                    clean.length <= 7 ? `(${clean.slice(0, 2)}) ${clean.slice(2)}` :
-                    `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
-                  setTelefone(formatted);
-                }
-              }}
-              style={{
-                backgroundColor: c.card,
-                borderColor: c.borda,
-                color: c.texto,
-                padding: 22,
-                borderRadius: 20,
-                fontSize: 32,
-                fontWeight: '900',
-                textAlign: 'center',
-                borderWidth: 2,
-                marginBottom: 20
-              }}
-            />
-
-            <TouchableOpacity
-              onPress={avancarParaNPS}
-              style={{
-                backgroundColor: c.roxo,
-                padding: 22,
-                borderRadius: 22,
-                alignItems: 'center',
-                shadowColor: c.roxo,
-                shadowOpacity: 0.5,
-                shadowRadius: 15,
-                elevation: 8
-              }}
-            >
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 1 }}>JOGUE NA MESA 🕹️</Text>
-            </TouchableOpacity>
-
-            <Text style={{ textAlign: 'center', color: '#1e293b', fontSize: 10, marginTop: 40, fontWeight: 'bold', letterSpacing: 1 }}>
-              SPRINGS LOYALTY • v2.0
-            </Text>
+            <TextInput placeholder="(00) 00000-0000" placeholderTextColor={c.subtexto} keyboardType="phone-pad" value={telefone} maxLength={15} onChangeText={(text) => {
+              const clean = text.replace(/\D/g, '').slice(0, 11);
+              const formatted = clean.length <= 2 ? `(${clean}` : clean.length <= 7 ? `(${clean.slice(0, 2)}) ${clean.slice(2)}` : `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
+              setTelefone(formatted);
+            }} style={{ backgroundColor: c.card, borderColor: c.borda, color: c.texto, padding: 22, borderRadius: 20, fontSize: 32, fontWeight: '900', textAlign: 'center', borderWidth: 2, marginBottom: 20 }} />
+            <TouchableOpacity onPress={avancarParaNPS} style={{ backgroundColor: c.roxo, padding: 22, borderRadius: 22, alignItems: 'center', shadowColor: c.roxo, shadowOpacity: 0.5, shadowRadius: 15, elevation: 8 }}><Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>JOGUE NA MESA 🕹️</Text></TouchableOpacity>
           </View>
         </ScrollView>
       )}
@@ -548,170 +373,43 @@ export default function MesaRoleta() {
       {etapa === 'nps' && (
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
           <View style={{ width: '90%', maxWidth: 400 }}>
-            <Text style={{ fontSize: 20, fontWeight: '900', color: c.texto, textAlign: 'center', marginBottom: 8 }}>
-              {perguntaCustom}
-            </Text>
-            <Text style={{ fontSize: 12, color: c.subtexto, textAlign: 'center', marginBottom: 30 }}>
-              Sua opinião é muito importante! ⭐
-            </Text>
-
-            <View style={{ marginBottom: 30 }}>
+            <Text style={{ fontSize: 20, fontWeight: '900', color: c.texto, textAlign: 'center', marginBottom: 8 }}>{perguntaCustom}</Text>
+            <View style={{ marginBottom: 30, marginTop: 20 }}>
               {[1, 2, 3, 4, 5].map((nota) => (
-                <TouchableOpacity
-                  key={nota}
-                  onPress={() => setNotaNps(nota)}
-                  style={{
-                    backgroundColor: notaNps === nota ? c.roxo : c.card,
-                    borderRadius: 12,
-                    padding: 16,
-                    marginBottom: 10,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    borderWidth: 1,
-                    borderColor: notaNps === nota ? c.roxo : c.borda,
-                  }}
-                >
-                  <Text style={{ fontSize: 24, marginRight: 12 }}>
-                    {nota === 1 ? '😢' : nota === 2 ? '😞' : nota === 3 ? '😐' : nota === 4 ? '😊' : '😍'}
-                  </Text>
-                  <Text
-                    style={{
-                      flex: 1,
-                      fontSize: 14,
-                      fontWeight: '700',
-                      color: notaNps === nota ? '#fff' : c.texto,
-                    }}
-                  >
-                    {nota === 1 ? 'Muito ruim' : nota === 2 ? 'Ruim' : nota === 3 ? 'Regular' : nota === 4 ? 'Bom' : 'Excelente'}
-                  </Text>
+                <TouchableOpacity key={nota} onPress={() => setNotaNps(nota)} style={{ backgroundColor: notaNps === nota ? c.roxo : c.card, borderRadius: 12, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: notaNps === nota ? c.roxo : c.borda }}>
+                  <Text style={{ fontSize: 24, marginRight: 12 }}>{nota === 1 ? '😢' : nota === 2 ? '😞' : nota === 3 ? '😐' : nota === 4 ? '😊' : '😍'}</Text>
+                  <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: notaNps === nota ? '#fff' : c.texto }}>{nota === 1 ? 'Muito ruim' : nota === 2 ? 'Ruim' : nota === 3 ? 'Regular' : nota === 4 ? 'Bom' : 'Excelente'}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-
-            <TouchableOpacity
-              onPress={avancarParaRoleta}
-              style={{
-                backgroundColor: notaNps > 0 ? c.roxo : '#ccc',
-                borderRadius: 12,
-                padding: 16,
-                alignItems: 'center',
-              }}
-              disabled={notaNps === 0}
-            >
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>
-                GIRAR A ROLETA →
-              </Text>
-            </TouchableOpacity>
+            <TouchableOpacity onPress={avancarParaRoleta} style={{ backgroundColor: notaNps > 0 ? c.roxo : '#ccc', borderRadius: 12, padding: 16, alignItems: 'center' }} disabled={notaNps === 0}><Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>GIRAR A ROLETA →</Text></TouchableOpacity>
           </View>
         </ScrollView>
       )}
 
       {etapa === 'roleta' && premiosRoletaMesa.length > 0 && (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
-          <Text style={{ fontSize: 24, fontWeight: '900', color: c.roxo, marginBottom: 20 }}>
-            {rodando ? '🎡 GIRANDO...' : 'BOA SORTE!'}
-          </Text>
-
-          <View style={{ zIndex: 10, marginBottom: -15 }}>
-            <Svg width={40} height={40} viewBox="0 0 32 32">
-              <Path d="M16 28 L6 6 L26 6 Z" fill={c.roxo} stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
-            </Svg>
-          </View>
-
-          <Animated.View style={[{ transform: [{ rotate: rotateAnim.interpolate({ inputRange: [0, 360], outputRange: ['0deg', '360deg'] }) }] }, { marginBottom: 30 }]}>
-            <WheelSVG prizes={premiosRoletaMesa} size={320} isDark={isDark} />
-          </Animated.View>
-
-          <TouchableOpacity
-            onPress={girarRoleta}
-            disabled={rodando}
-            style={{
-              backgroundColor: rodando ? '#ccc' : c.roxo,
-              borderRadius: 16,
-              paddingVertical: 18,
-              paddingHorizontal: 40,
-              alignItems: 'center',
-            }}
-          >
-            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>
-              {rodando ? 'GIRANDO...' : '🎰 GIRAR AGORA!'}
-            </Text>
-          </TouchableOpacity>
+          <Text style={{ fontSize: 24, fontWeight: '900', color: c.roxo, marginBottom: 20 }}>{rodando ? '🎡 GIRANDO...' : 'BOA SORTE!'}</Text>
+          <View style={{ zIndex: 10, marginBottom: -15 }}><Svg width={40} height={40} viewBox="0 0 32 32"><Path d="M16 28 L6 6 L26 6 Z" fill={c.roxo} stroke="#fff" strokeWidth="2" strokeLinejoin="round" /></Svg></View>
+          <Animated.View style={[{ transform: [{ rotate: rotateAnim.interpolate({ inputRange: [0, 360], outputRange: ['0deg', '360deg'] }) }] }, { marginBottom: 30 }]}><WheelSVG prizes={premiosRoletaMesa} size={320} isDark={isDark} /></Animated.View>
+          <TouchableOpacity onPress={girarRoleta} disabled={rodando} style={{ backgroundColor: rodando ? '#ccc' : c.roxo, borderRadius: 16, paddingVertical: 18, paddingHorizontal: 40, alignItems: 'center' }}><Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>{rodando ? 'GIRANDO...' : '🎰 GIRAR AGORA!'}</Text></TouchableOpacity>
         </View>
       )}
+
       {etapa === 'resultado' && premioGanho && (
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
           <View style={{ alignItems: 'center', width: '90%' }}>
-            <Text style={{ fontSize: 48, marginBottom: 20 }}>
-              {(premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? '😕' : '🎉'}
-            </Text>
-            <Text style={{ fontSize: 28, fontWeight: '900', color: (premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? '#64748B' : c.roxo, textAlign: 'center', marginBottom: 12 }}>
-              {(premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? 'QUASE LÁ!' : 'PARABÉNS!'}
-            </Text>
-            <Text style={{ fontSize: 18, fontWeight: '700', color: c.texto, textAlign: 'center', marginBottom: 20 }}>
-              {premioGanho.nome}
-            </Text>
-
+            <Text style={{ fontSize: 48, marginBottom: 20 }}>{(premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? '😕' : '🎉'}</Text>
+            <Text style={{ fontSize: 28, fontWeight: '900', color: (premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? '#64748B' : c.roxo, textAlign: 'center', marginBottom: 12 }}>{(premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? 'QUASE LÁ!' : 'PARABÉNS!'}</Text>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: c.texto, textAlign: 'center', marginBottom: 20 }}>{premioGanho.nome}</Text>
             <View style={{ backgroundColor: c.card, borderRadius: 16, padding: 25, marginBottom: 20, borderWidth: 1, borderColor: c.borda, minWidth: 300, alignItems: 'center' }}>
-              <Text style={{ fontSize: 13, color: c.subtexto, marginBottom: 12, fontWeight: '700', textAlign: 'center' }}>
-                {(premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? 'RESULTADO' : 'VOCÊ GANHOU'}
-              </Text>
-              <Text style={{ fontSize: 36, fontWeight: '900', color: (premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? '#64748B' : c.roxo, textAlign: 'center' }}>
-                {premioGanho.tipo === 'desconto' ? `${premioGanho.valor}%` : `${premioGanho.nome}`}
-              </Text>
-              {(!premioGanho.nome.toLowerCase().includes('tente') && premioGanho.tipo !== 'outro') && (
-                <Text style={{ fontSize: 14, color: c.subtexto, marginTop: 10, textAlign: 'center' }}>
-                  {premioGanho.tipo === 'desconto' ? 'de desconto para sua próxima visita!' : 'Retire seu brinde com o atendente'}
-                </Text>
-              )}
+              <Text style={{ fontSize: 13, color: c.subtexto, marginBottom: 12, fontWeight: '700' }}>VOCÊ GANHOU</Text>
+              <Text style={{ fontSize: 36, fontWeight: '900', color: (premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? '#64748B' : c.roxo, textAlign: 'center' }}>{premioGanho.tipo === 'desconto' ? `${premioGanho.valor}%` : `${premioGanho.nome}`}</Text>
+              {(!premioGanho.nome.toLowerCase().includes('tente') && premioGanho.tipo !== 'outro') && <Text style={{ fontSize: 14, color: c.subtexto, marginTop: 10, textAlign: 'center' }}>{premioGanho.tipo === 'desconto' ? 'de desconto para sua próxima visita!' : 'Retire seu brinde com o atendente'}</Text>}
             </View>
-
-            <TouchableOpacity
-              onPress={() => {
-                setEtapa('telefone');
-                setTelefone('');
-                setNotaNps(0);
-                setPremioGanho(null);
-                rotateAnim.setValue(0);
-              }}
-              style={{
-                backgroundColor: c.roxo,
-                borderRadius: 12,
-                padding: 16,
-                alignItems: 'center',
-                minWidth: 300,
-              }}
-            >
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>
-                JOGAR NOVAMENTE? 🎮
-              </Text>
-            </TouchableOpacity>
+            <TouchableOpacity onPress={() => { setEtapa('telefone'); setTelefone(''); setNotaNps(0); setPremioGanho(null); rotateAnim.setValue(0); }} style={{ backgroundColor: c.roxo, borderRadius: 12, padding: 16, alignItems: 'center', minWidth: 300 }}><Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>JOGAR NOVAMENTE? 🎮</Text></TouchableOpacity>
           </View>
         </ScrollView>
-      )}
-
-      {(etapa !== 'telefone' && etapa !== 'nps' && etapa !== 'roleta' && etapa !== 'resultado') && (
-        <View style={{ alignItems: 'center', padding: 20 }}>
-          {carregando ? (
-            <Text style={{ color: c.texto, fontSize: 16, fontWeight: '700' }}>Carregando dados da mesa...</Text>
-          ) : (
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 40, marginBottom: 20 }}>⚠️</Text>
-              <Text style={{ color: c.texto, fontSize: 18, fontWeight: '900', textAlign: 'center', marginBottom: 10 }}>
-                Nenhum prêmio configurado!
-              </Text>
-              <Text style={{ color: c.subtexto, fontSize: 14, textAlign: 'center', marginBottom: 30 }}>
-                Peça ao gerente para ativar os prêmios da mesa no painel administrativo.
-              </Text>
-              <TouchableOpacity 
-                onPress={() => carregarDadosMesa()}
-                style={{ backgroundColor: c.roxo, padding: 15, borderRadius: 12 }}
-              >
-                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Tentar Novamente 🔄</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
       )}
     </View>
   );

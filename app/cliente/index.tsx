@@ -1,13 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import bcrypt from 'bcryptjs';
-import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-  Animated, Easing, Image, Platform, ScrollView, StyleSheet,
+  ActivityIndicator,
+  Animated, Easing,
+  Modal,
+  Platform, ScrollView, StyleSheet,
   Text, TextInput, TouchableOpacity, useColorScheme,
-  Vibration,
   View
 } from 'react-native';
 import Svg, { Circle, Defs, FeComponentTransfer, FeFuncA, FeGaussianBlur, FeMerge, FeMergeNode, FeOffset, Filter, G, Path, RadialGradient, Stop, LinearGradient as SvgLinearGradient, Text as SvgText } from 'react-native-svg';
@@ -62,7 +63,6 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
 
   const textColor = isDark ? '#e2e8f0' : '#334155';
 
-  // Fatias começam no TOPO (-PI/2) e vão no sentido horário
   const buildSlicePath = (index: number) => {
     const startAngle = index * sliceAngle - Math.PI / 2;
     const endAngle = startAngle + sliceAngle;
@@ -87,26 +87,19 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
   return (
     <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       <Defs>
-        {/* Gradientes para profundidade nas fatias */}
-        {/* @ts-ignore */}
         <SvgLinearGradient id="gradBege" x1="0%" y1="0%" x2="100%" y2="100%">
           <Stop offset="0%" stopColor={isDark ? "#1e293b" : "#fdf8ec"} />
           <Stop offset="100%" stopColor={isDark ? "#0f172a" : "#f0e5d8"} />
         </SvgLinearGradient>
-        {/* @ts-ignore */}
         <SvgLinearGradient id="gradVerde" x1="0%" y1="0%" x2="100%" y2="100%">
           <Stop offset="0%" stopColor={isDark ? "#134e4a" : "#d1fae5"} />
           <Stop offset="100%" stopColor={isDark ? "#042f2e" : "#a7f3d0"} />
         </SvgLinearGradient>
-
-        {/* Gradiente radial para centro metálico */}
         <RadialGradient id="gCenter" cx="50%" cy="30%" rx="60%" ry="60%">
           <Stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
           <Stop offset="50%" stopColor="#d1d5db" stopOpacity="0.8" />
           <Stop offset="100%" stopColor="#6b7280" stopOpacity="1" />
         </RadialGradient>
-
-        {/* Sombra embaixo */}
         <Filter id="dropShadow" x="-50%" y="-50%" width="200%" height="200%">
           <FeGaussianBlur in="SourceAlpha" stdDeviation="3" />
           <FeOffset dx="0" dy="8" result="offsetblur" />
@@ -118,20 +111,9 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
             <FeMergeNode in="SourceGraphic" />
           </FeMerge>
         </Filter>
-
-        {/* Glow mais pronunciado */}
-        <Filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-          <FeGaussianBlur stdDeviation="4" result="coloredBlur" />
-          <FeMerge>
-            <FeMergeNode in="coloredBlur" />
-            <FeMergeNode in="SourceGraphic" />
-          </FeMerge>
-        </Filter>
       </Defs>
 
-      {/* RODA COM SOMBRA */}
       <G filter="url(#dropShadow)">
-
         {prizes.map((prize: any, i: number) => {
           const { x, y, rotation } = getTextPos(i);
           const lines = (prize.nome || '').split('\n');
@@ -143,30 +125,23 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
 
           return (
             <G key={i}>
-              {/* Fatia com gradiente */}
               <Path
                 d={buildSlicePath(i)}
                 fill={i % 2 === 0 ? 'url(#gradBege)' : 'url(#gradVerde)'}
                 stroke={isDark ? '#475569' : '#94a3b8'}
                 strokeWidth="1.2"
               />
-              {/* Conteúdo da fatia */}
               <G transform={`rotate(${rotation} ${x} ${y})`}>
-                {/* Ícone */}
                 <SvgText x={x} y={y - 12}
                   fill={iconColor} fontSize={size === 240 ? "8" : "11"}
                   fontWeight="900" textAnchor="middle" letterSpacing="0">
                   {icon}
                 </SvgText>
-
-                {/* Tipo (pontos/cashback/brinde) */}
                 <SvgText x={x} y={y - 1}
                   fill={textColor} fontSize={size === 240 ? "5" : "7.5"}
                   fontWeight="700" textAnchor="middle" letterSpacing="0">
                   {lines[0]}
                 </SvgText>
-
-                {/* Valor/Descrição */}
                 {lines[1] && (
                   <SvgText x={x} y={y + 9}
                     fill={textColor} fontSize={size === 240 ? "5.5" : "8.5"}
@@ -174,89 +149,30 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
                     {lines[1]}
                   </SvgText>
                 )}
-
-                {/* Terceira linha se existir */}
-                {lines[2] && (
-                  <SvgText x={x} y={y + 18}
-                    fill={textColor} fontSize={size === 240 ? "4.5" : "6.5"}
-                    fontWeight="600" textAnchor="middle" letterSpacing="0">
-                    {lines[2]}
-                  </SvgText>
-                )}
               </G>
-              {/* Estrelinhas nas fatias pares */}
-              {i % 2 === 0 && (() => {
-                const starAngle = i * sliceAngle - Math.PI / 2 + sliceAngle / 2;
-                const sr = RADIUS * 0.92;
-                return (
-                  <SvgText
-                    x={CENTER + sr * Math.cos(starAngle)}
-                    y={CENTER + sr * Math.sin(starAngle) + 3}
-                    fill="#10b981" fontSize="7" textAnchor="middle">
-                    ★
-                  </SvgText>
-                );
-              })()}
             </G>
           );
         })}
-
-        {/* Divisórias */}
-        {prizes.map((_: any, i: number) => {
-          const angle = i * sliceAngle - Math.PI / 2;
-          return (
-            <Path key={`d${i}`}
-              d={`M${CENTER},${CENTER} L${CENTER + RADIUS * Math.cos(angle)},${CENTER + RADIUS * Math.sin(angle)}`}
-              stroke={isDark ? '#475569' : '#94a3b8'} strokeWidth="0.6" />
-          );
-        })}
-
-        {/* Centro metálico */}
         <Circle cx={CENTER} cy={CENTER} r={size * 0.075} fill="url(#gCenter)" stroke={isDark ? '#475569' : '#94a3b8'} strokeWidth="1.5" />
-        <Circle cx={CENTER} cy={CENTER} r={size * 0.042} fill={isDark ? '#0f172a' : '#fff'} stroke={isDark ? '#334155' : '#cbd5e1'} strokeWidth="1" />
-        <SvgText x={CENTER} y={CENTER + size * 0.016} fill="#10b981" fontSize={size * 0.038} fontWeight="900" textAnchor="middle">✦</SvgText>
-
-        {/* Rebites/Parafusos no aro metálico */}
-        {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {
-          const rad = (angle * Math.PI) / 180;
-          const rivetRadius = RADIUS + size * 0.04;
-          const rivetX = CENTER + rivetRadius * Math.cos(rad);
-          const rivetY = CENTER + rivetRadius * Math.sin(rad);
-          const rivetSize = size * 0.04;
-          return (
-            <G key={`rivet-${angle}`}>
-              <Circle cx={rivetX} cy={rivetY} r={rivetSize} fill={isDark ? '#64748b' : '#cbd5e1'} stroke={isDark ? '#334155' : '#94a3b8'} strokeWidth="0.5" />
-              <Circle cx={rivetX} cy={rivetY} r={rivetSize * 0.5} fill={isDark ? '#334155' : '#e2e8f0'} opacity="0.7" />
-            </G>
-          );
-        })}
-      </G>  {/* Fecha o grupo de sombra */}
+      </G>
     </Svg>
   );
 }
 
 // ─── Componente CTA da Roleta ─────────────────────────────────────────────────
-function RoletaCTA({ onPress, premiosRoleta, isDark, c }: any) {
+function RoletaCTA({ onPress, isDark, c }: any) {
   const idleAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
 
   const WHEEL_SIZE = 240;
-
-  // Prêmios SEMPRE decorativos - nunca usa os reais!
   const prizesDisplay = [
     { nome: '10 SPG', tipo: 'pontos' },
     { nome: 'R$ 2,00\nCashback', tipo: 'cashback' },
     { nome: 'Café\nGrátis', tipo: 'brinde' },
     { nome: 'R$ 5,00\nCashback', tipo: 'cashback' },
     { nome: '5 SPG', tipo: 'pontos' },
-    { nome: 'Kit de\nFerramentas', tipo: 'brinde' },
-    { nome: '15 SPG', tipo: 'pontos' },
     { nome: 'Brinde\nSurpresa', tipo: 'brinde' },
-    { nome: 'R$ 1,00\nCashback', tipo: 'cashback' },
-    { nome: '20 SPG', tipo: 'pontos' },
-    { nome: 'Cappuccino\nPremium', tipo: 'brinde' },
-    { nome: 'R$ 3,00\nCashback', tipo: 'cashback' },
   ];
 
   useEffect(() => {
@@ -274,87 +190,37 @@ function RoletaCTA({ onPress, premiosRoleta, isDark, c }: any) {
     ).start();
   }, []);
 
-  const handlePressIn = () => Animated.spring(scaleAnim, { toValue: 0.95, useNativeDriver: Platform.OS !== "web", speed: 20 }).start();
-  const handlePressOut = () => Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: Platform.OS !== "web", speed: 20 }).start();
-
   const wheelRotate = idleAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
   const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] });
 
   return (
     <Animated.View style={{ alignItems: 'center', transform: [{ scale: scaleAnim }] }}>
-
-      {/* Título */}
       <Text style={{ fontSize: 20, fontWeight: '900', color: isDark ? '#f8fafc' : '#0f172a', marginBottom: 6, letterSpacing: 1 }}>
         ✨ Roleta da Sorte ✨
       </Text>
       <Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontSize: 12, marginBottom: 18, fontWeight: '600' }}>
         Toque para girar e ganhar prêmios!
       </Text>
-
-      {/* Glow */}
       <Animated.View style={{
-        position: 'absolute', top: 44,
-        width: WHEEL_SIZE + 20, height: WHEEL_SIZE + 20,
-        borderRadius: (WHEEL_SIZE + 20) / 2,
-        shadowColor: '#10b981', shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: glowOpacity as any, shadowRadius: 20, elevation: 20,
+        position: 'absolute', top: 44, width: WHEEL_SIZE + 20, height: WHEEL_SIZE + 20,
+        borderRadius: (WHEEL_SIZE + 20) / 2, shadowColor: '#10b981', shadowOpacity: glowOpacity as any, shadowRadius: 20, elevation: 20,
       }} />
-
-      {/* Ponteiro */}
       <View style={{ zIndex: 10, marginBottom: -12 }}>
         <Svg width={32} height={32} viewBox="0 0 32 32">
           <Path d="M16 28 L4 6 L28 6 Z" fill="#10b981" stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
-          <Circle cx="16" cy="6" r="4" fill="#10b981" stroke="#fff" strokeWidth="1.5" />
         </Svg>
       </View>
-
-      {/* Aro metálico */}
       <View style={{
-        width: WHEEL_SIZE + 16, height: WHEEL_SIZE + 16,
-        borderRadius: (WHEEL_SIZE + 16) / 2,
-        backgroundColor: isDark ? '#334155' : '#94a3b8',
-        justifyContent: 'center', alignItems: 'center',
-        shadowColor: '#000', shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.4, shadowRadius: 12, elevation: 15,
+        width: WHEEL_SIZE + 16, height: WHEEL_SIZE + 16, borderRadius: (WHEEL_SIZE + 16) / 2,
+        backgroundColor: isDark ? '#334155' : '#94a3b8', justifyContent: 'center', alignItems: 'center', elevation: 15,
       }}>
-        <Animated.View style={{
-          width: WHEEL_SIZE, height: WHEEL_SIZE,
-          borderRadius: WHEEL_SIZE / 2, overflow: 'hidden',
-          transform: [{ rotate: wheelRotate }],
-        }}>
+        <Animated.View style={{ width: WHEEL_SIZE, height: WHEEL_SIZE, transform: [{ rotate: wheelRotate }] }}>
           <WheelSVG prizes={prizesDisplay} size={WHEEL_SIZE} isDark={isDark} />
         </Animated.View>
       </View>
-
-      {/* Bolinhas decorativas */}
-      {[45, 135, 225, 315].map((deg) => {
-        const rad = (deg * Math.PI) / 180;
-        const r = WHEEL_SIZE / 2 + 30;
-        return (
-          <View key={deg} style={{
-            position: 'absolute',
-            top: 44 + WHEEL_SIZE / 2 + r * Math.sin(rad) - 5,
-            left: WHEEL_SIZE / 2 + 8 + r * Math.cos(rad) - 5,
-            width: 10, height: 10, borderRadius: 5,
-            backgroundColor: deg % 90 === 45 ? '#10b981' : '#facc15',
-            opacity: 0.7,
-          }} />
-        );
-      })}
-
-      {/* Botão */}
-      <TouchableOpacity onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut} activeOpacity={0.8}>
-        <LinearGradient
-          colors={['#10b981', '#059669']}
-          style={{
-            marginTop: 22, paddingHorizontal: 40, paddingVertical: 14,
-            borderRadius: 50, shadowColor: '#10b981',
-            shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5,
-            shadowRadius: 12, elevation: 10,
-          }}>
-          <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16, letterSpacing: 1.5 }}>
-            JOGAR ROLETA 🎡
-          </Text>
+      <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+        <LinearGradient colors={['#10b981', '#059669']} style={{ marginTop: 22, paddingHorizontal: 40, paddingVertical: 14, borderRadius: 50, elevation: 10 }}>
+          <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16, letterSpacing: 1.5 }}>JOGAR ROLETA 🎡</Text>
         </LinearGradient>
       </TouchableOpacity>
     </Animated.View>
@@ -366,88 +232,59 @@ export default function Cliente() {
   const params = useLocalSearchParams();
   const loja_id = params?.loja_id;
 
-  // ─── ROTA /MESA: Renderizar componente MesaRoleta ────────────────────────────
   if (params?.mesa === 'true' || (typeof window !== 'undefined' && window.location.pathname.includes('/mesa'))) {
     return <MesaRoleta />;
   }
 
   const [cpf, setCpf] = useState('');
   const [status, setStatus] = useState<'idle' | 'aguardando' | 'finalizado'>('idle');
-
   const [saldo, setSaldo] = useState(0);
   const [cashback, setCashback] = useState(0);
   const [saldoLocal, setSaldoLocal] = useState(0);
   const [cashbackLocal, setCashbackLocal] = useState(0);
-
   const [displayCash, setDisplayCash] = useState(0);
   const [displaySaldo, setDisplaySaldo] = useState(0);
   const [displayCashLocal, setDisplayCashLocal] = useState(0);
   const [displaySaldoLocal, setDisplaySaldoLocal] = useState(0);
 
-  const [nomeLojaAtual, setNomeLojaAtual] = useState('');
+  const [mostraIntercambio, setMostraIntercambio] = useState(false);
+  const [tokenAtivo, setTokenAtivo] = useState<any>(null);
+  const [saldoPorLoja, setSaldoPorLoja] = useState<any[]>([]);
   const [recompensas, setRecompensas] = useState<any[]>([]);
   const [recompensasRede, setRecompensasRede] = useState<any[]>([]);
-  const [resgatados, setResgatados] = useState<string[]>([]);
-  const [banners, setBanners] = useState<any[]>([]);
-
-  const [mostrarExtrato, setMostrarExtrato] = useState(false);
   const [extrato, setExtrato] = useState<any[]>([]);
+  const [mostrarExtrato, setMostrarExtrato] = useState(false);
+  const [configLoja, setConfigLoja] = useState<any>(null);
+  const [banners, setBanners] = useState<any[]>([]);
+  const [nomeLojaAtual, setNomeLojaAtual] = useState('');
 
-  // ─── PIN States ───────────────────────────────────────────────────────────
   const [mostrarPinModal, setMostrarPinModal] = useState(false);
   const [pinDigitado, setPinDigitado] = useState(['', '', '', '']);
+  const [pinModoValidar, setPinModoValidar] = useState(true);
   const [ehPrimeiroCadastro, setEhPrimeiroCadastro] = useState(false);
-  const [tentativasPinFalhadas, setTentativasPinFalhadas] = useState(0);
-  const [pinModoValidar, setPinModoValidar] = useState(true); // true = validar, false = criar novo
-  const pinInputRefs = useRef<any[]>([]);
-
-  const [configLoja, setConfigLoja] = useState<any>(null);
-
+  const pinInputRefs = useRef<(TextInput | null)[]>([]);
   const [mostrarRoletaModal, setMostrarRoletaModal] = useState(false);
   const [etapaRoleta, setEtapaRoleta] = useState<'nps' | 'girando' | 'resultado'>('nps');
   const [perguntasNps, setPerguntasNps] = useState<any[]>([]);
   const [premiosRoleta, setPremiosRoleta] = useState<any[]>([]);
-
-  // Prêmios HARDCODED para CTA (exemplo decorativo que fica girando)
-  const premiosDisplay = [
-    { id: 'ex1', nome: '10\nSPG', tipo: 'pontos', valor: 10, probabilidade: 15, icone: '✨' },
-    { id: 'ex2', nome: 'Café\nGrátis', tipo: 'brinde', valor: 0, probabilidade: 12, icone: '☕' },
-    { id: 'ex3', nome: 'R$ 3\nCashback', tipo: 'cashback', valor: 3, probabilidade: 20, icone: '💰' },
-    { id: 'ex4', nome: '20\nSPG', tipo: 'pontos', valor: 20, probabilidade: 18, icone: '✨' },
-    { id: 'ex5', nome: 'R$ 5\nCashback', tipo: 'cashback', valor: 5, probabilidade: 15, icone: '💰' },
-    { id: 'ex6', nome: 'Brinde\nSurpresa', tipo: 'brinde', valor: 0, probabilidade: 10, icone: '🎁' },
-    { id: 'ex7', nome: '15\nSPG', tipo: 'pontos', valor: 15, probabilidade: 5, icone: '✨' },
-    { id: 'ex8', nome: 'Cappuccino\nPremium', tipo: 'brinde', valor: 0, probabilidade: 5, icone: '☕' },
-  ];
-  const [respostasNps, setRespostasNps] = useState<any>({});
   const [premioGanho, setPremioGanho] = useState<any>(null);
+  const [respostasNps, setRespostasNps] = useState<any>({});
   const [rodando, setRodando] = useState(false);
   const [carregando, setCarregando] = useState(false);
   const [roletaTargetDeg, setRoletaTargetDeg] = useState(0);
 
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const pulse = useRef(new Animated.Value(1)).current;
-  const animatedCash = useRef(new Animated.Value(0)).current;
-  const animatedSaldo = useRef(new Animated.Value(0)).current;
-  const animatedCashLocal = useRef(new Animated.Value(0)).current;
-  const animatedSaldoLocal = useRef(new Animated.Value(0)).current;
-  // Animação de resultado
   const resultAnim = useRef(new Animated.Value(0)).current;
-
-  const [toast, setToast] = useState({ visible: false, message: '', tipo: 'sucesso' });
   const toastAnim = useRef(new Animated.Value(-150)).current;
-
+  const [toast, setToast] = useState({ visible: false, message: '', tipo: 'sucesso' });
   const temaSistema = useColorScheme();
   const [isDark, setIsDark] = useState(temaSistema === 'dark');
 
   useEffect(() => {
     const carregarTema = async () => {
       const temaSalvo = await carregarStorage('@tema_pref');
-      if (temaSalvo) {
-        setIsDark(temaSalvo === 'dark');
-      } else {
-        setIsDark(temaSistema === 'dark');
-      }
+      setIsDark(temaSalvo ? temaSalvo === 'dark' : temaSistema === 'dark');
     };
     carregarTema();
   }, [temaSistema]);
@@ -459,1269 +296,356 @@ export default function Cliente() {
   };
 
   const c = {
-    bg: isDark ? '#0B1120' : '#F1F5F9', // Mais cinza no claro para destacar bem os blocos brancos
+    bg: isDark ? '#0B1120' : '#F1F5F9',
     card: isDark ? '#162032' : '#FFFFFF',
-    borda: isDark ? '#26334A' : '#CBD5E1', // Borda mais forte no modo claro
+    borda: isDark ? '#26334A' : '#CBD5E1',
     texto: isDark ? '#F8FAFC' : '#1E293B',
     subtexto: isDark ? '#94A3B8' : '#64748B',
     neonVerde: '#10b981',
-    neonAmarelo: '#F59E0B', // Amarelo mais premium/âmbar
+    neonAmarelo: '#F59E0B',
     verde: '#10b981',
-    roxo: '#8B5CF6', // Roxo vibrante moderno
+    roxo: '#8B5CF6',
   };
-
-  // Spin da roleta real (de 0→1 mapeado para 0→targetDeg)
-  const wheelSpin = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', `${roletaTargetDeg}deg`],
-  });
-  // Spin do círculo de aguardando
-  const spinAguard = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
 
   const mostrarToast = (mensagem: string, tipo: 'sucesso' | 'erro' = 'sucesso') => {
     setToast({ visible: true, message: mensagem, tipo });
     Animated.sequence([
-      Animated.spring(toastAnim, { toValue: Platform.OS === 'web' ? 20 : 50, useNativeDriver: Platform.OS !== "web", speed: 12 }),
+      Animated.spring(toastAnim, { toValue: Platform.OS === 'web' ? 20 : 50, useNativeDriver: false, speed: 12 }),
       Animated.delay(4000),
-      Animated.timing(toastAnim, { toValue: -150, duration: 400, useNativeDriver: Platform.OS !== "web" }),
-    ]).start(() => setToast({ visible: false, message: '', tipo: 'sucesso' }));
+      Animated.timing(toastAnim, { toValue: -150, duration: 400, useNativeDriver: false }),
+    ]).start(() => setToast({ ...toast, visible: false }));
   };
 
-  // ─── Init ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     const initApp = async () => {
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const APP_VERSION = '5.5.0-platinum-diamond-final';
-        const savedVersion = localStorage.getItem('@app_version');
-        if (savedVersion !== APP_VERSION) {
-          localStorage.clear();
-          localStorage.setItem('@app_version', APP_VERSION);
-          window.location.reload();
-          return;
-        }
+      const APP_VERSION = '5.8.0-exchange';
+      const savedVersion = await carregarStorage('@app_version');
+      if (savedVersion !== APP_VERSION) {
+        if (typeof window !== 'undefined') localStorage.clear();
+        await salvarStorage('@app_version', APP_VERSION);
       }
       const saved = await carregarStorage('cliente_cpf');
       if (saved) {
         setCpf(saved);
-
-        // Se leu QR code (tem loja_id) - NÃO faz login automático
-        // Deve ir para aguardando para aparecer no painel do lojista
-        if (loja_id) {
-          console.log('📱 [QR Detectado] Cliente recuperado do storage, aguardando lojista...');
-          setStatus('aguardando');
-          return;
-        }
-
-        // Se não tem loja_id - faz login automático
-        console.log('📱 [Login automático] Cliente recuperado do storage');
-        await carregarDados(saved);
-        setStatus('finalizado');
+        if (loja_id) setStatus('aguardando');
+        else { await carregarDados(saved); setStatus('finalizado'); }
       }
     };
     initApp();
   }, [loja_id]);
 
-  // ─── Aguardando ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (status !== 'aguardando') return;
-    rotateAnim.setValue(0); pulse.setValue(1);
-    Animated.loop(Animated.sequence([
-      Animated.timing(pulse, { toValue: 1.15, duration: 800, useNativeDriver: Platform.OS !== "web" }),
-      Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: Platform.OS !== "web" }),
-    ])).start();
-    const girarInf = () => {
-      rotateAnim.setValue(0);
-      Animated.timing(rotateAnim, { toValue: 1, duration: 2000, easing: Easing.linear, useNativeDriver: Platform.OS !== "web" })
-        .start(({ finished }) => { if (finished) girarInf(); });
-    };
-    girarInf();
-    const cleanCpf = cpf.replace(/\D/g, '');
+    const girar = () => { rotateAnim.setValue(0); Animated.timing(rotateAnim, { toValue: 1, duration: 2000, easing: Easing.linear, useNativeDriver: false }).start(({ finished }) => { if (finished) girar(); }); };
+    girar();
+    const clean = cpf.replace(/\D/g, '');
     const interval = setInterval(async () => {
-      const { data } = await supabase.from('checkins').select('status').eq('cliente_cpf', cleanCpf).single();
-      if (!data || data.status === 'atendido') {
-        clearInterval(interval);
-        Vibration.vibrate(500);
-        carregarDados(cleanCpf, String(loja_id));
-        setStatus('finalizado');
-      }
+      const { data } = await supabase.from('checkins').select('status').eq('cliente_cpf', clean).single();
+      if (data?.status === 'atendido') { clearInterval(interval); await carregarDados(clean, String(loja_id)); setStatus('finalizado'); }
     }, 5000);
-    const subscription = supabase.channel(`wait_${cleanCpf}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'checkins', filter: `cliente_cpf=eq.${cleanCpf}` }, (payload) => {
-        if (payload.new.status === 'atendido') {
-          clearInterval(interval);
-          Vibration.vibrate(500);
-          carregarDados(cleanCpf, String(loja_id));
-          setStatus('finalizado');
-        }
-      }).subscribe();
-    return () => { clearInterval(interval); supabase.removeChannel(subscription); };
+    return () => clearInterval(interval);
   }, [status]);
 
-  // ─── Resetar roleta ao fechar modal ───────────────────────────────────────
-  useEffect(() => {
-    if (!mostrarRoletaModal) {
-      // Ao fechar, reseta para estado idle
-      rotateAnim.setValue(0);
-      setRoletaTargetDeg(0);
-      setPremioGanho(null);
-      setEtapaRoleta('nps');
-      setRespostasNps({});
-
-      // Reinicia a animação idle do CTA
-      const rodarCTA = () => {
-        rotateAnim.setValue(0);
-        Animated.timing(rotateAnim, {
-          toValue: 1,
-          duration: 18000,
-          easing: Easing.linear,
-          useNativeDriver: Platform.OS !== "web",
-        }).start(({ finished }) => {
-          if (finished) rodarCTA();
-        });
-      };
-      rodarCTA();
-    }
-  }, [mostrarRoletaModal]);
-
-  // ─── Animações de saldo ────────────────────────────────────────────────────
-  useEffect(() => {
-    Animated.timing(animatedCash, { toValue: cashback, duration: 1200, useNativeDriver: false }).start();
-    const l = animatedCash.addListener(({ value }) => setDisplayCash(value));
-    return () => animatedCash.removeListener(l);
-  }, [cashback]);
-  useEffect(() => {
-    Animated.timing(animatedSaldo, { toValue: saldo, duration: 1200, useNativeDriver: false }).start();
-    const l = animatedSaldo.addListener(({ value }) => setDisplaySaldo(value));
-    return () => animatedSaldo.removeListener(l);
-  }, [saldo]);
-  useEffect(() => {
-    Animated.timing(animatedCashLocal, { toValue: cashbackLocal, duration: 1200, useNativeDriver: false }).start();
-    const l = animatedCashLocal.addListener(({ value }) => setDisplayCashLocal(value));
-    return () => animatedCashLocal.removeListener(l);
-  }, [cashbackLocal]);
-  useEffect(() => {
-    Animated.timing(animatedSaldoLocal, { toValue: saldoLocal, duration: 1200, useNativeDriver: false }).start();
-    const l = animatedSaldoLocal.addListener(({ value }) => setDisplaySaldoLocal(value));
-    return () => animatedSaldoLocal.removeListener(l);
-  }, [saldoLocal]);
-
-  // ─── Carregar dados ────────────────────────────────────────────────────────
   const carregarDados = async (cpfBusca: string, lojaIdEfetivo?: string) => {
     const { data: lojas } = await supabase.from('lojas').select('id, nome');
-    const { data: configs } = await supabase.from('configuracoes_loja').select('loja_id, cidade, roleta_ativa, roleta_intervalo_dias');
-    const mapLojas: any = {};
-    (lojas || []).forEach(l => (mapLojas[l.id] = l.nome));
-    const lidEfetivo = lojaIdEfetivo || String(loja_id);
+    const { data: configs } = await supabase.from('configuracoes_loja').select('*');
+    const mapLojas: any = {}; lojas?.forEach(l => mapLojas[l.id] = l.nome);
+    const lid = lojaIdEfetivo || String(loja_id);
 
-    if (lidEfetivo && lidEfetivo !== 'undefined' && lidEfetivo !== 'null') {
-      setNomeLojaAtual(mapLojas[lidEfetivo] || 'Loja Parceira');
-      // NÃO salva loja_id no storage - deve vir sempre do QR code!
+    if (lid && lid !== 'undefined') { setNomeLojaAtual(mapLojas[lid] || 'Loja Parceira'); setConfigLoja(configs?.find(cf => cf.loja_id === lid)); }
+    else setNomeLojaAtual('Minha Carteira PALM');
 
-      // Verificar se tem brindes pendentes
-      const { data: brindePendente } = await supabase
-        .from('brindes_pendentes')
-        .select('*')
-        .eq('cliente_cpf', cpfBusca)
-        .eq('resgatado', false)
-        .eq('loja_id', lidEfetivo);
+    const [{ data: trans }, { data: res }, { data: cash }, { data: bonus }] = await Promise.all([
+      supabase.from('transacoes').select('*').eq('cliente_cpf', cpfBusca),
+      supabase.from('resgates').select('*').eq('cliente_cpf', cpfBusca),
+      supabase.from('cashbacks').select('*').eq('cliente_cpf', cpfBusca),
+      supabase.from('bonus_pendentes').select('*').eq('cliente_cpf', cpfBusca).eq('usado', false)
+    ]);
 
-      if (brindePendente && brindePendente.length > 0) {
-        mostrarToast(`🎁 Cliente tem ${brindePendente.length} brinde(s) pendente(s)!`, 'sucesso');
-      }
-    } else {
-      setNomeLojaAtual('Minha Carteira PALM');
+    const total = (trans || []).reduce((a, t) => a + (t.pontos_gerados || 0), 0) + (bonus || []).reduce((a, b) => a + b.pontos, 0);
+    const usados = (res || []).reduce((a, r) => a + r.pontos_usados, 0);
+    setSaldo(total - usados);
+    setCashback((cash || []).filter(c => !c.usado).reduce((a, c) => a + Number(c.valor), 0));
+
+    const saldos: any[] = [];
+    Object.keys(mapLojas).forEach(k => {
+      const s = (trans || []).filter(t => t.loja_id === k).reduce((a, t) => a + (t.pontos_gerados || 0), 0) - (res || []).filter(r => r.loja_id === k).reduce((a, r) => a + r.pontos_usados, 0);
+      if (s > 0) saldos.push({ id: k, nome: mapLojas[k], pontos: s });
+    });
+    setSaldoPorLoja(saldos);
+
+    const { data: tk } = await supabase.from('intercambio_tokens').select('*').eq('cliente_cpf', cpfBusca).eq('status', 'pendente').maybeSingle();
+    setTokenAtivo(tk);
+
+    const { data: rec } = await supabase.from('recompensas').select('*').eq('ativo', true).order('custo_pontos');
+    setRecompensas((rec || []).filter(r => r.loja_id === lid));
+    setRecompensasRede((rec || []).map(r => ({ ...r, nomeLoja: mapLojas[r.loja_id] })));
+  };
+
+  const gerarTokenIntercambio = async (selecionadas: any[]) => {
+    setCarregando(true);
+    const token = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const total = selecionadas.reduce((a, s) => a + s.pontos, 0);
+    const { data: tk, error } = await supabase.from('intercambio_tokens').insert([{ token, cliente_cpf: cpf.replace(/\D/g, ''), total_pontos_origem: total }]).select().single();
+    if (error) { mostrarToast('Erro ao gerar token', 'erro'); setCarregando(false); return; }
+    for (const s of selecionadas) {
+      await supabase.from('intercambio_itens').insert([{ token_id: tk.id, loja_origem_id: s.id, pontos: s.pontos }]);
+      await supabase.from('transacoes').insert([{ cliente_cpf: cpf.replace(/\D/g, ''), loja_id: s.id, pontos_usados: s.pontos, descricao: `RESERVA INTERCAMBIO (${token})` }]);
     }
-
-    const configAtual = (configs || []).find(c => String(c.loja_id) === lidEfetivo);
-    setConfigLoja(configAtual || null);
-
-    const { data: ban } = await supabase.from('banners').select('*').eq('ativo', true).order('ordem', { ascending: true });
-    setBanners(ban || []);
-
-    const { data: trans } = await supabase.from('transacoes').select('*').eq('cliente_cpf', cpfBusca);
-    const { data: res } = await supabase.from('resgates').select('*').eq('cliente_cpf', cpfBusca);
-    const { data: cash } = await supabase.from('cashbacks').select('*').eq('cliente_cpf', cpfBusca);
-    const { data: bonus } = await supabase.from('bonus_pendentes').select('pontos, loja_id').eq('cliente_cpf', cpfBusca).eq('usado', false);
-
-    const totalGlobal = (trans || []).reduce((a, t) => a + (t.pontos_gerados || 0), 0);
-    const bonusTotal = (bonus || []).reduce((a, b) => a + (b.pontos || 0), 0);
-    const usadosGlobal = (res || []).reduce((a, r) => a + (r.pontos_usados || 0), 0);
-    setSaldo((totalGlobal + bonusTotal) - usadosGlobal);
-    setResgatados((res || []).map(r => String(r.recompensa_id)));
-    setCashback((cash || []).filter(c => c.usado === false).reduce((s, c) => s + Number(c.valor), 0));
-
-    if (lidEfetivo && lidEfetivo !== 'undefined') {
-      const tLocal = (trans || []).filter(t => String(t.loja_id) === String(lidEfetivo)).reduce((a, t) => a + (t.pontos_gerados || 0), 0);
-      const bLocal = (bonus || []).filter(b => String(b.loja_id) === String(lidEfetivo)).reduce((a, b) => a + (b.pontos || 0), 0);
-      const uLocal = (res || []).filter(r => String(r.loja_id) === String(lidEfetivo)).reduce((a, r) => a + (r.pontos_usados || 0), 0);
-      setSaldoLocal((tLocal + bLocal) - uLocal);
-      const cLocal = (cash || []).filter(c => String(c.loja_id) === String(lidEfetivo) && c.usado === false).reduce((s, c) => s + Number(c.valor), 0);
-      setCashbackLocal(cLocal);
-      const { data: rec } = await supabase.from('recompensas').select('*').eq('loja_id', String(lidEfetivo)).eq('ativo', true).order('custo_pontos', { ascending: true });
-      setRecompensas(rec || []);
-    }
-
-    const { data: participacoesMesa } = await supabase.from('roleta_mesa_participacoes').select('*').eq('cliente_cpf', cpfBusca);
-    const { data: resgatesHistorico } = await supabase.from('resgates').select('*').eq('cliente_cpf', cpfBusca);
-
-    const historicoMap: any = {};
-    
-    // 🛍️ Compras
-    (trans || []).forEach(t => {
-      const chave = `compra_${t.id}`;
-      historicoMap[chave] = { id: t.id, tipo: 'compra', icone: '🛍️', titulo: 'Compra Realizada', loja: mapLojas[t.loja_id] || 'Rede PALM', valor: t.valor, pontos: t.pontos_gerados, data: t.created_at };
-    });
-
-    // 🎡 Prêmios da Mesa
-    (participacoesMesa || []).forEach(p => {
-      const chave = `mesa_${p.id}`;
-      const pontosExibir = p.premio_valor > 0 ? `+${p.premio_valor}` : 'GIFT';
-      historicoMap[chave] = { id: p.id, tipo: 'mesa', icone: '🎡', titulo: `Prêmio Mesa: ${p.premio_nome}`, loja: mapLojas[p.loja_id] || 'Rede PALM', valor: 0, pontos: pontosExibir, data: p.created_at };
-    });
-
-    // 🎁 Bônus Pendentes (de retorno/outros)
-    (bonus || []).forEach((b, idx) => {
-      const chave = `bonus_${idx}_${b.loja_id}`;
-      historicoMap[chave] = { id: chave, tipo: 'bonus', icone: '✨', titulo: 'Bônus de Fidelidade', loja: mapLojas[b.loja_id] || 'Rede PALM', valor: 0, pontos: b.pontos, data: new Date().toISOString() };
-    });
-
-    // 📤 Resgates realizados
-    (resgatesHistorico || []).forEach(r => {
-      const chave = `resgate_${r.id}`;
-      historicoMap[chave] = { id: r.id, tipo: 'resgate', icone: '🎁', titulo: `Resgate: ${r.recompensa_nome || 'Prêmio'}`, loja: mapLojas[r.loja_id] || 'Rede PALM', valor: 0, pontos: -r.pontos_usados, data: r.created_at };
-    });
-
-    const hist = Object.values(historicoMap);
-    hist.sort((a: any, b: any) => new Date(b.data).getTime() - new Date(a.data).getTime());
-    setExtrato(hist);
-
-    const { data: recRede } = await supabase.from('recompensas').select('*').eq('ativo', true).order('custo_pontos', { ascending: true }).limit(10);
-    setRecompensasRede((recRede || []).map(r => ({ ...r, nomeLoja: mapLojas[r.loja_id] || 'Loja Parceira' })));
+    setTokenAtivo(tk); setMostraIntercambio(false); setCarregando(false); carregarDados(cpf.replace(/\D/g, ''));
   };
 
-  const getEstado = (r: any) => {
-    if (saldoLocal < r.custo_pontos) return { t: 'SEM SALDO', d: true, c: c.borda };
-    return { t: 'RESGATAR', d: false, c: '#10b981' };
-  };
-
-  const resgatar = async (r: any) => {
-    const clean = cpf.replace(/\D/g, '');
-    const { error } = await supabase.rpc('realizar_resgate', { p_cliente_cpf: clean, p_loja_id: String(loja_id || configLoja?.loja_id), p_recompensa_id: r.id });
-    if (error) { mostrarToast(error.message, 'erro'); return; }
-    mostrarToast('🎁 Resgate realizado!', 'sucesso');
-    await carregarDados(clean);
-  };
-
-  const sairDaCarteira = async () => {
-    if (typeof window !== 'undefined') { localStorage.removeItem('cliente_cpf'); }
-    setCpf(''); setStatus('idle'); setSaldo(0); setCashback(0); setExtrato([]);
-    router.replace('/cliente');
-  };
-
-  const formatarTelefone = (text: string) => {
-    const cleaned = text.replace(/\D/g, '');
-
-    // Validação de DDD
-    if (cleaned.length >= 2) {
-      const ddd = cleaned.slice(0, 2);
-      if (!DDD_VALIDOS.includes(ddd)) {
-        setCpf('');
-        mostrarToast('⚠️ Insira um DDD válido (Ex: 11, 19, 21...)', 'erro');
-        return;
-      }
-    }
-
-    let formatted = cleaned;
-    if (cleaned.length > 2 && cleaned.length <= 7) formatted = `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
-    else if (cleaned.length > 7) formatted = `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`;
-    setCpf(formatted);
+  const cancelarToken = async () => {
+    if (!tokenAtivo) return;
+    setCarregando(true);
+    const { data: itens } = await supabase.from('intercambio_itens').select('*').eq('token_id', tokenAtivo.id);
+    for (const i of itens || []) await supabase.from('transacoes').insert([{ cliente_cpf: cpf.replace(/\D/g, ''), loja_id: i.loja_origem_id, pontos_gerados: i.pontos, descricao: `CANCELAMENTO (${tokenAtivo.token})` }]);
+    await supabase.from('intercambio_tokens').update({ status: 'cancelado' }).eq('id', tokenAtivo.id);
+    setTokenAtivo(null); setCarregando(false); carregarDados(cpf.replace(/\D/g, ''));
   };
 
   const entrarFila = async () => {
-    const clean = cpf.replace(/\D/g, '');
-    if (!clean || clean.length < 10) return;
-
+    const clean = cpf.replace(/\D/g, ''); if (clean.length < 10) return;
     setCarregando(true);
-    try {
-      // Se tem loja_id (leu QR) - vai direto sem PIN
-      if (loja_id) {
-        await continuarAposPin();
-        return;
-      }
-
-      // Se não tem loja_id (digitou número) - pede PIN
-      const { data: clienteExistente } = await supabase
-        .from('clientes')
-        .select('pin_hash')
-        .eq('cpf', clean)
-        .single();
-
-      const ehPrimeiro = !clienteExistente || !clienteExistente.pin_hash;
-
-      if (ehPrimeiro) {
-        // Primeiro cadastro - solicitar PIN
-        setEhPrimeiroCadastro(true);
-        setPinModoValidar(false);
-        setMostrarPinModal(true);
-      } else {
-        // Cliente já tem PIN - validar PIN
-        setPinModoValidar(true);
-        setMostrarPinModal(true);
-      }
-      setCarregando(false);
-    } catch (err) {
-      console.error('Erro ao verificar cliente:', err);
-      mostrarToast('❌ Erro ao processar', 'erro');
-      setCarregando(false);
-    }
-  };
-
-  // ─── Abrir Roleta (NPS primeiro) ───────────────────────────────────────────
-  const abrirRoleta = async () => {
-    const clean = cpf.replace(/\D/g, '');
-    if (!clean) return;
-    setCarregando(true);
-    try {
-      const lid = loja_id || configLoja?.loja_id || '1';
-      const [{ data: pNps }, { data: pRoleta }] = await Promise.all([
-        supabase.from('perguntas_nps').select('*').eq('loja_id', String(lid)).order('created_at', { ascending: true }),
-        supabase.from('roleta_premios').select('*').eq('loja_id', String(lid)).order('probabilidade', { ascending: false }),
-      ]);
-      setPerguntasNps(pNps && pNps.length > 0 ? pNps : [{ id: 'default', pergunta: 'O quanto você nos indicaria?', tipo: 'estrelas' }]);
-      setPremiosRoleta(pRoleta && pRoleta.length >= 2 ? pRoleta : [
-        { id: 'm1', nome: '10 Springs', tipo: 'pontos', valor: 10, probabilidade: 50 },
-        { id: 'm2', nome: 'Café Grátis', tipo: 'brinde', valor: 0, probabilidade: 30 },
-        { id: 'm3', nome: 'R$ 5 Cashback', tipo: 'cashback', valor: 5, probabilidade: 15 },
-        { id: 'm4', nome: 'Brinde Surpresa', tipo: 'brinde', valor: 0, probabilidade: 5 },
-      ]);
-      setRespostasNps({});
-      setEtapaRoleta('nps');
-      setMostrarRoletaModal(true);
-    } finally { setCarregando(false); }
-  };
-
-  // ─── Função para salvar prêmio ganho ───────────────────────────────────────
-  const salvarPremioGanho = async (premio: any, cpfCliente: string, lojaIdEfetiva: string | null) => {
-    try {
-      const lid = String(lojaIdEfetiva || configLoja?.loja_id || '1');
-      console.log('🎁 [1/5] Iniciando salvarPremioGanho:', { tipo: premio.tipo, valor: premio.valor, loja_id: lid });
-
-      if (premio.tipo === 'cashback') {
-        console.log('💰 [2/5] Inserindo cashback...');
-        const { error, data } = await supabase
-          .from('cashbacks')
-          .insert([{ cliente_cpf: cpfCliente, loja_id: lid, valor: Number(premio.valor), usado: false }])
-          .select();
-
-        if (error) {
-          console.error('❌ [ERRO] Cashback falhou:', error);
-          mostrarToast('❌ Erro ao salvar cashback', 'erro');
-          return false;
-        }
-        console.log('✅ [3/5] Cashback inserido:', data);
-        mostrarToast(`💰 +R$ ${Number(premio.valor).toFixed(2)} Cashback!`, 'sucesso');
-        return true;
-
-      } else if (premio.tipo === 'pontos') {
-        console.log('✨ [2/5] Preparando bonus com expiração...');
-        const { data: config } = await supabase
-          .from('configuracoes_loja')
-          .select('pontos_expiracao_dias')
-          .eq('loja_id', lid)
-          .single();
-
-        const diasExpiracao = config?.pontos_expiracao_dias || 365;
-        const dataExpiracao = new Date();
-        dataExpiracao.setDate(dataExpiracao.getDate() + diasExpiracao);
-
-        console.log('✨ [2.5/5] Inserindo bonus_pendentes...', { cliente_cpf: cpfCliente, loja_id: lid, pontos: Number(premio.valor) });
-        const { error, data } = await supabase
-          .from('bonus_pendentes')
-          .insert([{
-            cliente_cpf: cpfCliente,
-            loja_id: lid,
-            pontos: Number(premio.valor),
-            data_expiracao: dataExpiracao.toISOString(),
-            usado: false,
-          }])
-          .select();
-
-        if (error) {
-          console.error('❌ [ERRO] bonus_pendentes falhou:', { code: error.code, message: error.message, details: error.details });
-          mostrarToast(`❌ Erro ao salvar pontos: ${error.message}`, 'erro');
-          return false;
-        }
-        console.log('✅ [3/5] bonus_pendentes inserido:', data);
-        mostrarToast(`✨ +${Number(premio.valor)} Springs!`, 'sucesso');
-        return true;
-
-      } else if (premio.tipo === 'brinde') {
-        console.log('🎁 [2/5] Preparando brinde...', { cliente_cpf: cpfCliente, loja_id: lid, nome_brinde: premio.nome });
-
-        const { error, data } = await supabase
-          .from('brindes_pendentes')
-          .insert([{
-            cliente_cpf: cpfCliente,
-            loja_id: lid,
-            nome_brinde: premio.nome || premio.descricao,
-            resgatado: false
-          }])
-          .select();
-
-        if (error) {
-          console.error('❌ [ERRO] Brinde falhou:', { code: error.code, message: error.message, details: error.details });
-          mostrarToast('❌ Erro ao salvar brinde: ' + (error.message || 'desconhecido'), 'erro');
-          return false;
-        }
-        console.log('✅ [3/5] Brinde inserido:', data);
-        mostrarToast('🎁 Brinde reservado! Retire com o atendente', 'sucesso');
-      }
-
-      // ✨ NOVA: Sincronização com Remarketing (Balcão)
-      await sincronizarComRemarketig(cpfCliente, premio, lid);
-
-      return true;
-    } catch (err) {
-      console.error('❌ [ERRO GERAL] salvarPremioGanho:', err);
-      mostrarToast('❌ Erro ao salvar prêmio', 'erro');
-      return false;
-    }
-  };
-
-  // ✨ NOVA: Função de Sync para Remarketing no Balcão
-  const sincronizarComRemarketig = async (telefone: string, premio: any, lojaId: string) => {
-    try {
-      const cleanTel = telefone.replace(/\D/g, '');
-      
-      // Verificar se contato já existe no remarketing desta loja
-      const { data: existente } = await supabase
-        .from('contatos_mesa_remarketing')
-        .select('id, total_mensagens')
-        .eq('loja_id', lojaId)
-        .eq('cliente_cpf', cleanTel)
-        .limit(1);
-
-      if (existente && existente.length > 0) {
-        // Se já existia (estava na lista de sumidos/pendentes), marca como CONVERTEU
-        await supabase
-          .from('contatos_mesa_remarketing')
-          .update({
-            status: 'converteu',
-            premio_ganho: premio.nome,
-            data_ultimo_contato: new Date().toISOString(),
-          })
-          .eq('id', existente[0].id);
-        
-        console.log('✅ [Remarketing] Contato do balcão sincronizado como CONVERTEU');
-      } else {
-        // Se não existia, cria o registro como 'converteu' direto (novo cliente trackeado)
-        await supabase.from('contatos_mesa_remarketing').insert({
-          loja_id: lojaId,
-          cliente_cpf: cleanTel,
-          premio_ganho: premio.nome,
-          nota_nps: 5, // Como ele jogou no balcão e ganhou, consideramos engajamento máximo
-          status: 'converteu',
-          data_participacao: new Date().toISOString(),
-        });
-        console.log('✅ [Remarketing] Novo contato do balcão registrado');
-      }
-    } catch (error) {
-      console.error('⚠️ [Remarketing Sync Error]:', error);
-    }
-  };
-
-  // ─── Funções de PIN ────────────────────────────────────────────────────────
-  const hashPin = async (pin: string): Promise<string> => {
-    const salt = await bcrypt.genSalt(10);
-    return await bcrypt.hash(pin, salt);
-  };
-
-  const verificarPin = async (pinDigitadoStr: string, pinHashArmazenado: string): Promise<boolean> => {
-    return await bcrypt.compare(pinDigitadoStr, pinHashArmazenado);
-  };
-
-  const handlePinInput = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return; // apenas números
-    const newPin = [...pinDigitado];
-    newPin[index] = value.slice(-1); // apenas último dígito
-    setPinDigitado(newPin);
-
-    if (value && index < 3) {
-      setTimeout(() => pinInputRefs.current[index + 1]?.focus(), 50);
-    }
-  };
-
-  const handlePinBackspace = (index: number) => {
-    if (!pinDigitado[index] && index > 0) {
-      pinInputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const criarNovoPin = async () => {
-    const pinStr = pinDigitado.join('');
-    if (pinStr.length !== 4) {
-      mostrarToast('⚠️ PIN deve ter 4 dígitos', 'erro');
-      return;
-    }
-
-    setCarregando(true);
-    try {
-      const pinHash = await hashPin(pinStr);
-      const clean = cpf.replace(/\D/g, '');
-
-      const { error } = await supabase
-        .from('clientes')
-        .update({ pin_hash: pinHash, tentativas_pin: 0, bloqueado_ate: null })
-        .eq('cpf', clean);
-
-      if (error) throw error;
-
-      mostrarToast('✅ PIN configurado com sucesso!', 'sucesso');
-      setMostrarPinModal(false);
-      setPinDigitado(['', '', '', '']);
-      setEhPrimeiroCadastro(false);
-
-      // Prosseguir com entrada na fila
-      await continuarAposPin();
-    } catch (err) {
-      console.error('Erro ao salvar PIN:', err);
-      mostrarToast('❌ Erro ao configurar PIN', 'erro');
-    } finally {
-      setCarregando(false);
-    }
+    const { data } = await supabase.from('clientes').select('pin_hash').eq('cpf', clean).single();
+    if (!data?.pin_hash) { setEhPrimeiroCadastro(true); setPinModoValidar(false); setMostrarPinModal(true); }
+    else { setPinModoValidar(true); setMostrarPinModal(true); }
+    setCarregando(false);
   };
 
   const validarPin = async () => {
-    const pinStr = pinDigitado.join('');
-    if (pinStr.length !== 4) {
-      mostrarToast('⚠️ Digite o PIN de 4 dígitos', 'erro');
-      return;
-    }
-
+    const pin = pinDigitado.join(''); if (pin.length < 4) return;
     setCarregando(true);
-    try {
-      const clean = cpf.replace(/\D/g, '');
-      const { data: cliente } = await supabase
-        .from('clientes')
-        .select('pin_hash, bloqueado_ate, tentativas_pin')
-        .eq('cpf', clean)
-        .single();
-
-      if (!cliente) {
-        mostrarToast('❌ Cliente não encontrado', 'erro');
-        return;
-      }
-
-      // Verificar bloqueio
-      if (cliente.bloqueado_ate) {
-        const agora = new Date();
-        const bloqueioAte = new Date(cliente.bloqueado_ate);
-        if (agora < bloqueioAte) {
-          const minRestantes = Math.ceil((bloqueioAte.getTime() - agora.getTime()) / 60000);
-          mostrarToast(`⏱️ Acesso bloqueado por ${minRestantes} minuto(s)`, 'erro');
-          setCarregando(false);
-          return;
-        }
-      }
-
-      // Verificar PIN
-      const pinValido = await verificarPin(pinStr, cliente.pin_hash);
-
-      if (pinValido) {
-        // Reset tentativas
-        await supabase
-          .from('clientes')
-          .update({ tentativas_pin: 0, bloqueado_ate: null })
-          .eq('cpf', clean);
-
-        mostrarToast('✅ Acesso liberado!', 'sucesso');
-        setMostrarPinModal(false);
-        setPinDigitado(['', '', '', '']);
-        await continuarAposPin();
-      } else {
-        // Incrementar tentativas
-        const novasTentativas = (cliente.tentativas_pin || 0) + 1;
-
-        if (novasTentativas >= 3) {
-          const bloqueioAte = new Date();
-          bloqueioAte.setMinutes(bloqueioAte.getMinutes() + 15);
-
-          await supabase
-            .from('clientes')
-            .update({ tentativas_pin: novasTentativas, bloqueado_ate: bloqueioAte.toISOString() })
-            .eq('cpf', clean);
-
-          mostrarToast('🔒 Acesso bloqueado por 15 minutos', 'erro');
-          setMostrarPinModal(false);
-          setPinDigitado(['', '', '', '']);
-        } else {
-          await supabase
-            .from('clientes')
-            .update({ tentativas_pin: novasTentativas })
-            .eq('cpf', clean);
-
-          const tentativasRestantes = 3 - novasTentativas;
-          mostrarToast(`❌ PIN incorreto (${tentativasRestantes} tentativa${tentativasRestantes > 1 ? 's' : ''} restante${tentativasRestantes > 1 ? 's' : ''})`, 'erro');
-          setPinDigitado(['', '', '', '']);
-          pinInputRefs.current[0]?.focus();
-        }
-      }
-    } catch (err) {
-      console.error('Erro ao validar PIN:', err);
-      mostrarToast('❌ Erro ao validar PIN', 'erro');
-    } finally {
-      setCarregando(false);
-    }
+    const clean = cpf.replace(/\D/g, '');
+    const { data } = await supabase.from('clientes').select('pin_hash').eq('cpf', clean).single();
+    if (data && await bcrypt.compare(pin, data.pin_hash)) {
+      setMostrarPinModal(false); setPinDigitado(['', '', '', '']);
+      await salvarStorage('cliente_cpf', clean);
+      if (loja_id) { await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]); setStatus('aguardando'); }
+      else { await carregarDados(clean); setStatus('finalizado'); }
+    } else { mostrarToast('PIN incorreto', 'erro'); setPinDigitado(['', '', '', '']); }
+    setCarregando(false);
   };
 
-  const continuarAposPin = async () => {
+  const criarNovoPin = async () => {
+    const pin = pinDigitado.join(''); if (pin.length < 4) return;
+    setCarregando(true);
+    const hash = await bcrypt.hash(pin, 10);
     const clean = cpf.replace(/\D/g, '');
+    await supabase.from('clientes').upsert({ cpf: clean, pin_hash: hash });
+    setMostrarPinModal(false); setPinDigitado(['', '', '', '']);
     await salvarStorage('cliente_cpf', clean);
-
-    if (!loja_id) {
-      await carregarDados(clean);
-      setStatus('finalizado');
-      return;
-    }
-
-    // Cliente leu QR code
-    await supabase.from('clientes').upsert({ cpf: clean });
-    await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]);
-    setStatus('aguardando');
+    if (loja_id) { await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]); setStatus('aguardando'); }
+    else { await carregarDados(clean); setStatus('finalizado'); }
+    setCarregando(false);
   };
 
-  // ─── Girar Roleta ──────────────────────────────────────────────────────────
-  const girarRoleta = async () => {
-    if (rodando) return;
-    setRodando(true);
-    const clean = cpf.replace(/\D/g, '');
+  const abrirRoleta = async () => {
+    const lid = loja_id || configLoja?.loja_id;
+    const [{ data: pNps }, { data: pRol }] = await Promise.all([
+      supabase.from('perguntas_nps').select('*').eq('loja_id', lid),
+      supabase.from('roleta_premios').select('*').eq('loja_id', lid)
+    ]);
+    setPerguntasNps(pNps || [{ id: 'd', pergunta: 'Nota para a loja?', tipo: 'estrelas' }]);
+    setPremiosRoleta(pRol || []);
+    setEtapaRoleta('nps'); setMostrarRoletaModal(true);
+  };
 
-    // Sortear prêmio
-    let somaProbs = premiosRoleta.reduce((s, p) => s + Number(p.probabilidade), 0);
-    let random = Math.random() * somaProbs;
-    let premioSorteado = premiosRoleta[premiosRoleta.length - 1];
-    for (const p of premiosRoleta) {
-      if (random < Number(p.probabilidade)) { premioSorteado = p; break; }
-      random -= Number(p.probabilidade);
-    }
-
-    // ── Cálculo CORRETO da parada ──────────────────────────────────────────
-    // As fatias são desenhadas começando do TOPO (-PI/2), no sentido horário.
-    // Fatia i: ocupa de (i * sliceDeg) a ((i+1) * sliceDeg) a partir do topo.
-    // Meio da fatia i: i * sliceDeg + sliceDeg/2 a partir do topo.
-    // Quando a roda gira R graus no sentido horário, o ponto que estava
-    // a θ do topo vai para θ+R. Queremos θ+R ≡ 0 (mod 360), ou seja:
-    // R = (360 - (i*sliceDeg + sliceDeg/2) % 360) % 360
-    const sliceDeg = 360 / premiosRoleta.length;
-    const indexPremio = premiosRoleta.findIndex(p => p.id === premioSorteado.id);
-    const midSliceDeg = indexPremio * sliceDeg + sliceDeg / 2;
-    const finalOffset = (360 - (midSliceDeg % 360)) % 360;
-    const targetRotate = 12 * 360 + finalOffset; // 12 voltas + posição exata
-
-    setRoletaTargetDeg(targetRotate);
-    rotateAnim.setValue(0);
-
-    // Haptics durante o giro
-    let lastSlice = -1;
-    const listener = rotateAnim.addListener(({ value }) => {
-      const current = value * targetRotate;
-      const slice = Math.floor((current % 360) / sliceDeg);
-      if (slice !== lastSlice) {
-        lastSlice = slice;
-        if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-    });
-
-    Animated.timing(rotateAnim, {
-      toValue: 1,
-      duration: 6000,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: Platform.OS !== "web",
-    }).start(async () => {
-      rotateAnim.removeListener(listener);
-      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      // ── 2 segundos parado no prêmio ──
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Anima a entrada do resultado
-      resultAnim.setValue(0);
-      setPremioGanho(premioSorteado);
-      setRodando(false);
-      setEtapaRoleta('resultado');
-
-      // Salvar prêmio ganho no banco
-      const lojaIdPremio = loja_id ? String(loja_id) : null;
-      const sucessoAoSalvar = await salvarPremioGanho(premioSorteado, clean, lojaIdPremio);
-
-      console.log('🎁 [4/5] Resultado do salvarPremioGanho:', sucessoAoSalvar);
-
-      // SEMPRE carrega dados após tentar salvar (sucesso ou erro) - MAS SEM BLOQUEAR!
-      console.log('🎁 [5/5] Carregando dados para sincronizar...');
-      carregarDados(clean, loja_id && loja_id !== 'undefined' ? String(loja_id) : undefined);
-      console.log('✅ [COMPLETO] Prêmio processado e saldos sincronizando!');
-
-      Animated.spring(resultAnim, { toValue: 1, useNativeDriver: Platform.OS !== "web", speed: 20, bounciness: 8 }).start();
+  const girarRoleta = () => {
+    if (rodando) return; setRodando(true);
+    const total = premiosRoleta.reduce((a, p) => a + p.probabilidade, 0);
+    let rand = Math.random() * total;
+    let win = premiosRoleta[0];
+    for (const p of premiosRoleta) { if (rand < p.probabilidade) { win = p; break; } rand -= p.probabilidade; }
+    const target = 3600 + (360 - (premiosRoleta.indexOf(win) * (360 / premiosRoleta.length)));
+    setRoletaTargetDeg(target);
+    Animated.timing(rotateAnim, { toValue: 1, duration: 5000, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start(async () => {
+      setPremioGanho(win); setRodando(false); setEtapaRoleta('resultado');
+      const clean = cpf.replace(/\D/g, '');
+      if (win.tipo === 'pontos') await supabase.from('bonus_pendentes').insert([{ cliente_cpf: clean, loja_id: String(loja_id), pontos: win.valor }]);
+      else if (win.tipo === 'cashback') await supabase.from('cashbacks').insert([{ cliente_cpf: clean, loja_id: String(loja_id), valor: win.valor }]);
+      else if (win.tipo === 'brinde') await supabase.from('brindes_pendentes').insert([{ cliente_cpf: clean, loja_id: String(loja_id), nome_brinde: win.nome }]);
+      carregarDados(clean);
     });
   };
 
-  // ─── Banners por posição ───────────────────────────────────────────────────
-  const banner1 = banners.find(b => b.ordem === 1);
-  const banner2 = banners.find(b => b.ordem === 2);
-  const bannerGrande = banners.find(b => b.ordem === 3);
+  const formatarTelefone = (t: string) => {
+    const c = t.replace(/\D/g, '');
+    let f = c;
+    if (c.length > 2 && c.length <= 7) f = `(${c.slice(0, 2)}) ${c.slice(2)}`;
+    else if (c.length > 7) f = `(${c.slice(0, 2)}) ${c.slice(2, 7)}-${c.slice(7, 11)}`;
+    setCpf(f);
+  };
 
-  // ─── TELA DE LOGIN ─────────────────────────────────────────────────────────
-  if (status === 'idle') {
-    return (
-      <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={[styles.scroll, { justifyContent: 'flex-start', paddingTop: 60 }]}>
-
-        {/* CABEÇALHO FESTIVO PREMIUM */}
-        <View style={{ alignItems: 'center', marginBottom: 25 }}>
-          <View style={{ position: 'relative', padding: 20 }}>
-            {/* Estrelas flutuantes decorativas */}
-            <Text style={{ position: 'absolute', top: 0, left: 0, fontSize: 24 }}>✨</Text>
-            <Text style={{ position: 'absolute', top: -10, right: 10, fontSize: 18 }}>✨</Text>
-            <Text style={{ position: 'absolute', bottom: 10, left: -10, fontSize: 14 }}>✨</Text>
-            <Text style={{ position: 'absolute', bottom: 0, right: -5, fontSize: 22 }}>✨</Text>
-
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 2, lineHeight: 46 }}>PALM</Text>
-              <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde, letterSpacing: 2, lineHeight: 46 }}>SPRINGS</Text>
-            </View>
-          </View>
-
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 5 }}>
-            <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
-            <Text style={{ color: c.subtexto, fontSize: 13, fontWeight: '600', letterSpacing: 0.5 }}>seu clube de benefícios premium</Text>
-            <View style={{ height: 1, width: 25, backgroundColor: c.borda }} />
-          </View>
-        </View>
-
-        <TextInput
-          placeholder="(19) 99999-9999" placeholderTextColor={c.subtexto}
-          value={cpf} onChangeText={formatarTelefone}
-          keyboardType="phone-pad" maxLength={15}
-          style={[styles.inputGigante, { backgroundColor: c.card, borderColor: c.borda, color: c.texto }]}
-        />
-        <TouchableOpacity style={styles.buttonBig} onPress={entrarFila} activeOpacity={0.8}>
-          <Text style={styles.buttonTextBig}>ACESSAR MINHA CARTEIRA</Text>
-        </TouchableOpacity>
-
-        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 8, marginTop: 50, opacity: 0.5 }}>v5.4.0-platinum-diamond-final</Text>
-      </ScrollView>
-    );
-  }
-
-  // ─── TELA DE AGUARDANDO ────────────────────────────────────────────────────
-  if (status === 'aguardando') {
-    return (
-      <View style={[styles.center, { backgroundColor: c.bg }]}>
-        <Animated.View style={[styles.aiCircle, { transform: [{ scale: pulse }, { rotate: spinAguard }], borderColor: '#14b8a6', backgroundColor: c.card }]} />
-        <Text style={{ marginTop: 20, color: c.texto, fontWeight: 'bold' }}>Aguardando liberação do lojista...</Text>
-        <Text style={{ color: c.subtexto, fontSize: 12, marginTop: 5 }}>Você será redirecionado automaticamente</Text>
+  if (status === 'idle') return (
+    <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ padding: 25, paddingTop: 60 }}>
+      <View style={{ alignItems: 'center', marginBottom: 40 }}>
+        <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde }}>PALM</Text>
+        <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde }}>SPRINGS</Text>
       </View>
-    );
-  }
+      <TextInput placeholder="(19) 99999-9999" placeholderTextColor={c.subtexto} value={cpf} onChangeText={formatarTelefone} keyboardType="phone-pad" maxLength={15} style={[styles.inputGigante, { backgroundColor: c.card, borderColor: c.borda, color: c.texto }]} />
+      <TouchableOpacity style={styles.buttonBig} onPress={entrarFila} activeOpacity={0.8} disabled={carregando}>
+        {carregando ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonTextBig}>ACESSAR MINHA CARTEIRA</Text>}
+      </TouchableOpacity>
+      <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 40 }}>v5.8.0-exchange</Text>
+    </ScrollView>
+  );
 
-  // ─── TELA PRINCIPAL ────────────────────────────────────────────────────────
+  if (status === 'aguardando') return (
+    <View style={[styles.center, { backgroundColor: c.bg }]}>
+      <ActivityIndicator size="large" color={c.neonVerde} />
+      <Text style={{ marginTop: 20, color: c.texto }}>Aguardando liberação...</Text>
+    </View>
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 60 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <Text style={{ fontSize: 24, fontWeight: '900', color: c.neonVerde }}>PALM SPRINGS</Text>
+          <TouchableOpacity onPress={() => setStatus('idle')}><Text style={{ color: '#ef4444' }}>SAIR</Text></TouchableOpacity>
+        </View>
 
-        {/* ── 1. HEADER ── */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <View style={{ backgroundColor: c.card, padding: 20, borderRadius: 24, borderWidth: 1, borderColor: c.borda, marginBottom: 20 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <View>
-              <Text style={[styles.logoMini, { color: c.neonVerde }]}>PALM SPRINGS</Text>
-              <Text style={{ color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>CLUBE DE VANTAGENS</Text>
+              <Text style={{ color: c.subtexto, fontSize: 10 }}>SALDO TOTAL</Text>
+              <Text style={{ color: c.neonVerde, fontSize: 32, fontWeight: '900' }}>{saldo} SPG</Text>
             </View>
-            <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
-              <TouchableOpacity onPress={toggleTheme} style={{ padding: 10, borderRadius: 12, backgroundColor: c.card, borderWidth: 1, borderColor: c.borda }}>
-                <Text style={{ fontSize: 18 }}>{isDark ? '☀️' : '🌙'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setMostrarExtrato(!mostrarExtrato)} style={{ padding: 10, borderRadius: 12, backgroundColor: c.card, borderWidth: 1, borderColor: c.borda }}>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: c.neonAmarelo }}>🧾 EXTRATO</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* CARD ENVOLVENTE CINZA CLARO - SALDOS + EXTRATO */}
-          <View style={{ marginTop: 25, marginHorizontal: 0, borderRadius: 24, backgroundColor: isDark ? '#0F172A' : '#f3f4f6', padding: 16, borderWidth: 1, borderColor: isDark ? '#1E293B' : '#e5e7eb' }}>
-
-            {/* Saldos globais */}
-            <View style={{ flexDirection: 'row', gap: 12, marginBottom: loja_id ? 12 : 0 }}>
-              <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, shadowColor: c.neonVerde, shadowOpacity: 0.2, shadowRadius: 10, elevation: 5, borderRadius: 16, padding: 14, position: 'relative' }]}>
-                <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold', marginBottom: 8 }}>SPRINGS (REDE)</Text>
-                <Text style={{ color: c.neonVerde, fontSize: 26, fontWeight: '900' }}>✨ {Math.floor(displaySaldo)}</Text>
-                <TouchableOpacity onPress={() => setMostrarExtrato(!mostrarExtrato)} style={{ position: 'absolute', top: 12, right: 12, padding: 6 }}>
-                  <Text style={{ fontSize: 18 }}>👁️</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, borderRadius: 16, padding: 14, justifyContent: 'center' }]}>
-                <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold', marginBottom: 8 }}>CASHBACK (REDE)</Text>
-                <Text style={{ color: c.neonAmarelo, fontSize: 24, fontWeight: '900' }}>💰 R$ {displayCash.toFixed(2)}</Text>
-              </View>
-            </View>
-
-            {/* Saldos locais - APENAS SE LOJA_ID */}
-            {loja_id && (
-              <View style={{ flexDirection: 'row', gap: 10, marginBottom: mostrarExtrato ? 12 : 0 }}>
-                <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, padding: 12, borderRadius: 16 }]}>
-                  <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold' }}>DISPONÍVEL NESTA LOJA</Text>
-                  <Text style={{ color: c.neonVerde, fontSize: 18, fontWeight: '900', marginTop: 3 }}>{Math.floor(displaySaldoLocal)} Springs</Text>
-                </View>
-                <View style={[styles.headerCard, { flex: 1, backgroundColor: c.card, borderColor: c.borda, padding: 12, borderRadius: 16 }]}>
-                  <Text style={{ color: c.subtexto, fontSize: 9, fontWeight: 'bold' }}>DISPONÍVEL NESTA LOJA</Text>
-                  <Text style={{ color: c.neonAmarelo, fontSize: 16, fontWeight: '900', marginTop: 3 }}>R$ {displayCashLocal.toFixed(2)}</Text>
-                </View>
-              </View>
-            )}
-
-            {/* EXTRATO */}
-            {mostrarExtrato && (
-              <View style={{ marginTop: 15, borderTopWidth: 1, borderTopColor: c.borda, paddingTop: 16 }}>
-                <Text style={{ color: c.texto, fontWeight: '900', fontSize: 16, marginBottom: 16 }}>Histórico de Atividade</Text>
-                <ScrollView style={{ maxHeight: 350 }} showsVerticalScrollIndicator={true}>
-                  {extrato.length > 0 ? (
-                    extrato.map((item: any) => (
-                      <View key={item.id} style={{
-                        backgroundColor: c.bg, borderRadius: 18, padding: 16, marginBottom: 12,
-                        borderWidth: 1, borderColor: c.borda, flexDirection: 'row', alignItems: 'center'
-                      }}>
-                        <View style={{ width: 45, height: 45, borderRadius: 22, backgroundColor: item.pontos > 0 ? '#10b98115' : item.pontos < 0 ? '#ef444415' : c.roxo + '15', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                          <Text style={{ fontSize: 20 }}>{item.icone || '🏷️'}</Text>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ color: c.texto, fontWeight: 'bold', fontSize: 14 }}>{item.titulo || (item.tipo === 'compra' ? 'Compra' : 'Atividade')}</Text>
-                          <Text style={{ color: c.subtexto, fontSize: 12 }}>{item.loja} • {new Date(item.data).toLocaleDateString('pt-BR')} {new Date(item.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</Text>
-                        </View>
-                        <View style={{ alignItems: 'flex-end' }}>
-                          <Text style={{ color: item.pontos > 0 ? '#10b981' : item.pontos < 0 ? '#ef4444' : c.roxo, fontWeight: '900', fontSize: 16 }}>
-                            {item.pontos > 0 ? `+${item.pontos}` : item.pontos === 'Especial' ? '⭐' : item.pontos}
-                          </Text>
-                          <Text style={{ color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>SPRINGS</Text>
-                        </View>
-                      </View>
-                    ))
-                  ) : (
-                    <View style={{ alignItems: 'center', padding: 20 }}>
-                      <Text style={{ color: c.subtexto, fontSize: 14 }}>Nenhuma atividade registrada ainda.</Text>
-                    </View>
-                  )}
-                </ScrollView>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* ── 2. BRINDES DA LOJA ATUAL ── */}
-        {recompensas.length > 0 && (
-          <View style={{ marginTop: 32 }}>
-            <Text style={[styles.sectionTitle, { color: c.texto, paddingHorizontal: 20 }]}>✨ Veja nossos brindes</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingLeft: 20 }}>
-              {recompensas.map(r => (
-                <View key={r.id} style={[styles.cardRecompensa, { backgroundColor: c.card, borderColor: c.borda }]}>
-                  {r.imagem
-                    ? <Image source={{ uri: r.imagem }} style={styles.imageRec} />
-                    : <View style={styles.imagePlaceholder}><Text style={{ fontSize: 40 }}>🎁</Text></View>}
-                  <View style={styles.overlayRec}>
-                    <Text style={styles.nomeRec} numberOfLines={2}>{r.nome}</Text>
-                    <Text style={{ color: c.neonVerde, fontWeight: '900' }}>{r.custo_pontos} SPG</Text>
-                    <TouchableOpacity style={[styles.botaoRec, { backgroundColor: getEstado(r).c }]} onPress={() => resgatar(r)} disabled={getEstado(r).d}>
-                      <Text style={styles.botaoTexto}>{getEstado(r).t}</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* ── 3. 2 CARDS DE PROPAGANDA ── */}
-        {(banner1 || banner2) && (
-          <View style={{ paddingHorizontal: 20, marginTop: 28 }}>
-            <Text style={[styles.sectionTitle, { color: c.texto }]}>📣 Novidades</Text>
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              {banner1 && (
-                <TouchableOpacity style={[styles.cardPropaganda, { flex: 1, borderColor: c.borda }]} activeOpacity={0.9}>
-                  <Image source={{ uri: banner1.imagem }} style={styles.cardPropImagem} />
-                  <View style={styles.cardPropOverlay}>
-                    <Text style={styles.cardPropTitulo} numberOfLines={2}>{banner1.titulo}</Text>
-                    {banner1.subtitulo ? <Text style={styles.cardPropSub} numberOfLines={1}>{banner1.subtitulo}</Text> : null}
-                  </View>
-                </TouchableOpacity>
-              )}
-              {banner2 && (
-                <TouchableOpacity style={[styles.cardPropaganda, { flex: 1, borderColor: c.borda }]} activeOpacity={0.9}>
-                  <Image source={{ uri: banner2.imagem }} style={styles.cardPropImagem} />
-                  <View style={styles.cardPropOverlay}>
-                    <Text style={styles.cardPropTitulo} numberOfLines={2}>{banner2.titulo}</Text>
-                    {banner2.subtitulo ? <Text style={styles.cardPropSub} numberOfLines={1}>{banner2.subtitulo}</Text> : null}
-                  </View>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        )}
-
-        {/* ── 4. CTA DA ROLETA (APENAS COM QR CODE) ── */}
-        {loja_id && loja_id !== 'undefined' ? (
-          <View style={{ alignItems: 'center', marginVertical: 36, paddingHorizontal: 20 }}>
-            <RoletaCTA onPress={abrirRoleta} premiosRoleta={premiosDisplay} isDark={isDark} c={c} />
-          </View>
-        ) : (
-          <View style={{ alignItems: 'center', marginVertical: 20, paddingHorizontal: 20 }}>
-            <Text style={{ color: c.subtexto, fontSize: 12, fontStyle: 'italic', textAlign: 'center' }}>
-              🎡 A Roleta da Sorte está disponível apenas quando você faz login com o QR code na loja!
-            </Text>
-          </View>
-        )}
-
-        {/* ── 5. BRINDES DA REDE ── */}
-        {recompensasRede.length > 0 && (
-          <View style={{ marginTop: 8 }}>
-            <Text style={[styles.sectionTitle, { color: c.texto, paddingHorizontal: 20 }]}>🌐 Brindes da Rede</Text>
-            <Text style={{ color: c.subtexto, fontSize: 12, paddingHorizontal: 20, marginBottom: 14 }}>
-              Troque seus Springs em qualquer loja parceira
-            </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingLeft: 20 }}>
-              {recompensasRede.map(r => (
-                // ── Mesmo formato do carrossel primário ──
-                <View key={r.id} style={[styles.cardRecompensa, { backgroundColor: c.card, borderColor: c.borda }]}>
-                  {r.imagem
-                    ? <Image source={{ uri: r.imagem }} style={styles.imageRec} />
-                    : <View style={styles.imagePlaceholder}><Text style={{ fontSize: 40 }}>🎁</Text></View>}
-                  <View style={styles.overlayRec}>
-                    <Text style={styles.nomeRec} numberOfLines={2}>{r.nome}</Text>
-                    <Text style={{ color: c.subtexto, fontSize: 10, marginTop: 2 }}>📍 {r.nomeLoja}</Text>
-                    <Text style={{ color: c.neonVerde, fontWeight: '900', marginTop: 4 }}>{r.custo_pontos} SPG</Text>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* ── 6. BANNER GRANDE ── */}
-        <View style={{ paddingHorizontal: 20, marginTop: 32 }}>
-          {bannerGrande ? (
-            <TouchableOpacity style={[styles.bannerCard, { borderColor: c.borda }]} activeOpacity={0.9}>
-              <Image source={{ uri: bannerGrande.imagem }} style={styles.bannerImage} />
-              <View style={styles.bannerOverlay}>
-                <Text style={styles.bannerTitle}>{bannerGrande.titulo}</Text>
-                <Text style={styles.bannerSub}>{bannerGrande.subtitulo}</Text>
-              </View>
+            <TouchableOpacity onPress={() => setMostraIntercambio(true)} style={{ padding: 10, backgroundColor: c.roxo, borderRadius: 12 }}>
+              <Text style={{ color: '#fff', fontWeight: 'bold' }}>REDE 🔄</Text>
             </TouchableOpacity>
-          ) : (
-            <LinearGradient colors={['#0ea5e9', '#10b981', '#7c3aed']} style={[styles.bannerCard, { borderColor: 'transparent' }]}>
-              <View style={{ flex: 1, padding: 24, justifyContent: 'flex-end' }}>
-                <Text style={styles.bannerTitle}>A Magia Continua ✨</Text>
-                <Text style={styles.bannerSub}>Acumule Springs hoje e troque por vantagens.</Text>
-              </View>
-            </LinearGradient>
-          )}
+          </View>
+          <Text style={{ color: c.neonAmarelo, fontSize: 18, fontWeight: 'bold', marginTop: 10 }}>💰 R$ {cashback.toFixed(2)}</Text>
         </View>
 
-        {/* ── 7. DOIS CARDS FINAIS ── */}
-        <View style={{ paddingHorizontal: 20, marginTop: 28, flexDirection: 'row', gap: 12 }}>
-          <TouchableOpacity style={[styles.cardInfo, { backgroundColor: c.card, borderColor: c.borda, flex: 1 }]} activeOpacity={0.85}>
-            <Text style={{ fontSize: 28, marginBottom: 8 }}>📘</Text>
-            <Text style={{ color: c.texto, fontWeight: '900', fontSize: 14, textAlign: 'center' }}>Saiba como{'\n'}funciona</Text>
-            <Text style={{ color: c.subtexto, fontSize: 11, textAlign: 'center', marginTop: 6 }}>Entenda o programa de benefícios</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.cardInfo, { backgroundColor: c.card, borderColor: c.neonVerde, flex: 1 }]} activeOpacity={0.85}>
-            <Text style={{ fontSize: 28, marginBottom: 8 }}>🎁</Text>
-            <Text style={{ color: c.neonVerde, fontWeight: '900', fontSize: 14, textAlign: 'center' }}>Indique e{'\n'}Ganhe</Text>
-            <Text style={{ color: c.subtexto, fontSize: 11, textAlign: 'center', marginTop: 6 }}>Convide amigos e ganhe Springs</Text>
-          </TouchableOpacity>
-        </View>
+        {loja_id && <RoletaCTA onPress={abrirRoleta} isDark={isDark} c={c} />}
 
-        {/* ── 8. SAIR DA CONTA ── */}
-        <TouchableOpacity style={styles.botaoSair} onPress={sairDaCarteira}>
-          <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>🚪 SAIR DA CONTA</Text>
-        </TouchableOpacity>
-        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 16, marginBottom: 10 }}>
-          v5.4.0-platinum-diamond-final
-        </Text>
+        <Text style={{ color: c.texto, fontSize: 18, fontWeight: 'bold', marginTop: 30, marginBottom: 15 }}>🎁 Brindes Disponíveis</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {recompensas.map(r => (
+            <View key={r.id} style={{ width: 200, backgroundColor: c.card, borderRadius: 20, marginRight: 15, padding: 15, borderWidth: 1, borderColor: c.borda }}>
+              <Text style={{ color: c.texto, fontWeight: 'bold' }}>{r.nome}</Text>
+              <Text style={{ color: c.neonVerde }}>{r.custo_pontos} SPG</Text>
+              <TouchableOpacity style={{ backgroundColor: saldo >= r.custo_pontos ? c.neonVerde : c.borda, padding: 10, borderRadius: 10, marginTop: 10 }}>
+                <Text style={{ color: '#fff', textAlign: 'center' }}>RESGATAR</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
       </ScrollView>
 
-      {/* ── MODAL DA ROLETA ── */}
-      {mostrarRoletaModal && (
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { maxHeight: '90%', backgroundColor: c.bg, borderColor: c.borda }]}>
-
-            {/* NPS */}
-            {etapaRoleta === 'nps' && (
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <Text style={[styles.modalTitle, { color: c.texto }]}>Antes de girar... 🎡</Text>
-                <Text style={{ color: c.subtexto, textAlign: 'center', marginTop: 6, marginBottom: 10 }}>
-                  Sua opinião vale muito pra gente!
-                </Text>
-                {perguntasNps.map(p => (
-                  <View key={p.id} style={{ marginTop: 20, backgroundColor: c.card, padding: 20, borderRadius: 20, borderWidth: 1, borderColor: c.borda }}>
-                    <Text style={{ color: c.texto, textAlign: 'center', fontWeight: 'bold', marginBottom: 15 }}>{p.pergunta}</Text>
-                    <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10 }}>
-                      {[1, 2, 3, 4, 5].map(s => (
-                        <TouchableOpacity key={s} onPress={() => setRespostasNps({ ...respostasNps, [p.id]: s })}>
-                          <Text style={{ fontSize: 32, opacity: respostasNps[p.id] >= s ? 1 : 0.2 }}>⭐</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
+      <Modal visible={mostraIntercambio} transparent animationType="slide">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: c.card, borderRadius: 24, padding: 24 }}>
+            <Text style={{ color: c.texto, fontSize: 20, fontWeight: 'bold', marginBottom: 20 }}>🌐 Intercâmbio de Pontos</Text>
+            {tokenAtivo ? (
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ color: c.subtexto }}>CÓDIGO DE RESGATE:</Text>
+                <Text style={{ color: c.neonVerde, fontSize: 40, fontWeight: 'bold', marginVertical: 20 }}>{tokenAtivo.token}</Text>
+                <TouchableOpacity onPress={cancelarToken} style={{ padding: 10 }}><Text style={{ color: '#ef4444' }}>CANCELAR</Text></TouchableOpacity>
+              </View>
+            ) : (
+              <ScrollView>
+                {saldoPorLoja.map(s => (
+                  <TouchableOpacity key={s.id} style={{ padding: 15, borderBottomWidth: 1, borderColor: c.borda }} onPress={() => gerarTokenIntercambio([s])}>
+                    <Text style={{ color: c.texto }}>{s.nome}</Text>
+                    <Text style={{ color: c.neonVerde }}>{s.pontos} SPG</Text>
+                  </TouchableOpacity>
                 ))}
-                <TouchableOpacity
-                  style={[styles.buttonBig, { marginTop: 30, opacity: Object.keys(respostasNps).length === perguntasNps.length ? 1 : 0.5 }]}
-                  onPress={() => {
-                    // Validar se respondeu todas as perguntas
-                    if (Object.keys(respostasNps).length !== perguntasNps.length) {
-                      mostrarToast('⚠️ Responda todas as perguntas!', 'erro');
-                      return;
-                    }
-                    setEtapaRoleta('girando');
-                  }}
-                  disabled={Object.keys(respostasNps).length !== perguntasNps.length}
-                >
-                  <Text style={styles.buttonTextBig}>LIBERAR ROLETA 🎡</Text>
-                </TouchableOpacity>
               </ScrollView>
             )}
+            <TouchableOpacity onPress={() => setMostraIntercambio(false)} style={{ marginTop: 20, alignItems: 'center' }}><Text style={{ color: c.subtexto }}>FECHAR</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
-            {/* GIRANDO — visual igual ao CTA mas com prêmios reais */}
+      <Modal visible={mostrarRoletaModal} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: c.card, borderRadius: 24, padding: 24, width: '100%', maxWidth: 400 }}>
+            {etapaRoleta === 'nps' && (
+              <View>
+                <Text style={{ color: c.texto, fontSize: 20, fontWeight: 'bold', textAlign: 'center' }}>O que achou de nós?</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 30 }}>
+                  {[1, 2, 3, 4, 5].map(i => <TouchableOpacity key={i} onPress={() => setEtapaRoleta('girando')}><Text style={{ fontSize: 40 }}>⭐</Text></TouchableOpacity>)}
+                </View>
+              </View>
+            )}
             {etapaRoleta === 'girando' && (
               <View style={{ alignItems: 'center' }}>
-                <Text style={{ color: c.texto, fontSize: 22, fontWeight: '900', marginBottom: 24 }}>BOA SORTE! 🍀</Text>
-
-                {/* Ponteiro */}
-                <View style={{ zIndex: 10, marginBottom: -12 }}>
-                  <Svg width={36} height={36} viewBox="0 0 32 32">
-                    <Path d="M16 28 L4 6 L28 6 Z" fill="#10b981" stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
-                    <Circle cx="16" cy="6" r="4" fill="#10b981" stroke="#fff" strokeWidth="1.5" />
-                  </Svg>
-                </View>
-
-                {/* Aro metálico + roda animada */}
-                <View style={{
-                  width: 308, height: 308, borderRadius: 154,
-                  backgroundColor: isDark ? '#334155' : '#94a3b8',
-                  justifyContent: 'center', alignItems: 'center',
-                  shadowColor: '#10b981', shadowOffset: { width: 0, height: 0 },
-                  shadowOpacity: 0.5, shadowRadius: 20, elevation: 20,
-                }}>
-                  <Animated.View style={{
-                    width: 288, height: 288, borderRadius: 144,
-                    overflow: 'hidden',
-                    transform: [{ rotate: wheelSpin }],
-                  }}>
-                    <WheelSVG prizes={premiosRoleta} size={288} isDark={isDark} />
-                  </Animated.View>
-                </View>
-
-                <TouchableOpacity
-                  style={[styles.buttonBig, { marginTop: 32, width: '100%', opacity: rodando ? 0.6 : 1 }]}
-                  onPress={girarRoleta}
-                  disabled={rodando}>
-                  <Text style={styles.buttonTextBig}>{rodando ? '🎡 Girando...' : 'GIRAR AGORA!'}</Text>
+                <Animated.View style={{ transform: [{ rotate: rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', `${roletaTargetDeg}deg`] }) }] }}>
+                  <WheelSVG prizes={premiosRoleta} size={250} isDark={isDark} />
+                </Animated.View>
+                <TouchableOpacity onPress={girarRoleta} disabled={rodando} style={{ backgroundColor: c.neonVerde, padding: 20, borderRadius: 50, marginTop: 30 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>{rodando ? 'GIRANDO...' : 'GIRAR!'}</Text>
                 </TouchableOpacity>
               </View>
             )}
-
-            {/* RESULTADO TEMÁTICO */}
-            {etapaRoleta === 'resultado' && premioGanho && (() => {
-              const positivo = isPremioPositivo(premioGanho);
-              return (
-                <Animated.View style={{
-                  alignItems: 'center',
-                  transform: [{ scale: resultAnim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }],
-                  opacity: resultAnim,
-                }}>
-                  {positivo ? (
-                    // ── FESTIVO ──
-                    <View style={{ backgroundColor: c.card, borderRadius: 24, padding: 28, width: '100%', borderWidth: 1, borderColor: c.borda }}>
-                      <Text style={{ fontSize: 70, marginBottom: 10, textAlign: 'center' }}>🎉</Text>
-                      <Text style={{ color: c.verde, fontSize: 14, fontWeight: '700', letterSpacing: 2, marginBottom: 8, textAlign: 'center' }}>
-                        PARABÉNS!
-                      </Text>
-                      <Text style={{ color: c.texto, fontSize: 26, fontWeight: '900', textAlign: 'center', marginBottom: 6 }}>
-                        {premioGanho.nome}
-                      </Text>
-                      <Text style={{ color: c.subtexto, fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
-                        {premioGanho.tipo === 'cashback' ? '💰 Cashback creditado na sua carteira!'
-                          : premioGanho.tipo === 'pontos' ? '✨ Springs adicionados ao seu saldo!'
-                            : '🎁 Retire seu brinde com o atendente!'}
-                      </Text>
-                      {/* Estrelinhas decorativas */}
-                      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24, justifyContent: 'center' }}>
-                        {['🌟', '⭐', '🌟', '⭐', '🌟'].map((e, i) => (
-                          <Text key={i} style={{ fontSize: 20 }}>{e}</Text>
-                        ))}
-                      </View>
-                    </View>
-                  ) : (
-                    // ── TRISTE ──
-                    <View style={{ backgroundColor: c.card, borderRadius: 24, padding: 28, width: '100%', borderWidth: 1, borderColor: c.borda }}>
-                      <Text style={{ fontSize: 70, marginBottom: 10, textAlign: 'center' }}>😢</Text>
-                      <Text style={{ color: c.roxo, fontSize: 14, fontWeight: '700', letterSpacing: 2, marginBottom: 8, textAlign: 'center' }}>
-                        OPS...
-                      </Text>
-                      <Text style={{ color: c.texto, fontSize: 26, fontWeight: '900', textAlign: 'center', marginBottom: 6 }}>
-                        {premioGanho.nome}
-                      </Text>
-                      <Text style={{ color: c.subtexto, fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
-                        Não foi dessa vez... Tente novamente na sua próxima visita!
-                      </Text>
-                    </View>
-                  )}
-                  <TouchableOpacity style={[styles.buttonBig, { width: '100%', marginTop: 8 }]} onPress={() => setMostrarRoletaModal(false)}>
-                    <Text style={styles.buttonTextBig}>FECHAR</Text>
-                  </TouchableOpacity>
-                </Animated.View>
-              );
-            })()}
+            {etapaRoleta === 'resultado' && (
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontSize: 60 }}>🎉</Text>
+                <Text style={{ color: c.texto, fontSize: 24, fontWeight: 'bold', textAlign: 'center' }}>Você ganhou: {premioGanho?.nome}</Text>
+                <TouchableOpacity onPress={() => setMostrarRoletaModal(false)} style={{ marginTop: 30, backgroundColor: c.neonVerde, padding: 15, borderRadius: 15 }}><Text style={{ color: '#fff' }}>FECHAR</Text></TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
-      )}
+      </Modal>
 
-      {/* TOAST */}
-      {mostrarPinModal && (
-        <View style={styles.modalOverlay}>
-          <View style={{ backgroundColor: c.card, borderRadius: 24, padding: 28, width: '100%', maxWidth: 350 }}>
-            <Text style={{ fontSize: 22, fontWeight: '900', color: c.texto, textAlign: 'center', marginBottom: 8 }}>
-              {pinModoValidar ? '🔐 Acesso Seguro' : '📱 Criar PIN'}
-            </Text>
-            <Text style={{ color: c.subtexto, textAlign: 'center', marginBottom: 24, fontSize: 13 }}>
-              {pinModoValidar ? 'Digite seu PIN de 4 dígitos' : 'Crie um PIN de 4 dígitos para sua carteira'}
-            </Text>
-
-            {/* 4 Input Boxes para PIN */}
-            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginBottom: 24 }}>
+      <Modal visible={mostrarPinModal} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: c.card, padding: 30, borderRadius: 24, width: 300 }}>
+            <Text style={{ color: c.texto, fontSize: 20, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 }}>{pinModoValidar ? 'Digite seu PIN' : 'Crie seu PIN'}</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 30 }}>
               {[0, 1, 2, 3].map(i => (
                 <TextInput
                   key={i}
-                  ref={input => {
-                    if (input) pinInputRefs.current[i] = input;
+                  ref={r => {
+                    pinInputRefs.current[i] = r;
                   }}
                   value={pinDigitado[i]}
-                  onChangeText={v => handlePinInput(i, v)}
+                  onChangeText={v => {
+                    const n = [...pinDigitado];
+                    const cleanV = v.replace(/\D/g, '');
+                    n[i] = cleanV;
+                    setPinDigitado(n);
+                    if (cleanV && i < 3) {
+                      pinInputRefs.current[i + 1]?.focus();
+                    }
+                  }}
                   onKeyPress={({ nativeEvent }) => {
-                    if (nativeEvent.key === 'Backspace') handlePinBackspace(i);
+                    if (nativeEvent.key === 'Backspace' && !pinDigitado[i] && i > 0) {
+                      pinInputRefs.current[i - 1]?.focus();
+                    }
+                  }}
+                  style={{ 
+                    width: 50, 
+                    height: 60, 
+                    backgroundColor: c.bg, 
+                    color: c.texto, 
+                    textAlign: 'center', 
+                    fontSize: 24, 
+                    borderRadius: 10,
+                    borderWidth: pinDigitado[i] ? 2 : 1,
+                    borderColor: pinDigitado[i] ? c.neonVerde : c.borda
                   }}
                   keyboardType="numeric"
                   maxLength={1}
-                  secureTextEntry={true}
-                  style={{
-                    width: 60, height: 60,
-                    borderRadius: 12,
-                    borderWidth: 2,
-                    borderColor: pinDigitado[i] ? c.neonVerde : c.borda,
-                    backgroundColor: c.bg,
-                    color: c.texto,
-                    fontSize: 28,
-                    fontWeight: '900',
-                    textAlign: 'center',
-                  }}
-                  placeholder="•"
-                  placeholderTextColor={c.subtexto}
+                  secureTextEntry
                 />
               ))}
             </View>
-
-            {/* Botões */}
-            <View style={{ gap: 10 }}>
-              <TouchableOpacity
-                style={{ backgroundColor: c.neonVerde, padding: 16, borderRadius: 12, alignItems: 'center' }}
-                onPress={pinModoValidar ? validarPin : criarNovoPin}
-                disabled={carregando}
-              >
-                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>
-                  {carregando ? '⏳ Processando...' : (pinModoValidar ? 'CONFIRMAR' : 'CRIAR PIN')}
-                </Text>
-              </TouchableOpacity>
-
-              {!pinModoValidar && (
-                <TouchableOpacity
-                  style={{ backgroundColor: c.borda, padding: 14, borderRadius: 12, alignItems: 'center' }}
-                  onPress={() => {
-                    setMostrarPinModal(false);
-                    setPinDigitado(['', '', '', '']);
-                  }}
-                >
-                  <Text style={{ color: c.subtexto, fontWeight: '700', fontSize: 12 }}>CANCELAR</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* WhatsApp Recovery para PIN - quando estiver sem QR code */}
-            {!loja_id && pinModoValidar && (
-              <TouchableOpacity
-                style={{ marginTop: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: c.borda }}
-                onPress={() => {
-                  const numero = cpf.replace(/\D/g, '');
-                  const url = `https://wa.me/+55${numero}?text=Olá, esqueci meu PIN de acesso ao PALM SPRINGS`;
-                  // Abrir WhatsApp (em produção, usar Linking)
-                }}
-              >
-                <Text style={{ fontSize: 18 }}>💬</Text>
-                <Text style={{ color: c.neonVerde, fontWeight: '700', fontSize: 12 }}>Perdeu o PIN? Vá até uma loja da rede para trocar.</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity onPress={pinModoValidar ? validarPin : criarNovoPin} style={{ backgroundColor: c.neonVerde, padding: 15, borderRadius: 15 }}><Text style={{ color: '#fff', textAlign: 'center', fontWeight: 'bold' }}>CONFIRMAR</Text></TouchableOpacity>
           </View>
         </View>
-      )}
-
-      {toast.visible && (
-        <Animated.View style={[styles.toast, {
-          backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444',
-          transform: [{ translateY: toastAnim }],
-        }]}>
-          <Text style={{ color: '#fff', fontWeight: 'bold' }}>{toast.message}</Text>
-        </Animated.View>
-      )}
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { flexGrow: 1, justifyContent: 'center', padding: 25 },
-  logo: { fontSize: 36, fontWeight: '900', textAlign: 'center' },
-  logoMini: { fontSize: 24, fontWeight: '900' },
   inputGigante: { padding: 22, borderRadius: 20, fontSize: 32, fontWeight: '900', textAlign: 'center', borderWidth: 2, marginBottom: 20 },
   buttonBig: { padding: 22, borderRadius: 20, alignItems: 'center', backgroundColor: '#10b981' },
   buttonTextBig: { color: '#fff', fontWeight: '900', fontSize: 16 },
-  headerCard: { padding: 18, borderRadius: 22, borderWidth: 1 },
-  sectionTitle: { fontSize: 18, fontWeight: '900', marginBottom: 15 },
-  // Carrossel (loja + rede — mesmo formato)
-  cardRecompensa: { width: 220, height: 300, borderRadius: 24, marginRight: 15, overflow: 'hidden', borderWidth: 1 },
-  imageRec: { width: '100%', height: '100%', position: 'absolute', resizeMode: 'cover' },
-  imagePlaceholder: { width: '100%', height: '100%', backgroundColor: '#1e293b', justifyContent: 'center', alignItems: 'center' },
-  overlayRec: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 18, backgroundColor: 'rgba(0,0,0,0.85)' },
-  nomeRec: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
-  botaoRec: { padding: 12, borderRadius: 12, marginTop: 10, alignItems: 'center' },
-  botaoTexto: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
-  // Cards de propaganda
-  cardPropaganda: { height: 140, borderRadius: 20, overflow: 'hidden', borderWidth: 1 },
-  cardPropImagem: { width: '100%', height: '100%', position: 'absolute', resizeMode: 'cover' },
-  cardPropOverlay: { flex: 1, padding: 14, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
-  cardPropTitulo: { color: '#fff', fontSize: 13, fontWeight: '900' },
-  cardPropSub: { color: '#e2e8f0', fontSize: 10, marginTop: 3 },
-  // Banner grande
-  bannerCard: { height: 200, borderRadius: 24, overflow: 'hidden', borderWidth: 1 },
-  bannerImage: { width: '100%', height: '100%', position: 'absolute', resizeMode: 'cover', opacity: 0.6 },
-  bannerOverlay: { flex: 1, padding: 24, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.35)' },
-  bannerTitle: { color: '#fff', fontSize: 24, fontWeight: '900' },
-  bannerSub: { color: '#fff', fontSize: 14, marginTop: 4 },
-  // Cards finais
-  cardInfo: { padding: 22, borderRadius: 22, borderWidth: 1.5, alignItems: 'center' },
-  // Sair
-  botaoSair: { marginTop: 28, padding: 18, alignItems: 'center', marginHorizontal: 20, borderWidth: 1, borderRadius: 16, borderColor: '#ef4444' },
-  // Modal
-  modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20, zIndex: 9999 },
-  modalCard: { backgroundColor: '#1e293b', width: '100%', maxWidth: 450, padding: 25, borderRadius: 24, borderWidth: 1, borderColor: '#334155' },
-  modalTitle: { color: '#fff', fontSize: 26, fontWeight: '900', textAlign: 'center' },
-  // Resultado
-  resultGradient: { width: '100%', borderRadius: 24, padding: 28, alignItems: 'center', borderWidth: 1, borderColor: '#334155' },
-  // Toast
-  toast: { position: 'absolute', top: 0, left: 20, right: 20, padding: 16, borderRadius: 16, alignItems: 'center', zIndex: 99999 },
-  // Aguardando
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  aiCircle: { width: 120, height: 120, borderRadius: 60, borderWidth: 6, borderTopColor: 'transparent' },
 });
