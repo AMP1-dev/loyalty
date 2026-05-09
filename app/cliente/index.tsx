@@ -232,10 +232,9 @@ export default function Cliente() {
   const params = useLocalSearchParams();
   const loja_id = params?.loja_id;
 
-  if (params?.mesa === 'true' || (typeof window !== 'undefined' && window.location.pathname.includes('/mesa'))) {
+  if (params?.mesa === 'true' || loja_id || (typeof window !== 'undefined' && window.location.pathname.includes('/mesa'))) {
     return <MesaRoleta />;
   }
-
   const [cpf, setCpf] = useState('');
   const [status, setStatus] = useState<'idle' | 'aguardando' | 'finalizado'>('idle');
   const [saldo, setSaldo] = useState(0);
@@ -318,7 +317,7 @@ export default function Cliente() {
 
   useEffect(() => {
     const initApp = async () => {
-      const APP_VERSION = '5.8.0-exchange';
+      const APP_VERSION = 'v5.8.0-exchange';
       const savedVersion = await carregarStorage('@app_version');
       if (savedVersion !== APP_VERSION) {
         if (typeof window !== 'undefined') localStorage.clear();
@@ -415,7 +414,7 @@ export default function Cliente() {
       mostrarToast('Número inválido. Use (DD) 99999-9999 📱', 'erro');
       return;
     }
-    
+
     const ddd = clean.substring(0, 2);
     if (!DDD_VALIDOS.includes(ddd)) {
       mostrarToast(`O DDD ${ddd} não é reconhecido. Verifique o número. ⚠️`, 'erro');
@@ -425,7 +424,7 @@ export default function Cliente() {
     setCarregando(true);
     try {
       const { data, error } = await supabase.from('clientes').select('pin_hash').eq('cpf', clean).maybeSingle();
-      
+
       if (error) {
         mostrarToast('Erro de conexão. Tente novamente. 🌐', 'erro');
         setCarregando(false);
@@ -524,9 +523,9 @@ export default function Cliente() {
       <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 40 }}>v5.8.0-exchange</Text>
 
       {toast.visible && (
-        <Animated.View style={{ 
-          position: 'absolute', top: toastAnim, left: 20, right: 20, 
-          backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444', 
+        <Animated.View style={{
+          position: 'absolute', top: toastAnim, left: 20, right: 20,
+          backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444',
           padding: 16, borderRadius: 12, elevation: 10, zIndex: 9999,
           flexDirection: 'row', alignItems: 'center'
         }}>
@@ -541,8 +540,8 @@ export default function Cliente() {
       <ActivityIndicator size="large" color={c.neonVerde} />
       <Text style={{ marginTop: 20, color: c.texto, fontWeight: 'bold' }}>Aguardando liberação...</Text>
       <Text style={{ marginTop: 10, color: c.subtexto, fontSize: 12, textAlign: 'center', paddingHorizontal: 40 }}>O atendente já foi notificado e logo irá liberar seu acesso. ⏳</Text>
-      
-      <TouchableOpacity 
+
+      <TouchableOpacity
         onPress={() => { setStatus('idle'); salvarStorage('cliente_cpf', ''); }}
         style={{ marginTop: 40, padding: 10 }}
       >
@@ -671,13 +670,13 @@ export default function Cliente() {
                       pinInputRefs.current[i - 1]?.focus();
                     }
                   }}
-                  style={{ 
-                    width: 50, 
-                    height: 60, 
-                    backgroundColor: c.bg, 
-                    color: c.texto, 
-                    textAlign: 'center', 
-                    fontSize: 24, 
+                  style={{
+                    width: 50,
+                    height: 60,
+                    backgroundColor: c.bg,
+                    color: c.texto,
+                    textAlign: 'center',
+                    fontSize: 24,
                     borderRadius: 10,
                     borderWidth: pinDigitado[i] ? 2 : 1,
                     borderColor: pinDigitado[i] ? c.neonVerde : c.borda
@@ -694,9 +693,9 @@ export default function Cliente() {
       </Modal>
 
       {toast.visible && (
-        <Animated.View style={{ 
-          position: 'absolute', top: toastAnim, left: 20, right: 20, 
-          backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444', 
+        <Animated.View style={{
+          position: 'absolute', top: toastAnim, left: 20, right: 20,
+          backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444',
           padding: 16, borderRadius: 12, elevation: 10, zIndex: 9999,
           flexDirection: 'row', alignItems: 'center'
         }}>
