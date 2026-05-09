@@ -242,7 +242,8 @@ export default function Cliente() {
   const params = useLocalSearchParams();
   const loja_id = params?.loja_id;
 
-  if (params?.mesa === 'true' || loja_id || (typeof window !== 'undefined' && window.location.pathname.includes('/mesa'))) {
+  // 🔴 CORRIGIDO: Só mostra MesaRoleta quando EXPLICITAMENTE é mesa
+  if (params?.mesa === 'true' || (typeof window !== 'undefined' && window.location.pathname.includes('/mesa'))) {
     return <MesaRoleta />;
   }
   const [cpf, setCpf] = useState('');
