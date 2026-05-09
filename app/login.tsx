@@ -158,7 +158,7 @@ export default function LoginScreen() {
           <Text style={styles.backButtonText}>← VOLTAR AO INÍCIO</Text>
         </TouchableOpacity>
       </View>
-      <Text style={styles.footer}>Powered by AMP Tecnologia © 2026</Text>
+      <Text style={styles.footer}>Powered by AMP Tecnologia © 2026 | v5.8.0-exchange</Text>
     </View>
   );
 }

@@ -10,6 +10,8 @@ import Svg, { Circle, Defs, G, Path, RadialGradient, LinearGradient as SvgLinear
 import { supabase } from '../../../lib/supabase';
 import OfertaGoogle from './OfertaGoogle';
 
+const APP_VERSION = 'v5.8.0-exchange';
+
 // ─── Storage helpers ──────────────────────────────────────────────────────────
 const salvarStorage = async (key: string, value: string) => {
   if (typeof window !== 'undefined') localStorage.setItem(key, value);
@@ -184,6 +186,16 @@ export default function MesaRoleta() {
            }
         }
         setPremiosRoletaMesa(listaBonita);
+      } else {
+        // Se não houver prêmios no banco, carrega prêmios padrão para evitar tela branca
+        setPremiosRoletaMesa([
+          { id: 'd1', nome: 'TENTE NOVAMENTE', tipo: 'outro', probabilidade: 50 },
+          { id: 'd2', nome: 'PRÓXIMA VISITA', tipo: 'outro', probabilidade: 50 },
+          { id: 'd3', nome: 'TENTE NOVAMENTE', tipo: 'outro', probabilidade: 50 },
+          { id: 'd4', nome: 'PRÓXIMA VISITA', tipo: 'outro', probabilidade: 50 },
+          { id: 'd5', nome: 'TENTE NOVAMENTE', tipo: 'outro', probabilidade: 50 },
+          { id: 'd6', nome: 'SORTE NA PRÓXIMA', tipo: 'outro', probabilidade: 50 }
+        ]);
       }
 
       const { data: perguntas } = await supabase.from('perguntas_nps').select('*').eq('loja_id', loja_id).eq('ativa', true).order('ordem', { ascending: true });
@@ -411,6 +423,7 @@ export default function MesaRoleta() {
           </View>
         </ScrollView>
       )}
+      <Text style={{ position: 'absolute', bottom: 10, color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>{APP_VERSION}</Text>
     </View>
   );
 }

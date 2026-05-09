@@ -29,7 +29,7 @@ const carregarStorage = async (key: string) => {
 const DDD_VALIDOS = [
   '11', '12', '13', '14', '15', '16', '17', '18', '19',
   '21', '22', '24', '27', '28',
-  '31', '32', '33', '34', '35', '37', '38',
+  '31', '32', '33', '34', '35', '36', '37', '38', '39',
   '41', '42', '43', '44', '45', '46', '47', '48', '49',
   '51', '53', '54', '55',
   '61', '62', '63', '64', '65', '66', '67', '68', '69',
@@ -405,12 +405,41 @@ export default function Cliente() {
   };
 
   const entrarFila = async () => {
-    const clean = cpf.replace(/\D/g, ''); if (clean.length < 10) return;
+    const clean = cpf.replace(/\D/g, '');
+    if (clean.length < 10 || clean.length > 11) {
+      mostrarToast('Número inválido. Use (DD) 99999-9999 📱', 'erro');
+      return;
+    }
+    
+    const ddd = clean.substring(0, 2);
+    if (!DDD_VALIDOS.includes(ddd)) {
+      mostrarToast(`O DDD ${ddd} não é reconhecido. Verifique o número. ⚠️`, 'erro');
+      return;
+    }
+
     setCarregando(true);
-    const { data } = await supabase.from('clientes').select('pin_hash').eq('cpf', clean).single();
-    if (!data?.pin_hash) { setEhPrimeiroCadastro(true); setPinModoValidar(false); setMostrarPinModal(true); }
-    else { setPinModoValidar(true); setMostrarPinModal(true); }
-    setCarregando(false);
+    try {
+      const { data, error } = await supabase.from('clientes').select('pin_hash').eq('cpf', clean).maybeSingle();
+      
+      if (error) {
+        mostrarToast('Erro de conexão. Tente novamente. 🌐', 'erro');
+        setCarregando(false);
+        return;
+      }
+
+      if (!data?.pin_hash) {
+        setEhPrimeiroCadastro(true);
+        setPinModoValidar(false);
+        setMostrarPinModal(true);
+      } else {
+        setPinModoValidar(true);
+        setMostrarPinModal(true);
+      }
+    } catch (err) {
+      mostrarToast('Ocorreu um erro inesperado. ❌', 'erro');
+    } finally {
+      setCarregando(false);
+    }
   };
 
   const validarPin = async () => {
