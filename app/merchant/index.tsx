@@ -428,8 +428,11 @@ export default function MerchantPanel() {
       setHistoricoCRM(atrasados);
       setClientesAtrasados(atrasados.length);
 
-      const pontosGeradosMes = vendasMes.reduce((a: any, v: any) => a + (v.pontos_gerados || 0), 0);
-      const roi = pontosGeradosMes > 0 ? (totalMes / (pontosGeradosMes * (Number(config.reais_por_ponto) || 1))) : 0;
+      const cashbackUsadoMes = resgatesMesLista.reduce((a: any, r: any) => a + (Number(r.valor_cashback) || 0), 0);
+      const pontosResgatadosMesTotal = resgatesMesLista.reduce((a: any, r: any) => a + (Number(r.pontos_usados) || 0), 0);
+      const custoEstimadoPontos = pontosResgatadosMesTotal * (1 / (Number(config.reais_por_ponto) || 1));
+      const investimentoTotal = (cashbackUsadoMes + custoEstimadoPontos) || 1; // evita divisão por zero
+      const roi = totalMes / investimentoTotal;
 
       setStats({
         totalMes, totalDia, vendasCount: vendasHoje.length, vendasCountTotal: vendas.length,
