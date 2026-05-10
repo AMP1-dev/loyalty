@@ -574,10 +574,17 @@ export default function Cliente() {
     try {
       if (loja_id) {
         // Fluxo Balcão: Check-in DIRETO (sem PIN) para aparecer no lojista
-        const { error: insError } = await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]);
+        // Usamos upsert para evitar erro se o cliente já estiver na fila
+        const { error: insError } = await supabase.from('checkins').upsert(
+          { cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' },
+          { onConflict: 'cliente_cpf,loja_id' }
+        );
+        
         if (insError) {
           console.error('Erro ao inserir checkin:', insError);
-          mostrarToast('Erro ao entrar na fila. Tente novamente. ❌', 'erro');
+          // Se for erro de política (RLS), tentamos avisar
+          const msg = insError.code === '42501' ? 'Erro de permissão no banco. 🔒' : 'Erro ao entrar na fila. Tente novamente. ❌';
+          mostrarToast(msg, 'erro');
           setCarregando(false);
           return;
         }
