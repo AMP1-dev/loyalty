@@ -122,7 +122,7 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
   const numSlices = prizes.length;
   const sliceAngle = (2 * Math.PI) / numSlices;
 
-  const textColor = isDark ? '#e2e8f0' : '#334155';
+  const textColor = isDark ? '#f8fafc' : '#0f172a';
 
   const buildSlicePath = (index: number) => {
     const startAngle = index * sliceAngle - Math.PI / 2;
@@ -279,7 +279,8 @@ function RoletaCTA({ onPress, isDark, c }: any) {
       </View>
       <View style={{
         width: WHEEL_SIZE + 16, height: WHEEL_SIZE + 16, borderRadius: (WHEEL_SIZE + 16) / 2,
-        backgroundColor: isDark ? '#334155' : '#94a3b8', justifyContent: 'center', alignItems: 'center', elevation: 15,
+        backgroundColor: isDark ? '#334155' : '#ffffff', justifyContent: 'center', alignItems: 'center', elevation: 15,
+        borderWidth: 1, borderColor: isDark ? '#475569' : '#e2e8f0'
       }}>
         <Animated.View style={{ width: WHEEL_SIZE, height: WHEEL_SIZE, transform: [{ rotate: wheelRotate }] }}>
           <WheelSVG prizes={prizesDisplay} size={WHEEL_SIZE} isDark={isDark} />
@@ -701,7 +702,12 @@ export default function Cliente() {
     for (const p of premiosRoleta) { if (rand < p.probabilidade) { win = p; break; } rand -= p.probabilidade; }
     const target = 3600 + (360 - (premiosRoleta.indexOf(win) * (360 / premiosRoleta.length)));
     setRoletaTargetDeg(target);
-    Animated.timing(rotateAnim, { toValue: 1, duration: 5000, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start(async () => {
+    Animated.timing(rotateAnim, { 
+      toValue: 1, 
+      duration: 3000, 
+      easing: Easing.out(Easing.cubic), 
+      useNativeDriver: false 
+    }).start(async () => {
       setPremioGanho(win); setRodando(false); setEtapaRoleta('resultado');
       const clean = cpf.replace(/\D/g, '');
       if (win.tipo === 'pontos') await supabase.from('bonus_pendentes').insert([{ cliente_cpf: clean, loja_id: String(loja_id), pontos: win.valor }]);
@@ -865,6 +871,41 @@ export default function Cliente() {
             </View>
           )}
 
+          {/* SEÇÃO DE BRINDES DA LOJA */}
+          {loja_id && recompensas.length > 0 && (
+            <View style={{ paddingLeft: 20, marginVertical: 30 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
+                <Text style={{ fontSize: 22, marginRight: 8 }}>✨</Text>
+                <Text style={{ fontSize: 18, fontWeight: '900', color: c.texto }}>Brindes de {nomeLojaAtual || 'esta loja'}</Text>
+              </View>
+              <Text style={{ color: c.subtexto, fontSize: 12, marginBottom: 15, fontWeight: '600' }}>Exclusivos para você aproveitar agora</Text>
+              
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {recompensas.map((item, idx) => (
+                  <View key={idx} style={[styles.brindeCard, { backgroundColor: c.card, borderColor: c.borda }]}>
+                    <View style={{ height: 160, backgroundColor: '#222', borderRadius: 20, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
+                       {item.foto ? (
+                         <Image source={{ uri: item.foto }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                       ) : (
+                         <Text style={{ fontSize: 40 }}>🎁</Text>
+                       )}
+                      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={StyleSheet.absoluteFill} />
+                      <View style={{ position: 'absolute', bottom: 12, left: 12 }}>
+                        <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>{item.nome}</Text>
+                        <Text style={{ color: c.neonVerde, fontWeight: '800', fontSize: 12 }}>{item.custo_pontos} SPG</Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity style={[styles.btnResgate, { backgroundColor: saldo >= item.custo_pontos ? c.neonVerde : (isDark ? '#26334A' : '#E2E8F0') }]}>
+                      <Text style={{ color: saldo >= item.custo_pontos ? '#fff' : '#94A3B8', fontWeight: '900', fontSize: 10 }}>
+                        {saldo >= item.custo_pontos ? 'RESGATAR AGORA' : 'SEM SALDO'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           {/* SEÇÃO DE BRINDES DA REDE */}
           <View style={{ paddingLeft: 20, marginVertical: 30 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
@@ -874,7 +915,7 @@ export default function Cliente() {
             <Text style={{ color: c.subtexto, fontSize: 12, marginBottom: 15, fontWeight: '600' }}>Troque seus Springs em qualquer loja parceira</Text>
             
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {(recompensasRede.length > 0 ? recompensasRede : recompensas).map((item, idx) => (
+              {recompensasRede.map((item, idx) => (
                 <View key={idx} style={[styles.brindeCard, { backgroundColor: c.card, borderColor: c.borda }]}>
                   <View style={{ height: 160, backgroundColor: '#222', borderRadius: 20, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
                      {item.foto ? (
