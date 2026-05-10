@@ -64,6 +64,21 @@ const getIconePremio = (tipo: string) => {
   return '🎁';
 };
 
+// ─── Validação de Telefone Brasileira ──────────────────────────────────────────
+const validarTelefone = (tel: string) => {
+  const clean = tel.replace(/\D/g, '');
+  if (/^(\d)\1+$/.test(clean)) return false; // Bloqueia repetidos
+  if (clean.length !== 10 && clean.length !== 11) return false;
+  const ddd = clean.substring(0, 2);
+  if (!DDD_VALIDOS.includes(ddd)) return false;
+  if (clean.length === 11) {
+    if (clean[2] !== '9') return false; // Celular deve começar com 9
+  } else {
+    if (!['2', '3', '4', '5'].includes(clean[2])) return false; // Fixo 2 a 5
+  }
+  return true;
+};
+
 // ─── Componente de Animação Pulsante (Estilo I.A) ──────────────────────────
 const PulsingAI = ({ color }: { color: string }) => {
   const scale1 = useRef(new Animated.Value(1)).current;
@@ -544,14 +559,8 @@ export default function Cliente() {
 
   const entrarFila = async () => {
     const clean = cpf.replace(/\D/g, '');
-    if (clean.length < 10 || clean.length > 11) {
-      mostrarToast('Número inválido. Use (DD) 99999-9999 📱', 'erro');
-      return;
-    }
-
-    const ddd = clean.substring(0, 2);
-    if (!DDD_VALIDOS.includes(ddd)) {
-      mostrarToast(`O DDD ${ddd} não é reconhecido. Verifique o número. ⚠️`, 'erro');
+    if (!validarTelefone(clean)) {
+      mostrarToast('Número inválido ou não aceito como telefone. 📱', 'erro');
       return;
     }
 

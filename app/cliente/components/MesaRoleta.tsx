@@ -248,9 +248,15 @@ export default function MesaRoleta() {
 
   const validarTelefone = (tel: string): boolean => {
     const clean = tel.replace(/\D/g, '');
-    if (clean.length !== 11) return false;
+    if (/^(\d)\1+$/.test(clean)) return false; // Bloqueia repetidos
+    if (clean.length !== 10 && clean.length !== 11) return false;
     const ddd = clean.substring(0, 2);
     if (!DDD_VALIDOS.includes(ddd)) return false;
+    if (clean.length === 11) {
+      if (clean[2] !== '9') return false; // Celular deve começar com 9
+    } else {
+      if (!['2', '3', '4', '5'].includes(clean[2])) return false; // Fixo 2 a 5
+    }
     return true;
   };
 
