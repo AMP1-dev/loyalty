@@ -575,24 +575,25 @@ export default function Cliente() {
       if (loja_id) {
         // Fluxo Balcão: Check-in DIRETO (sem PIN) para aparecer no lojista
         
-        // 1. Garantir que o cliente existe na tabela 'clientes' para evitar erro de Foreign Key (23503)
-        const { error: clientError } = await supabase.from('clientes').upsert(
-          { cpf: clean },
-          { onConflict: 'cpf' }
-        );
-
-        if (clientError) {
-          console.error('Erro ao garantir cliente:', clientError);
-          mostrarToast(`Erro ${clientError.code}: Falha ao identificar cliente.`, 'erro');
-          setCarregando(false);
-          return;
+        // 1. Garantir que o cliente existe na tabela 'clientes' (Manual para evitar erro 42P10)
+        const { data: exCli } = await supabase.from('clientes').select('cpf').eq('cpf', clean).maybeSingle();
+        if (!exCli) {
+          const { error: insCliErr } = await supabase.from('clientes').insert([{ cpf: clean }]);
+          if (insCliErr && insCliErr.code !== '23505') { // 23505 = já existe (ignorar se outro processo criou)
+            console.error('Erro ao criar cliente:', insCliErr);
+            mostrarToast(`Erro ${insCliErr.code}: Falha ao registrar.`, 'erro');
+            setCarregando(false);
+            return;
+          }
         }
 
-        // 2. Agora sim, entra na fila
-        const { error: insError } = await supabase.from('checkins').upsert(
-          { cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' },
-          { onConflict: 'cliente_cpf,loja_id' }
-        );
+        // 2. Garantir entrada na fila (Limpa se já existir e insere novo para evitar conflitos de status)
+        await supabase.from('checkins').delete().eq('cliente_cpf', clean).eq('loja_id', String(loja_id));
+        const { error: insError } = await supabase.from('checkins').insert([{ 
+          cliente_cpf: clean, 
+          loja_id: String(loja_id), 
+          status: 'aguardando' 
+        }]);
         
         if (insError) {
           console.error('Erro ao inserir checkin:', insError);
