@@ -727,6 +727,8 @@ export default function Cliente() {
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       {content}
+
+      <Modal visible={mostrarExchange} transparent animationType="slide">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' }}>
           <View style={{ backgroundColor: c.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '90%', borderWidth: 1, borderColor: c.borda }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
