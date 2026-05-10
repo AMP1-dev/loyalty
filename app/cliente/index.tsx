@@ -149,12 +149,12 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
     <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       <Defs>
         <SvgLinearGradient id="gradBege" x1="0%" y1="0%" x2="100%" y2="100%">
-          <Stop offset="0%" stopColor={isDark ? "#1e293b" : "#fdf8ec"} />
-          <Stop offset="100%" stopColor={isDark ? "#0f172a" : "#f0e5d8"} />
+          <Stop offset="0%" stopColor="#fdf8ec" />
+          <Stop offset="100%" stopColor="#f0e5d8" />
         </SvgLinearGradient>
         <SvgLinearGradient id="gradVerde" x1="0%" y1="0%" x2="100%" y2="100%">
-          <Stop offset="0%" stopColor={isDark ? "#134e4a" : "#d1fae5"} />
-          <Stop offset="100%" stopColor={isDark ? "#042f2e" : "#a7f3d0"} />
+          <Stop offset="0%" stopColor="#d1fae5" />
+          <Stop offset="100%" stopColor="#a7f3d0" />
         </SvgLinearGradient>
         <RadialGradient id="gCenter" cx="50%" cy="30%" rx="60%" ry="60%">
           <Stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
@@ -233,7 +233,13 @@ function RoletaCTA({ onPress, isDark, c }: any) {
     { nome: 'Café\nGrátis', tipo: 'brinde' },
     { nome: 'R$ 5,00\nCashback', tipo: 'cashback' },
     { nome: '5 SPG', tipo: 'pontos' },
+    { nome: 'Kit de\nFerramentas', tipo: 'brinde' },
+    { nome: '15 SPG', tipo: 'pontos' },
+    { nome: 'R$ 1,00\nCashback', tipo: 'cashback' },
     { nome: 'Brinde\nSurpresa', tipo: 'brinde' },
+    { nome: '20 SPG', tipo: 'pontos' },
+    { nome: 'Cappuccino\nPremium', tipo: 'brinde' },
+    { nome: 'R$ 3,00\nCashback', tipo: 'cashback' },
   ];
 
   useEffect(() => {
@@ -832,7 +838,6 @@ export default function Cliente() {
             </View>
           )}
 
-          {/* BOTÃO IMPORTAR */}
           <TouchableOpacity
             onPress={() => { carregarSaldosPorLoja(); setMostrarExchange(true); }}
             style={{ backgroundColor: c.roxo, marginHorizontal: 20, paddingVertical: 14, borderRadius: 12, marginVertical: 10, alignItems: 'center' }}
@@ -840,12 +845,33 @@ export default function Cliente() {
             <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>🔄 IMPORTAR PONTOS DE OUTRAS LOJAS</Text>
           </TouchableOpacity>
 
-          {/* SEÇÃO DE BRINDES */}
-          <View style={{ paddingLeft: 20, marginVertical: 30 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
-              <Text style={{ fontSize: 18, marginRight: 8 }}>✨</Text>
-              <Text style={{ fontSize: 18, fontWeight: '900', color: c.texto }}>Veja nossos brindes</Text>
+          {/* CARROSSEL DE BANNERS */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, marginVertical: 25 }}>
+             <LinearGradient colors={['#0EA5E9', '#8B5CF6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 24, padding: 25, width: 300, height: 180, justifyContent: 'flex-end', marginRight: 15 }}>
+                <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900' }}>A Magia Continua ✨</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, marginTop: 4 }}>Acumule Springs hoje e troque por vantagens.</Text>
+             </LinearGradient>
+
+             <LinearGradient colors={['#475569', '#1E293B']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 24, padding: 25, width: 300, height: 180, justifyContent: 'flex-end' }}>
+                <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900' }}>Novidades da Rede</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, marginTop: 4 }}>Ofertas exclusivas para você.</Text>
+             </LinearGradient>
+          </ScrollView>
+
+          {/* ROLETA (SE ESTIVER NA LOJA) */}
+          {loja_id && (
+            <View style={{ marginVertical: 30 }}>
+               <RoletaCTA onPress={abrirRoleta} isDark={isDark} c={c} />
             </View>
+          )}
+
+          {/* SEÇÃO DE BRINDES DA REDE */}
+          <View style={{ paddingLeft: 20, marginVertical: 30 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
+              <Text style={{ fontSize: 22, marginRight: 8 }}>🌐</Text>
+              <Text style={{ fontSize: 18, fontWeight: '900', color: c.texto }}>Brindes da Rede</Text>
+            </View>
+            <Text style={{ color: c.subtexto, fontSize: 12, marginBottom: 15, fontWeight: '600' }}>Troque seus Springs em qualquer loja parceira</Text>
             
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {(recompensasRede.length > 0 ? recompensasRede : recompensas).map((item, idx) => (
@@ -873,20 +899,7 @@ export default function Cliente() {
             </ScrollView>
           </View>
 
-          {/* BANNER MAGIA */}
-          <View style={{ paddingHorizontal: 20, marginBottom: 25 }}>
-             <LinearGradient colors={['#0EA5E9', '#8B5CF6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 24, padding: 25, height: 180, justifyContent: 'flex-end' }}>
-                <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900' }}>A Magia Continua ✨</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 4 }}>Acumule Springs hoje e troque por vantagens.</Text>
-             </LinearGradient>
-          </View>
 
-          {/* ROLETA (SE ESTIVER NA LOJA) */}
-          {loja_id && (
-            <View style={{ marginVertical: 30 }}>
-               <RoletaCTA onPress={abrirRoleta} isDark={isDark} c={c} />
-            </View>
-          )}
 
           {/* GRID DE AÇÕES */}
           <View style={{ paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
