@@ -351,8 +351,17 @@ export default function Cliente() {
       const saved = await carregarStorage('cliente_cpf');
       if (saved) {
         setCpf(saved);
-        if (loja_id) setStatus('aguardando');
-        else { await carregarDados(saved); setStatus('finalizado'); }
+        if (loja_id) {
+          // Garante que o check-in existe no banco ao ler o QR
+          await supabase.from('checkins').upsert(
+            { cliente_cpf: saved, loja_id: String(loja_id), status: 'aguardando' },
+            { onConflict: 'cliente_cpf,loja_id' }
+          );
+          setStatus('aguardando');
+        } else {
+          await carregarDados(saved);
+          setStatus('finalizado');
+        }
       }
     };
     initApp();
