@@ -130,9 +130,41 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
 }
 
 // ─── Componente Principal MesaRoleta ──────────────────────────────────────────
-export default function MesaRoleta() {
+const { width } = Dimensions.get('window');
+
+// Funções Auxiliares de Storage
+const salvarStorage = async (chave: string, valor: any) => {
+  try {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(chave, JSON.stringify(valor));
+    } else {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      await AsyncStorage.setItem(chave, JSON.stringify(valor));
+    }
+  } catch (e) {
+    console.error('Erro ao salvar storage:', e);
+  }
+};
+
+const buscarStorage = async (chave: string) => {
+  try {
+    if (Platform.OS === 'web') {
+      const v = localStorage.getItem(chave);
+      return v ? JSON.parse(v) : null;
+    } else {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const v = await AsyncStorage.getItem(chave);
+      return v ? JSON.parse(v) : null;
+    }
+  } catch (e) {
+    console.error('Erro ao buscar storage:', e);
+    return null;
+  }
+};
+
+export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?: string; onClose?: () => void }) {
   const params = useLocalSearchParams();
-  const loja_id = params?.loja_id as string;
+  const loja_id = loja_id_prop || (params?.loja_id as string);
 
   const [etapa, setEtapa] = useState<'telefone' | 'nps' | 'roleta' | 'resultado' | 'google'>('telefone');
   const [telefone, setTelefone] = useState('');
