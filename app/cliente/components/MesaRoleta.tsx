@@ -225,17 +225,27 @@ export default function MesaRoleta() {
   const validarJogueDiario = async (telefone: string, lojaId: string): Promise<boolean> => {
     try {
       const cleanTel = telefone.replace(/\D/g, '');
+      
+      // 1. Trava Local (Instantânea)
+      const jaJogouLocal = await buscarStorage(`ja_jogou_${lojaId}_${cleanTel}`);
+      if (jaJogouLocal) {
+        const dataLocal = new Date(jaJogouLocal);
+        const hoje = new Date();
+        if (dataLocal.getDate() === hoje.getDate() && dataLocal.getMonth() === hoje.getMonth()) {
+          return false;
+        }
+      }
+
+      // 2. Trava de Banco (Segurança)
       const hoje = new Date();
-      const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-      const fimHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + 1);
+      const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).toISOString();
 
       const { data, error } = await supabase
         .from('roleta_mesa_participacoes')
         .select('id')
         .eq('loja_id', lojaId)
         .eq('cliente_cpf', cleanTel)
-        .gte('created_at', inicioHoje.toISOString())
-        .lt('created_at', fimHoje.toISOString())
+        .gte('created_at', inicioHoje)
         .limit(1);
 
       if (error) return true;
@@ -338,6 +348,7 @@ export default function MesaRoleta() {
       });
       await sincronizarComRemarketig(telefone, premio);
       await salvarStorage(`mesa_telefone_${loja_id}`, telefone);
+      await salvarStorage(`ja_jogou_${loja_id}_${telefone}`, new Date().toISOString());
     } catch (error) {
       console.error('Erro ao salvar participação:', error);
     }
