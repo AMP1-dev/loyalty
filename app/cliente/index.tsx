@@ -64,6 +64,41 @@ const getIconePremio = (tipo: string) => {
   return '🎁';
 };
 
+// ─── Componente de Animação Pulsante (Estilo I.A) ──────────────────────────
+const PulsingAI = ({ color }: { color: string }) => {
+  const scale1 = useRef(new Animated.Value(1)).current;
+  const scale2 = useRef(new Animated.Value(1)).current;
+  const opacity = useRef(new Animated.Value(0.5)).current;
+
+  useEffect(() => {
+    const pulse = (val: Animated.Value, to: number, delay: number) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(val, { toValue: to, duration: 1500, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+          Animated.timing(val, { toValue: 1, duration: 1500, useNativeDriver: true, easing: Easing.inOut(Easing.ease) }),
+        ])
+      );
+    };
+    pulse(scale1, 1.8, 0).start();
+    pulse(scale2, 2.4, 400).start();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 0.1, duration: 1500, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.5, duration: 1500, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  return (
+    <View style={{ justifyContent: 'center', alignItems: 'center' }}>
+      <Animated.View style={{ position: 'absolute', width: 60, height: 60, borderRadius: 30, backgroundColor: color, opacity, transform: [{ scale: scale2 }] }} />
+      <Animated.View style={{ position: 'absolute', width: 60, height: 60, borderRadius: 30, backgroundColor: color, opacity: 0.3, transform: [{ scale: scale1 }] }} />
+      <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: color, shadowColor: color, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 15, elevation: 10, borderWidth: 2, borderColor: '#fff' }} />
+    </View>
+  );
+};
+
 // ─── Componente WheelSVG (compartilhado entre CTA e Modal) ───────────────────
 function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDark: boolean }) {
   const CENTER = size / 2;
@@ -651,15 +686,17 @@ export default function Cliente() {
   } else if (status === 'aguardando') {
     content = (
       <View style={[styles.center, { backgroundColor: c.bg }]}>
-        <ActivityIndicator size="large" color={c.neonVerde} />
-        <Text style={{ marginTop: 20, color: c.texto, fontWeight: 'bold' }}>Aguardando liberação...</Text>
-        <Text style={{ marginTop: 10, color: c.subtexto, fontSize: 12, textAlign: 'center', paddingHorizontal: 40 }}>O atendente já foi notificado e logo irá liberar seu acesso. ⏳</Text>
+        <View style={{ height: 150, justifyContent: 'center', alignItems: 'center' }}>
+          <PulsingAI color={c.neonVerde} />
+        </View>
+        <Text style={{ marginTop: 20, color: c.texto, fontWeight: '900', fontSize: 18 }}>Aguardando liberação...</Text>
+        <Text style={{ marginTop: 10, color: c.subtexto, fontSize: 13, textAlign: 'center', paddingHorizontal: 40, lineHeight: 20 }}>O atendente já foi notificado e logo irá liberar seu acesso. ⏳</Text>
 
         <TouchableOpacity
           onPress={() => { setStatus('idle'); salvarStorage('cliente_cpf', ''); }}
-          style={{ marginTop: 40, padding: 10 }}
+          style={{ marginTop: 60, padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#ef444430' }}
         >
-          <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>CANCELAR CHECK-IN</Text>
+          <Text style={{ color: '#ef4444', fontWeight: 'bold', fontSize: 12, letterSpacing: 1 }}>CANCELAR CHECK-IN</Text>
         </TouchableOpacity>
       </View>
     );

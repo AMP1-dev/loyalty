@@ -12,6 +12,19 @@ import OfertaGoogle from './OfertaGoogle';
 
 const APP_VERSION = 'v5.8.0-exchange';
 
+// ─── DDDs válidos brasileiros ──────────────────────────────────────────────────
+const DDD_VALIDOS = [
+  '11', '12', '13', '14', '15', '16', '17', '18', '19',
+  '21', '22', '24', '27', '28',
+  '31', '32', '33', '34', '35', '36', '37', '38', '39',
+  '41', '42', '43', '44', '45', '46', '47', '48', '49',
+  '51', '53', '54', '55',
+  '61', '62', '63', '64', '65', '66', '67', '68', '69',
+  '71', '73', '74', '75', '77', '79',
+  '81', '82', '83', '84', '85', '86', '87', '88', '89',
+  '91', '92', '93', '94', '95', '96', '97', '98', '99'
+];
+
 // ─── Storage helpers ──────────────────────────────────────────────────────────
 const salvarStorage = async (key: string, value: string) => {
   if (typeof window !== 'undefined') localStorage.setItem(key, value);
@@ -236,8 +249,8 @@ export default function MesaRoleta() {
   const validarTelefone = (tel: string): boolean => {
     const clean = tel.replace(/\D/g, '');
     if (clean.length !== 11) return false;
-    const ddd = parseInt(clean.substring(0, 2));
-    if (ddd < 11 || ddd > 99) return false;
+    const ddd = clean.substring(0, 2);
+    if (!DDD_VALIDOS.includes(ddd)) return false;
     return true;
   };
 
