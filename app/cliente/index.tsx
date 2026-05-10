@@ -568,7 +568,13 @@ export default function Cliente() {
     try {
       if (loja_id) {
         // Fluxo Balcão: Check-in DIRETO (sem PIN) para aparecer no lojista
-        await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]);
+        const { error: insError } = await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]);
+        if (insError) {
+          console.error('Erro ao inserir checkin:', insError);
+          mostrarToast('Erro ao entrar na fila. Tente novamente. ❌', 'erro');
+          setCarregando(false);
+          return;
+        }
         await salvarStorage('cliente_cpf', clean);
         setStatus('aguardando');
       } else {
@@ -686,9 +692,19 @@ export default function Cliente() {
           <Text style={{ fontSize: 36 }}>✨ ✨ ✨</Text>
         </View>
         <TextInput placeholder="(19) 99999-9999" placeholderTextColor={c.subtexto} value={cpf} onChangeText={formatarTelefone} keyboardType="phone-pad" maxLength={15} style={[styles.inputGigante, { backgroundColor: c.card, borderColor: c.borda, color: c.texto }]} />
-        <TouchableOpacity style={styles.buttonBig} onPress={entrarFila} activeOpacity={0.8} disabled={carregando}>
-          {carregando ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonTextBig}>ACESSAR MINHA CARTEIRA</Text>}
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: c.neonVerde, marginTop: 10 }]}
+            onPress={entrarFila}
+            disabled={carregando}
+          >
+            {carregando ? <ActivityIndicator color="#000" /> : <Text style={[styles.buttonText, { color: '#000', fontWeight: '900' }]}>ACESSAR MINHA CARTEIRA</Text>}
+          </TouchableOpacity>
+
+          {!loja_id && (
+            <Text style={{ color: '#ef4444', fontSize: 10, marginTop: 15, textAlign: 'center', fontWeight: 'bold' }}>
+              ⚠️ ATENÇÃO: QR CODE NÃO DETECTADO. ESCANEIE O QR DO BALCÃO PARA ENTRAR NA FILA.
+            </Text>
+          )}
         <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 40 }}>v5.8.0-exchange</Text>
       </ScrollView>
     );

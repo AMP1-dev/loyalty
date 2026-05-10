@@ -633,6 +633,11 @@ export default function MerchantPanel() {
     if (channelResgateRef.current) supabase.removeChannel(channelResgateRef.current);
 
     const channelCheckin = supabase.channel(`fila_aberta_${lojaId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'checkins' }, (p) => { buscarFila(); buscarStats(); if (p.eventType === 'INSERT') Vibration.vibrate([0, 500, 200, 500]); }).subscribe();
+    
+    const pollTimer = setInterval(() => {
+      buscarFila();
+    }, 10000);
+
     const channelResgate = supabase.channel(`resgates_geral_escuta`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'resgates' }, async (p) => {
       if (p.new.loja_id !== lojaId) return;
       setTimeout(() => { buscarStats(); }, 1500); Vibration.vibrate([0, 1000, 500, 1000]);
