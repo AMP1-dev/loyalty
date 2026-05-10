@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated, Easing,
+  Image,
   Modal,
   Platform, ScrollView, StyleSheet,
   Text, TextInput, TouchableOpacity, useColorScheme,
@@ -445,11 +446,18 @@ export default function Cliente() {
     else setNomeLojaAtual('Minha Carteira PALM');
 
     const [{ data: trans }, { data: res }, { data: cash }, { data: bonus }] = await Promise.all([
-      supabase.from('transacoes').select('*').eq('cliente_cpf', cpfBusca),
-      supabase.from('resgates').select('*').eq('cliente_cpf', cpfBusca),
+      supabase.from('transacoes').select('*').eq('cliente_cpf', cpfBusca).order('created_at', { ascending: false }),
+      supabase.from('resgates').select('*').eq('cliente_cpf', cpfBusca).order('created_at', { ascending: false }),
       supabase.from('cashbacks').select('*').eq('cliente_cpf', cpfBusca),
       supabase.from('bonus_pendentes').select('*').eq('cliente_cpf', cpfBusca).eq('usado', false)
     ]);
+
+    // Combinar para o Extrato
+    const comb = [
+      ...(trans || []).map(t => ({ ...t, tipo: 'ganho' })),
+      ...(res || []).map(r => ({ ...r, tipo: 'resgate', pontos_usados: r.pontos_usados }))
+    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    setExtrato(comb);
 
     const total = (trans || []).reduce((a, t) => a + (t.pontos_gerados || 0), 0) + (bonus || []).reduce((a, b) => a + b.pontos, 0);
     const usados = (res || []).reduce((a, r) => a + r.pontos_usados, 0);
@@ -843,7 +851,11 @@ export default function Cliente() {
               {(recompensasRede.length > 0 ? recompensasRede : recompensas).map((item, idx) => (
                 <View key={idx} style={[styles.brindeCard, { backgroundColor: c.card, borderColor: c.borda }]}>
                   <View style={{ height: 160, backgroundColor: '#222', borderRadius: 20, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
-                     <Text style={{ fontSize: 40 }}>🎁</Text>
+                     {item.foto ? (
+                       <Image source={{ uri: item.foto }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                     ) : (
+                       <Text style={{ fontSize: 40 }}>🎁</Text>
+                     )}
                     <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={StyleSheet.absoluteFill} />
                     <View style={{ position: 'absolute', bottom: 12, left: 12 }}>
                       <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>{item.nome}</Text>
@@ -868,6 +880,13 @@ export default function Cliente() {
                 <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 4 }}>Acumule Springs hoje e troque por vantagens.</Text>
              </LinearGradient>
           </View>
+
+          {/* ROLETA (SE ESTIVER NA LOJA) */}
+          {loja_id && (
+            <View style={{ marginVertical: 30 }}>
+               <RoletaCTA onPress={abrirRoleta} isDark={isDark} c={c} />
+            </View>
+          )}
 
           {/* GRID DE AÇÕES */}
           <View style={{ paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -897,14 +916,6 @@ export default function Cliente() {
           </TouchableOpacity>
 
           <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 20 }}>Versão 5.8.0-exchange</Text>
-
-          {/* ROLETA (SE ESTIVER NA LOJA) */}
-          {loja_id && (
-            <View style={{ marginTop: 40 }}>
-               <RoletaCTA onPress={abrirRoleta} isDark={isDark} c={c} />
-            </View>
-          )}
-
         </ScrollView>
       </View>
     );
@@ -1043,6 +1054,60 @@ export default function Cliente() {
         </View>
       </Modal>
 
+      <Modal visible={mostrarExtrato} transparent animationType="slide">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: c.card, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, height: '85%', borderWidth: 1, borderColor: c.borda }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 }}>
+              <View>
+                <Text style={{ fontSize: 24, fontWeight: '900', color: c.texto }}>Extrato Completo</Text>
+                <Text style={{ fontSize: 12, color: c.subtexto }}>Histórico de ganhos e resgates</Text>
+              </View>
+              <TouchableOpacity onPress={() => setMostrarExtrato(false)} style={{ backgroundColor: isDark ? '#1e293b' : '#f1f5f9', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ fontSize: 20, color: c.texto }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+               {/* Transações (Ganhos) */}
+               <Text style={{ fontSize: 14, fontWeight: '900', color: c.neonVerde, marginBottom: 15, letterSpacing: 1 }}>✦ GANHOS DE PONTOS</Text>
+               {(extrato || []).filter(t => t.pontos_gerados > 0).length === 0 ? (
+                 <Text style={{ color: c.subtexto, fontSize: 12, fontStyle: 'italic', marginBottom: 20 }}>Nenhum ganho registrado.</Text>
+               ) : (
+                 (extrato || []).filter(t => t.pontos_gerados > 0).map((t, idx) => (
+                   <View key={idx} style={{ backgroundColor: isDark ? '#1e293b' : '#f8fafc', padding: 15, borderRadius: 16, marginBottom: 10, borderWidth: 1, borderColor: c.borda }}>
+                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                       <View>
+                         <Text style={{ color: c.texto, fontWeight: '800', fontSize: 14 }}>Compra Efetuada</Text>
+                         <Text style={{ color: c.subtexto, fontSize: 11 }}>{new Date(t.created_at).toLocaleDateString('pt-BR')}</Text>
+                       </View>
+                       <Text style={{ color: c.neonVerde, fontWeight: '900', fontSize: 16 }}>+{t.pontos_gerados}</Text>
+                     </View>
+                   </View>
+                 ))
+               )}
+
+               {/* Resgates */}
+               <Text style={{ fontSize: 14, fontWeight: '900', color: '#ef4444', marginTop: 20, marginBottom: 15, letterSpacing: 1 }}>🎁 RESGATES REALIZADOS</Text>
+               {(extrato || []).filter(t => t.pontos_usados > 0).length === 0 ? (
+                 <Text style={{ color: c.subtexto, fontSize: 12, fontStyle: 'italic', marginBottom: 20 }}>Nenhum resgate realizado.</Text>
+               ) : (
+                 (extrato || []).filter(t => t.pontos_usados > 0).map((t, idx) => (
+                   <View key={idx} style={{ backgroundColor: isDark ? '#1e293b' : '#f8fafc', padding: 15, borderRadius: 16, marginBottom: 10, borderWidth: 1, borderColor: c.borda }}>
+                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                       <View>
+                         <Text style={{ color: c.texto, fontWeight: '800', fontSize: 14 }}>{t.premio_nome || 'Brinde Resgatado'}</Text>
+                         <Text style={{ color: c.subtexto, fontSize: 11 }}>{new Date(t.created_at).toLocaleDateString('pt-BR')}</Text>
+                       </View>
+                       <Text style={{ color: '#ef4444', fontWeight: '900', fontSize: 16 }}>-{t.pontos_usados}</Text>
+                     </View>
+                   </View>
+                 ))
+               )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       {
     toast.visible && (
       <Animated.View style={{
@@ -1056,6 +1121,7 @@ export default function Cliente() {
     )
   }
     </View >
+
   );
 }
 
