@@ -626,111 +626,106 @@ export default function Cliente() {
     setCpf(f);
   };
 
-  if (status === 'idle') return (
-    <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ padding: 25, paddingTop: 60 }}>
-      <View style={{ alignItems: 'center', marginBottom: 20 }}>
-        <Text style={{ fontSize: 36, marginBottom: 10 }}>✨ ✨ ✨</Text>
-      </View>
-      <View style={{ alignItems: 'center', marginBottom: 40 }}>
-        <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde }}>PALM</Text>
-        <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde }}>SPRINGS</Text>
-      </View>
-      <View style={{ alignItems: 'center', marginBottom: 20 }}>
-        <Text style={{ fontSize: 36 }}>✨ ✨ ✨</Text>
-      </View>
-      <TextInput placeholder="(19) 99999-9999" placeholderTextColor={c.subtexto} value={cpf} onChangeText={formatarTelefone} keyboardType="phone-pad" maxLength={15} style={[styles.inputGigante, { backgroundColor: c.card, borderColor: c.borda, color: c.texto }]} />
-      <TouchableOpacity style={styles.buttonBig} onPress={entrarFila} activeOpacity={0.8} disabled={carregando}>
-        {carregando ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonTextBig}>ACESSAR MINHA CARTEIRA</Text>}
-      </TouchableOpacity>
-      <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 40 }}>v5.8.0-exchange</Text>
+  let content;
+  if (status === 'idle') {
+    content = (
+      <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ padding: 25, paddingTop: 60 }}>
+        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+          <Text style={{ fontSize: 36, marginBottom: 10 }}>✨ ✨ ✨</Text>
+        </View>
+        <View style={{ alignItems: 'center', marginBottom: 40 }}>
+          <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde }}>PALM</Text>
+          <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde }}>SPRINGS</Text>
+        </View>
+        <View style={{ alignItems: 'center', marginBottom: 20 }}>
+          <Text style={{ fontSize: 36 }}>✨ ✨ ✨</Text>
+        </View>
+        <TextInput placeholder="(19) 99999-9999" placeholderTextColor={c.subtexto} value={cpf} onChangeText={formatarTelefone} keyboardType="phone-pad" maxLength={15} style={[styles.inputGigante, { backgroundColor: c.card, borderColor: c.borda, color: c.texto }]} />
+        <TouchableOpacity style={styles.buttonBig} onPress={entrarFila} activeOpacity={0.8} disabled={carregando}>
+          {carregando ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonTextBig}>ACESSAR MINHA CARTEIRA</Text>}
+        </TouchableOpacity>
+        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 40 }}>v5.8.0-exchange</Text>
+      </ScrollView>
+    );
+  } else if (status === 'aguardando') {
+    content = (
+      <View style={[styles.center, { backgroundColor: c.bg }]}>
+        <ActivityIndicator size="large" color={c.neonVerde} />
+        <Text style={{ marginTop: 20, color: c.texto, fontWeight: 'bold' }}>Aguardando liberação...</Text>
+        <Text style={{ marginTop: 10, color: c.subtexto, fontSize: 12, textAlign: 'center', paddingHorizontal: 40 }}>O atendente já foi notificado e logo irá liberar seu acesso. ⏳</Text>
 
-      {toast.visible && (
-        <Animated.View style={{
-          position: 'absolute', top: toastAnim, left: 20, right: 20,
-          backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444',
-          padding: 16, borderRadius: 12, elevation: 10, zIndex: 9999,
-          flexDirection: 'row', alignItems: 'center'
-        }}>
-          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14, flex: 1 }}>{toast.message}</Text>
-        </Animated.View>
-      )}
-    </ScrollView>
-  );
+        <TouchableOpacity
+          onPress={() => { setStatus('idle'); salvarStorage('cliente_cpf', ''); }}
+          style={{ marginTop: 40, padding: 10 }}
+        >
+          <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>CANCELAR CHECK-IN</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  } else {
+    content = (
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <Text style={{ fontSize: 24, fontWeight: '900', color: c.neonVerde }}>PALM SPRINGS</Text>
+            <TouchableOpacity onPress={() => setStatus('idle')}><Text style={{ color: '#ef4444' }}>SAIR</Text></TouchableOpacity>
+          </View>
 
-  if (status === 'aguardando') return (
-    <View style={[styles.center, { backgroundColor: c.bg }]}>
-      <ActivityIndicator size="large" color={c.neonVerde} />
-      <Text style={{ marginTop: 20, color: c.texto, fontWeight: 'bold' }}>Aguardando liberação...</Text>
-      <Text style={{ marginTop: 10, color: c.subtexto, fontSize: 12, textAlign: 'center', paddingHorizontal: 40 }}>O atendente já foi notificado e logo irá liberar seu acesso. ⏳</Text>
+          <View style={{ backgroundColor: c.card, padding: 20, borderRadius: 24, borderWidth: 1, borderColor: c.borda, marginBottom: 20 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <View>
+                <Text style={{ color: c.subtexto, fontSize: 10 }}>SALDO TOTAL</Text>
+                <Text style={{ color: c.neonVerde, fontSize: 32, fontWeight: '900' }}>{saldo} SPG</Text>
+              </View>
+              <TouchableOpacity onPress={() => setMostraIntercambio(true)} style={{ padding: 10, backgroundColor: c.roxo, borderRadius: 12 }}>
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>REDE 🔄</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={{ color: c.neonAmarelo, fontSize: 18, fontWeight: 'bold', marginTop: 10 }}>💰 R$ {cashback.toFixed(2)}</Text>
+          </View>
 
-      <TouchableOpacity
-        onPress={() => { setStatus('idle'); salvarStorage('cliente_cpf', ''); }}
-        style={{ marginTop: 40, padding: 10 }}
-      >
-        <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>CANCELAR CHECK-IN</Text>
-      </TouchableOpacity>
-    </View>
-  );
+          {caixaAtiva && (
+            <View style={{ backgroundColor: `${c.neonVerde}20`, borderRadius: 12, padding: 16, marginVertical: 15, borderWidth: 2, borderColor: c.neonVerde }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <Text style={{ color: c.neonVerde, fontWeight: '900', fontSize: 16 }}>💰 PONTOS EM IMPORTAÇÃO</Text>
+                <Text style={{ color: c.neonVerde, fontSize: 12, fontWeight: '600' }}>{Math.round((new Date(caixaAtiva.expira_em).getTime() - new Date().getTime()) / 60000)}min</Text>
+              </View>
+              <Text style={{ color: c.texto, fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>{caixaAtiva.pontos_disponiveis} SPG disponíveis</Text>
+              <Text style={{ color: c.subtexto, fontSize: 11, marginBottom: 12 }}>Taxa aplicada: {caixaAtiva.taxa_em_pontos} SPG</Text>
+              <View style={{ height: 1, backgroundColor: c.borda, marginBottom: 12 }} />
+              <Text style={{ color: c.subtexto, fontSize: 10 }}>ℹ️ Use estes pontos para resgatar brindes. Válido por 24h após validação do caixa.</Text>
+            </View>
+          )}
+
+          <TouchableOpacity
+            onPress={() => { carregarSaldosPorLoja(); setMostrarExchange(true); }}
+            style={{ backgroundColor: c.roxo, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, marginVertical: 10 }}
+          >
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12, textAlign: 'center' }}>🔄 IMPORTAR PONTOS DE OUTRAS LOJAS</Text>
+          </TouchableOpacity>
+
+          {loja_id && <RoletaCTA onPress={abrirRoleta} isDark={isDark} c={c} />}
+
+          <Text style={{ color: c.texto, fontSize: 18, fontWeight: 'bold', marginTop: 30, marginBottom: 15 }}>🎁 Brindes Disponíveis</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {recompensas.map(r => (
+              <View key={r.id} style={{ width: 200, backgroundColor: c.card, borderRadius: 20, marginRight: 15, padding: 15, borderWidth: 1, borderColor: c.borda }}>
+                <Text style={{ color: c.texto, fontWeight: 'bold' }}>{r.nome}</Text>
+                <Text style={{ color: c.neonVerde }}>{r.custo_pontos} SPG</Text>
+                <TouchableOpacity style={{ backgroundColor: saldo >= r.custo_pontos ? c.neonVerde : c.borda, padding: 10, borderRadius: 10, marginTop: 10 }}>
+                  <Text style={{ color: '#fff', textAlign: 'center' }}>RESGATAR</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <Text style={{ fontSize: 24, fontWeight: '900', color: c.neonVerde }}>PALM SPRINGS</Text>
-          <TouchableOpacity onPress={() => setStatus('idle')}><Text style={{ color: '#ef4444' }}>SAIR</Text></TouchableOpacity>
-        </View>
-
-        <View style={{ backgroundColor: c.card, padding: 20, borderRadius: 24, borderWidth: 1, borderColor: c.borda, marginBottom: 20 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <View>
-              <Text style={{ color: c.subtexto, fontSize: 10 }}>SALDO TOTAL</Text>
-              <Text style={{ color: c.neonVerde, fontSize: 32, fontWeight: '900' }}>{saldo} SPG</Text>
-            </View>
-            <TouchableOpacity onPress={() => setMostraIntercambio(true)} style={{ padding: 10, backgroundColor: c.roxo, borderRadius: 12 }}>
-              <Text style={{ color: '#fff', fontWeight: 'bold' }}>REDE 🔄</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={{ color: c.neonAmarelo, fontSize: 18, fontWeight: 'bold', marginTop: 10 }}>💰 R$ {cashback.toFixed(2)}</Text>
-        </View>
-
-        {caixaAtiva && (
-          <View style={{ backgroundColor: `${c.neonVerde}20`, borderRadius: 12, padding: 16, marginVertical: 15, borderWidth: 2, borderColor: c.neonVerde }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ color: c.neonVerde, fontWeight: '900', fontSize: 16 }}>💰 PONTOS EM IMPORTAÇÃO</Text>
-              <Text style={{ color: c.neonVerde, fontSize: 12, fontWeight: '600' }}>{Math.round((new Date(caixaAtiva.expira_em).getTime() - new Date().getTime()) / 60000)}min</Text>
-            </View>
-            <Text style={{ color: c.texto, fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>{caixaAtiva.pontos_disponiveis} SPG disponíveis</Text>
-            <Text style={{ color: c.subtexto, fontSize: 11, marginBottom: 12 }}>Taxa aplicada: {caixaAtiva.taxa_em_pontos} SPG</Text>
-            <View style={{ height: 1, backgroundColor: c.borda, marginBottom: 12 }} />
-            <Text style={{ color: c.subtexto, fontSize: 10 }}>ℹ️ Use estes pontos para resgatar brindes. Válido por 24h após validação do caixa.</Text>
-          </View>
-        )}
-
-        <TouchableOpacity
-          onPress={() => { carregarSaldosPorLoja(); setMostrarExchange(true); }}
-          style={{ backgroundColor: c.roxo, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, marginVertical: 10 }}
-        >
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12, textAlign: 'center' }}>🔄 IMPORTAR PONTOS DE OUTRAS LOJAS</Text>
-        </TouchableOpacity>
-
-
-        {loja_id && <RoletaCTA onPress={abrirRoleta} isDark={isDark} c={c} />}
-
-        <Text style={{ color: c.texto, fontSize: 18, fontWeight: 'bold', marginTop: 30, marginBottom: 15 }}>🎁 Brindes Disponíveis</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {recompensas.map(r => (
-            <View key={r.id} style={{ width: 200, backgroundColor: c.card, borderRadius: 20, marginRight: 15, padding: 15, borderWidth: 1, borderColor: c.borda }}>
-              <Text style={{ color: c.texto, fontWeight: 'bold' }}>{r.nome}</Text>
-              <Text style={{ color: c.neonVerde }}>{r.custo_pontos} SPG</Text>
-              <TouchableOpacity style={{ backgroundColor: saldo >= r.custo_pontos ? c.neonVerde : c.borda, padding: 10, borderRadius: 10, marginTop: 10 }}>
-                <Text style={{ color: '#fff', textAlign: 'center' }}>RESGATAR</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </ScrollView>
-      </ScrollView>
-
-      <Modal visible={mostrarExchange} transparent animationType="slide">
+      {content}
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' }}>
           <View style={{ backgroundColor: c.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '90%', borderWidth: 1, borderColor: c.borda }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
