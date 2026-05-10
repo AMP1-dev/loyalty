@@ -577,7 +577,7 @@ export default function Cliente() {
         
         // 1. Garantir que o cliente existe na tabela 'clientes' para evitar erro de Foreign Key (23503)
         const { error: clientError } = await supabase.from('clientes').upsert(
-          { cpf: clean, updated_at: new Date().toISOString() },
+          { cpf: clean },
           { onConflict: 'cpf' }
         );
 
