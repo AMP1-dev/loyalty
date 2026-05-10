@@ -1,12 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated, Easing, Platform, ScrollView, StyleSheet, Text, TextInput,
-  TouchableOpacity, useColorScheme, View, ActivityIndicator, Alert
+  TouchableOpacity, useColorScheme, View
 } from 'react-native';
-import Svg, { Circle, Defs, G, Path, RadialGradient, LinearGradient as SvgLinearGradient, Stop, Text as SvgText, Filter, FeGaussianBlur, FeOffset, FeComponentTransfer, FeFuncA, FeMerge, FeMergeNode } from 'react-native-svg';
+import Svg, { Circle, Defs, FeComponentTransfer, FeFuncA, FeGaussianBlur, FeMerge, FeMergeNode, FeOffset, Filter, G, Path, RadialGradient, Stop, LinearGradient as SvgLinearGradient, Text as SvgText } from 'react-native-svg';
 import { supabase } from '../../../lib/supabase';
 import OfertaGoogle from './OfertaGoogle';
 
@@ -55,7 +55,7 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
 
   const getTextPos = (index: number) => {
     const midAngle = index * sliceAngle - Math.PI / 2 + sliceAngle / 2;
-    const r = RADIUS * 0.7; 
+    const r = RADIUS * 0.7;
     return {
       x: CENTER + r * Math.cos(midAngle),
       y: CENTER + r * Math.sin(midAngle),
@@ -91,7 +91,7 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
         {prizes.map((prize: any, i: number) => {
           const { x, y, rotation } = getTextPos(i);
           const words = (prize.nome || '').split(' ');
-          const displayLines = words.length > 2 ? [words.slice(0,2).join(' '), words.slice(2).join(' ')] : [prize.nome || ''];
+          const displayLines = words.length > 2 ? [words.slice(0, 2).join(' '), words.slice(2).join(' ')] : [prize.nome || ''];
 
           return (
             <G key={i}>
@@ -192,9 +192,9 @@ export default function MesaRoleta() {
       if (premios && premios.length > 0) {
         let listaBonita = [...premios];
         if (listaBonita.length > 0 && listaBonita.length < 6) {
-           while(listaBonita.length < 6) {
-             listaBonita = [...listaBonita, ...premios];
-           }
+          while (listaBonita.length < 6) {
+            listaBonita = [...listaBonita, ...premios];
+          }
         }
         setPremiosRoletaMesa(listaBonita);
       } else {

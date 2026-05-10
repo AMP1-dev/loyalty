@@ -574,7 +574,21 @@ export default function Cliente() {
     try {
       if (loja_id) {
         // Fluxo Balcão: Check-in DIRETO (sem PIN) para aparecer no lojista
-        // Usamos upsert para evitar erro se o cliente já estiver na fila
+        
+        // 1. Garantir que o cliente existe na tabela 'clientes' para evitar erro de Foreign Key (23503)
+        const { error: clientError } = await supabase.from('clientes').upsert(
+          { cpf: clean, updated_at: new Date().toISOString() },
+          { onConflict: 'cpf' }
+        );
+
+        if (clientError) {
+          console.error('Erro ao garantir cliente:', clientError);
+          mostrarToast(`Erro ${clientError.code}: Falha ao identificar cliente.`, 'erro');
+          setCarregando(false);
+          return;
+        }
+
+        // 2. Agora sim, entra na fila
         const { error: insError } = await supabase.from('checkins').upsert(
           { cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' },
           { onConflict: 'cliente_cpf,loja_id' }
@@ -582,8 +596,8 @@ export default function Cliente() {
         
         if (insError) {
           console.error('Erro ao inserir checkin:', insError);
-          // Se for erro de política (RLS), tentamos avisar
-          const msg = insError.code === '42501' ? 'Erro de permissão no banco. 🔒' : 'Erro ao entrar na fila. Tente novamente. ❌';
+          // Mostramos o código do erro para depuração precisa
+          const msg = `Erro ${insError.code}: Tente novamente. ❌`;
           mostrarToast(msg, 'erro');
           setCarregando(false);
           return;
