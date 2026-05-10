@@ -522,21 +522,22 @@ export default function Cliente() {
 
     setCarregando(true);
     try {
-      const { data, error } = await supabase.from('clientes').select('pin_hash').eq('cpf', clean).maybeSingle();
-
-      if (error) {
-        mostrarToast('Erro de conexão. Tente novamente. 🌐', 'erro');
-        setCarregando(false);
-        return;
-      }
-
-      if (!data?.pin_hash) {
-        setEhPrimeiroCadastro(true);
-        setPinModoValidar(false);
-        setMostrarPinModal(true);
+      if (loja_id) {
+        // Fluxo Balcão: Check-in DIRETO (sem PIN) para aparecer no lojista
+        await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]);
+        await salvarStorage('cliente_cpf', clean);
+        setStatus('aguardando');
       } else {
-        setPinModoValidar(true);
-        setMostrarPinModal(true);
+        // Fluxo Home: Pede PIN para segurança
+        const { data } = await supabase.from('clientes').select('pin_hash').eq('cpf', clean).maybeSingle();
+        if (!data?.pin_hash) {
+          setEhPrimeiroCadastro(true);
+          setPinModoValidar(false);
+          setMostrarPinModal(true);
+        } else {
+          setPinModoValidar(true);
+          setMostrarPinModal(true);
+        }
       }
     } catch (err) {
       mostrarToast('Ocorreu um erro inesperado. ❌', 'erro');
@@ -551,20 +552,20 @@ export default function Cliente() {
     const clean = cpf.replace(/\D/g, '');
     const { data } = await supabase.from('clientes').select('pin_hash').eq('cpf', clean).single();
     if (data && await bcrypt.compare(pin, data.pin_hash)) {
-      setMostrarPinModal(false); 
+      setMostrarPinModal(false);
       setPinDigitado(['', '', '', '']);
       await salvarStorage('cliente_cpf', clean);
-      if (loja_id) { 
-        await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]); 
-        setStatus('aguardando'); 
+      if (loja_id) {
+        await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]);
+        setStatus('aguardando');
       }
-      else { 
-        await carregarDados(clean); 
-        setStatus('finalizado'); 
+      else {
+        await carregarDados(clean);
+        setStatus('finalizado');
       }
-    } else { 
-      mostrarToast('PIN incorreto', 'erro'); 
-      setPinDigitado(['', '', '', '']); 
+    } else {
+      mostrarToast('PIN incorreto', 'erro');
+      setPinDigitado(['', '', '', '']);
     }
     setCarregando(false);
   };
@@ -575,16 +576,16 @@ export default function Cliente() {
     const hash = await bcrypt.hash(pin, 10);
     const clean = cpf.replace(/\D/g, '');
     await supabase.from('clientes').upsert({ cpf: clean, pin_hash: hash });
-    setMostrarPinModal(false); 
+    setMostrarPinModal(false);
     setPinDigitado(['', '', '', '']);
     await salvarStorage('cliente_cpf', clean);
-    if (loja_id) { 
-      await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]); 
-      setStatus('aguardando'); 
+    if (loja_id) {
+      await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]);
+      setStatus('aguardando');
     }
-    else { 
-      await carregarDados(clean); 
-      setStatus('finalizado'); 
+    else {
+      await carregarDados(clean);
+      setStatus('finalizado');
     }
     setCarregando(false);
   };
@@ -854,17 +855,19 @@ export default function Cliente() {
         </View>
       </Modal>
 
-      {toast.visible && (
-        <Animated.View style={{
-          position: 'absolute', top: toastAnim, left: 20, right: 20,
-          backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444',
-          padding: 16, borderRadius: 12, elevation: 10, zIndex: 9999,
-          flexDirection: 'row', alignItems: 'center'
-        }}>
-          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14, flex: 1 }}>{toast.message}</Text>
-        </Animated.View>
-      )}
-    </View>
+      {
+    toast.visible && (
+      <Animated.View style={{
+        position: 'absolute', top: toastAnim, left: 20, right: 20,
+        backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444',
+        padding: 16, borderRadius: 12, elevation: 10, zIndex: 9999,
+        flexDirection: 'row', alignItems: 'center'
+      }}>
+        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14, flex: 1 }}>{toast.message}</Text>
+      </Animated.View>
+    )
+  }
+    </View >
   );
 }
 
