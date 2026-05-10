@@ -254,17 +254,21 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
     try {
       const cleanTel = telefone.replace(/\D/g, '');
       
-      // 1. Trava Local (Instantânea)
+      // 1. Trava Local (Instantânea e Prioritária)
       const jaJogouLocal = await buscarStorage(`ja_jogou_${lojaId}_${cleanTel}`);
       if (jaJogouLocal) {
         const dataLocal = new Date(jaJogouLocal);
         const hoje = new Date();
-        if (dataLocal.getDate() === hoje.getDate() && dataLocal.getMonth() === hoje.getMonth()) {
+        // Compara Dia, Mês e Ano
+        if (dataLocal.getDate() === hoje.getDate() && 
+            dataLocal.getMonth() === hoje.getMonth() && 
+            dataLocal.getFullYear() === hoje.getFullYear()) {
+          console.log("Bloqueio local ativado para:", cleanTel);
           return false;
         }
       }
 
-      // 2. Trava de Banco (Segurança)
+      // 2. Trava de Banco (Segurança de Nuvem)
       const hoje = new Date();
       const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).toISOString();
 
@@ -276,10 +280,20 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
         .gte('created_at', inicioHoje)
         .limit(1);
 
-      if (error) return true;
-      if (data && data.length > 0) return false;
+      if (error) {
+        console.error("Erro ao verificar participações no banco:", error);
+        return true; // Em caso de erro de rede, permitimos para não travar o cliente legítimo
+      }
+      
+      if (data && data.length > 0) {
+        // Se achou no banco mas não tinha no local, sincroniza o local agora
+        await salvarStorage(`ja_jogou_${lojaId}_${cleanTel}`, new Date().toISOString());
+        return false;
+      }
+
       return true;
     } catch (error) {
+      console.error("Erro na validação de jogue diário:", error);
       return true;
     }
   };
@@ -364,7 +378,12 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
 
   const salvarParticipacaoMesa = async (telefone: string, premio: any) => {
     try {
-      await supabase.from('roleta_mesa_participacoes').insert({
+      // 1. TRAVA LOCAL IMEDIATA (Se o banco falhar, o celular já está bloqueado)
+      await salvarStorage(`ja_jogou_${loja_id}_${telefone}`, new Date().toISOString());
+      await salvarStorage(`mesa_telefone_${loja_id}`, telefone);
+
+      // 2. SALVAR PARTICIPAÇÃO
+      const { error: errPart } = await supabase.from('roleta_mesa_participacoes').insert({
         loja_id: loja_id,
         cliente_cpf: telefone,
         premio_id: premio.id,
@@ -374,11 +393,13 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
         oferta_google_dobro: notaNps === 5,
         premio_resgatado: false,
       });
+      if (errPart) console.error('Erro ao salvar participação no banco:', errPart);
+
+      // 3. REGISTRAR NO REMARKETING
       await sincronizarComRemarketig(telefone, premio);
-      await salvarStorage(`mesa_telefone_${loja_id}`, telefone);
-      await salvarStorage(`ja_jogou_${loja_id}_${telefone}`, new Date().toISOString());
+      
     } catch (error) {
-      console.error('Erro ao salvar participação:', error);
+      console.error('Erro crítico no fluxo de salvamento:', error);
     }
   };
 
