@@ -3,7 +3,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Animated, Easing, Platform, ScrollView, StyleSheet, Text, TextInput,
+  Animated, Dimensions, Easing, Platform, ScrollView, StyleSheet, Text, TextInput,
   TouchableOpacity, useColorScheme, View
 } from 'react-native';
 import Svg, { Circle, Defs, FeComponentTransfer, FeFuncA, FeGaussianBlur, FeMerge, FeMergeNode, FeOffset, Filter, G, Path, RadialGradient, Stop, LinearGradient as SvgLinearGradient, Text as SvgText } from 'react-native-svg';
