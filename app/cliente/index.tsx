@@ -1059,8 +1059,8 @@ export default function Cliente() {
           <View style={{ backgroundColor: c.card, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 24, height: '85%', borderWidth: 1, borderColor: c.borda }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 }}>
               <View>
-                <Text style={{ fontSize: 24, fontWeight: '900', color: c.texto }}>Extrato Completo</Text>
-                <Text style={{ fontSize: 12, color: c.subtexto }}>Histórico de ganhos e resgates</Text>
+                <Text style={{ fontSize: 24, fontWeight: '900', color: c.texto }}>Histórico de Atividade</Text>
+                <Text style={{ fontSize: 12, color: c.subtexto }}>Seu rastro de vantagens</Text>
               </View>
               <TouchableOpacity onPress={() => setMostrarExtrato(false)} style={{ backgroundColor: isDark ? '#1e293b' : '#f1f5f9', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' }}>
                 <Text style={{ fontSize: 20, color: c.texto }}>✕</Text>
@@ -1068,40 +1068,39 @@ export default function Cliente() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-               {/* Transações (Ganhos) */}
-               <Text style={{ fontSize: 14, fontWeight: '900', color: c.neonVerde, marginBottom: 15, letterSpacing: 1 }}>✦ GANHOS DE PONTOS</Text>
-               {(extrato || []).filter(t => t.pontos_gerados > 0).length === 0 ? (
-                 <Text style={{ color: c.subtexto, fontSize: 12, fontStyle: 'italic', marginBottom: 20 }}>Nenhum ganho registrado.</Text>
+               {(extrato || []).length === 0 ? (
+                 <View style={{ alignItems: 'center', marginTop: 100 }}>
+                    <Text style={{ fontSize: 50 }}>📦</Text>
+                    <Text style={{ color: c.subtexto, marginTop: 10 }}>Nenhuma atividade ainda.</Text>
+                 </View>
                ) : (
-                 (extrato || []).filter(t => t.pontos_gerados > 0).map((t, idx) => (
-                   <View key={idx} style={{ backgroundColor: isDark ? '#1e293b' : '#f8fafc', padding: 15, borderRadius: 16, marginBottom: 10, borderWidth: 1, borderColor: c.borda }}>
-                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                       <View>
-                         <Text style={{ color: c.texto, fontWeight: '800', fontSize: 14 }}>Compra Efetuada</Text>
-                         <Text style={{ color: c.subtexto, fontSize: 11 }}>{new Date(t.created_at).toLocaleDateString('pt-BR')}</Text>
-                       </View>
-                       <Text style={{ color: c.neonVerde, fontWeight: '900', fontSize: 16 }}>+{t.pontos_gerados}</Text>
-                     </View>
-                   </View>
-                 ))
-               )}
+                 (extrato || []).map((t, idx) => {
+                   const isResgate = t.tipo === 'resgate';
+                   const icon = isResgate ? '🎁' : (t.tipo_origem === 'roleta' || t.premio_nome ? '🎡' : '🛍️');
+                   const iconBg = isResgate ? '#fee2e2' : (isDark ? '#0f172a' : '#ecfdf5');
 
-               {/* Resgates */}
-               <Text style={{ fontSize: 14, fontWeight: '900', color: '#ef4444', marginTop: 20, marginBottom: 15, letterSpacing: 1 }}>🎁 RESGATES REALIZADOS</Text>
-               {(extrato || []).filter(t => t.pontos_usados > 0).length === 0 ? (
-                 <Text style={{ color: c.subtexto, fontSize: 12, fontStyle: 'italic', marginBottom: 20 }}>Nenhum resgate realizado.</Text>
-               ) : (
-                 (extrato || []).filter(t => t.pontos_usados > 0).map((t, idx) => (
-                   <View key={idx} style={{ backgroundColor: isDark ? '#1e293b' : '#f8fafc', padding: 15, borderRadius: 16, marginBottom: 10, borderWidth: 1, borderColor: c.borda }}>
-                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                       <View>
-                         <Text style={{ color: c.texto, fontWeight: '800', fontSize: 14 }}>{t.premio_nome || 'Brinde Resgatado'}</Text>
-                         <Text style={{ color: c.subtexto, fontSize: 11 }}>{new Date(t.created_at).toLocaleDateString('pt-BR')}</Text>
+                   return (
+                     <View key={idx} style={{ backgroundColor: isDark ? '#1e293b' : '#fff', padding: 16, borderRadius: 24, marginBottom: 12, borderWidth: 1, borderColor: c.borda, flexDirection: 'row', alignItems: 'center' }}>
+                       <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: iconBg, justifyContent: 'center', alignItems: 'center', marginRight: 15 }}>
+                          <Text style={{ fontSize: 24 }}>{icon}</Text>
                        </View>
-                       <Text style={{ color: '#ef4444', fontWeight: '900', fontSize: 16 }}>-{t.pontos_usados}</Text>
+                       
+                       <View style={{ flex: 1 }}>
+                         <Text style={{ color: c.texto, fontWeight: '900', fontSize: 15 }}>{isResgate ? (t.premio_nome || 'Resgate Efetuado') : 'Compra Realizada'}</Text>
+                         <Text style={{ color: c.subtexto, fontSize: 11, fontWeight: '700', marginTop: 2 }}>
+                            {t.loja_nome || 'A M P'} • {new Date(t.created_at).toLocaleDateString('pt-BR')} {new Date(t.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                         </Text>
+                       </View>
+
+                       <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={{ color: isResgate ? '#ef4444' : c.neonVerde, fontWeight: '900', fontSize: 16 }}>
+                             {isResgate ? `-${t.pontos_usados}` : `+${t.pontos_gerados}`}
+                          </Text>
+                          <Text style={{ color: c.subtexto, fontSize: 8, fontWeight: '900', letterSpacing: 0.5 }}>SPRINGS</Text>
+                       </View>
                      </View>
-                   </View>
-                 ))
+                   );
+                 })
                )}
             </ScrollView>
           </View>
