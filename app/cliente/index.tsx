@@ -423,9 +423,15 @@ export default function Cliente() {
     girar();
     const clean = cpf.replace(/\D/g, '');
     const interval = setInterval(async () => {
-      const { data } = await supabase.from('checkins').select('status').eq('cliente_cpf', clean).single();
-      if (data?.status === 'atendido') { clearInterval(interval); await carregarDados(clean, String(loja_id)); setStatus('finalizado'); }
-    }, 5000);
+      const { data, error } = await supabase.from('checkins').select('status').eq('cliente_cpf', clean).eq('loja_id', String(loja_id)).maybeSingle();
+      
+      // Se o registro sumiu (foi atendido/removido) ou o status mudou, libera o cliente
+      if (!data || data.status !== 'aguardando') {
+        clearInterval(interval);
+        await carregarDados(clean, String(loja_id));
+        setStatus('finalizado');
+      }
+    }, 3000);
     return () => clearInterval(interval);
   }, [status]);
 
@@ -692,19 +698,21 @@ export default function Cliente() {
           <Text style={{ fontSize: 36 }}>✨ ✨ ✨</Text>
         </View>
         <TextInput placeholder="(19) 99999-9999" placeholderTextColor={c.subtexto} value={cpf} onChangeText={formatarTelefone} keyboardType="phone-pad" maxLength={15} style={[styles.inputGigante, { backgroundColor: c.card, borderColor: c.borda, color: c.texto }]} />
-          <TouchableOpacity
-            style={[styles.button, { backgroundColor: c.neonVerde, marginTop: 10 }]}
-            onPress={entrarFila}
-            disabled={carregando}
-          >
-            {carregando ? <ActivityIndicator color="#000" /> : <Text style={[styles.buttonText, { color: '#000', fontWeight: '900' }]}>ACESSAR MINHA CARTEIRA</Text>}
-          </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.buttonBig} 
+          onPress={entrarFila} 
+          activeOpacity={0.8} 
+          disabled={carregando}
+        >
+          {carregando ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonTextBig}>ACESSAR MINHA CARTEIRA</Text>}
+        </TouchableOpacity>
 
-          {!loja_id && (
-            <Text style={{ color: '#ef4444', fontSize: 10, marginTop: 15, textAlign: 'center', fontWeight: 'bold' }}>
-              ⚠️ ATENÇÃO: QR CODE NÃO DETECTADO. ESCANEIE O QR DO BALCÃO PARA ENTRAR NA FILA.
-            </Text>
-          )}
+        {!loja_id && (
+          <Text style={{ color: '#ef4444', fontSize: 10, marginTop: 15, textAlign: 'center', fontWeight: 'bold' }}>
+            ⚠️ ATENÇÃO: QR CODE NÃO DETECTADO. ESCANEIE O QR DO BALCÃO PARA ENTRAR NA FILA.
+          </Text>
+        )}
         <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 40 }}>v5.8.0-exchange</Text>
       </ScrollView>
     );
