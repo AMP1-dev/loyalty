@@ -246,6 +246,7 @@ export default function Cliente() {
   if (params?.mesa === 'true' || (typeof window !== 'undefined' && window.location.pathname.includes('/mesa'))) {
     return <MesaRoleta />;
   }
+
   const [cpf, setCpf] = useState('');
   const [status, setStatus] = useState<'idle' | 'aguardando' | 'finalizado'>('idle');
   const [saldo, setSaldo] = useState(0);
@@ -410,9 +411,7 @@ export default function Cliente() {
     }
   };
 
-  // ════════════════════════════════════════════════════════════════════
   // 1. CARREGAR SALDOS POR LOJA
-  // ════════════════════════════════════════════════════════════════════
   const carregarSaldosPorLoja = async () => {
     try {
       setCarregandoSaldos(true);
@@ -440,9 +439,7 @@ export default function Cliente() {
     }
   };
 
-  // ════════════════════════════════════════════════════════════════════
   // 2. ATUALIZAR SELEÇÃO DE PONTOS
-  // ════════════════════════════════════════════════════════════════════
   const atualizarSelecao = (lojaId: string, novoValor: number) => {
     const saldoLoja = saldosPorLoja.find(s => s.id === lojaId)?.saldo_total || 0;
     const valorLimitado = Math.min(Math.max(0, novoValor), saldoLoja);
@@ -454,9 +451,7 @@ export default function Cliente() {
     setTotalSelecionado(total);
   };
 
-  // ════════════════════════════════════════════════════════════════════
   // 3. GERAR TOKEN COM SELEÇÃO
-  // ════════════════════════════════════════════════════════════════════
   const gerarTokenExchange = async () => {
     if (totalSelecionado === 0) {
       mostrarToast('Selecione pelo menos 1 ponto para importar.', 'erro');
@@ -547,11 +542,21 @@ export default function Cliente() {
     const clean = cpf.replace(/\D/g, '');
     const { data } = await supabase.from('clientes').select('pin_hash').eq('cpf', clean).single();
     if (data && await bcrypt.compare(pin, data.pin_hash)) {
-      setMostrarPinModal(false); setPinDigitado(['', '', '', '']);
+      setMostrarPinModal(false); 
+      setPinDigitado(['', '', '', '']);
       await salvarStorage('cliente_cpf', clean);
-      if (loja_id) { await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]); setStatus('aguardando'); }
-      else { await carregarDados(clean); setStatus('finalizado'); }
-    } else { mostrarToast('PIN incorreto', 'erro'); setPinDigitado(['', '', '', '']); }
+      if (loja_id) { 
+        await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]); 
+        setStatus('aguardando'); 
+      }
+      else { 
+        await carregarDados(clean); 
+        setStatus('finalizado'); 
+      }
+    } else { 
+      mostrarToast('PIN incorreto', 'erro'); 
+      setPinDigitado(['', '', '', '']); 
+    }
     setCarregando(false);
   };
 
@@ -561,10 +566,17 @@ export default function Cliente() {
     const hash = await bcrypt.hash(pin, 10);
     const clean = cpf.replace(/\D/g, '');
     await supabase.from('clientes').upsert({ cpf: clean, pin_hash: hash });
-    setMostrarPinModal(false); setPinDigitado(['', '', '', '']);
+    setMostrarPinModal(false); 
+    setPinDigitado(['', '', '', '']);
     await salvarStorage('cliente_cpf', clean);
-    if (loja_id) { await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]); setStatus('aguardando'); }
-    else { await carregarDados(clean); setStatus('finalizado'); }
+    if (loja_id) { 
+      await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]); 
+      setStatus('aguardando'); 
+    }
+    else { 
+      await carregarDados(clean); 
+      setStatus('finalizado'); 
+    }
     setCarregando(false);
   };
 
@@ -607,9 +619,15 @@ export default function Cliente() {
 
   if (status === 'idle') return (
     <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ padding: 25, paddingTop: 60 }}>
+      <View style={{ alignItems: 'center', marginBottom: 20 }}>
+        <Text style={{ fontSize: 36, marginBottom: 10 }}>✨ ✨ ✨</Text>
+      </View>
       <View style={{ alignItems: 'center', marginBottom: 40 }}>
         <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde }}>PALM</Text>
         <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde }}>SPRINGS</Text>
+      </View>
+      <View style={{ alignItems: 'center', marginBottom: 20 }}>
+        <Text style={{ fontSize: 36 }}>✨ ✨ ✨</Text>
       </View>
       <TextInput placeholder="(19) 99999-9999" placeholderTextColor={c.subtexto} value={cpf} onChangeText={formatarTelefone} keyboardType="phone-pad" maxLength={15} style={[styles.inputGigante, { backgroundColor: c.card, borderColor: c.borda, color: c.texto }]} />
       <TouchableOpacity style={styles.buttonBig} onPress={entrarFila} activeOpacity={0.8} disabled={carregando}>

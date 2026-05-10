@@ -4,7 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated, Easing, Platform, ScrollView, StyleSheet, Text, TextInput,
-  TouchableOpacity, useColorScheme, View, Linking, ActivityIndicator
+  TouchableOpacity, useColorScheme, View, ActivityIndicator, Alert
 } from 'react-native';
 import Svg, { Circle, Defs, G, Path, RadialGradient, LinearGradient as SvgLinearGradient, Stop, Text as SvgText, Filter, FeGaussianBlur, FeOffset, FeComponentTransfer, FeFuncA, FeMerge, FeMergeNode } from 'react-native-svg';
 import { supabase } from '../../../lib/supabase';
@@ -150,8 +150,6 @@ export default function MesaRoleta() {
   const temaSistema = useColorScheme();
   const [isDark, setIsDark] = useState(temaSistema === 'dark');
 
-  const toggleTheme = () => setIsDark(!isDark);
-
   const c = {
     bg: isDark ? '#020617' : '#f8fafc',
     card: isDark ? '#1e293b' : '#ffffff',
@@ -187,7 +185,6 @@ export default function MesaRoleta() {
         }
         setPremiosRoletaMesa(listaBonita);
       } else {
-        // Se não houver prêmios no banco, carrega prêmios padrão para evitar tela branca
         setPremiosRoletaMesa([
           { id: 'd1', nome: 'TENTE NOVAMENTE', tipo: 'outro', probabilidade: 50 },
           { id: 'd2', nome: 'PRÓXIMA VISITA', tipo: 'outro', probabilidade: 50 },
@@ -366,52 +363,25 @@ export default function MesaRoleta() {
 
       {etapa === 'telefone' && (
         <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ padding: 25, paddingTop: 60 }}>
-          
-          {/* TÍTULO: DIVIDIDO EM 2 LINHAS */}
+          <View style={{ alignItems: 'center', marginBottom: 20 }}>
+            <Text style={{ fontSize: 36, marginBottom: 10 }}>✨ ✨ ✨</Text>
+          </View>
           <View style={{ alignItems: 'center', marginBottom: 40 }}>
             <Text style={{ fontSize: 48, fontWeight: '900', color: c.roxo }}>PALM</Text>
             <Text style={{ fontSize: 48, fontWeight: '900', color: c.roxo }}>SPRINGS</Text>
           </View>
-          
-          {/* INPUT: IDÊNTICO AO VERDE */}
-          <TextInput 
-            placeholder="(00) 00000-0000" 
-            placeholderTextColor={c.subtexto} 
-            keyboardType="phone-pad" 
-            value={telefone} 
-            maxLength={15} 
-            onChangeText={(text) => {
-              const clean = text.replace(/\D/g, '').slice(0, 11);
-              const formatted = clean.length <= 2 ? `(${clean}` : clean.length <= 7 ? `(${clean.slice(0, 2)}) ${clean.slice(2)}` : `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
-              setTelefone(formatted);
-            }} 
-            style={[styles.inputGigante, { backgroundColor: c.card, borderColor: c.borda, color: c.texto }]} 
-          />
-          
-          {/* BOTÃO: IDÊNTICO AO VERDE */}
-          <TouchableOpacity 
-            style={styles.buttonBig} 
-            onPress={avancarParaNPS} 
-            activeOpacity={0.8} 
-            disabled={carregando}
-          >
+          <View style={{ alignItems: 'center', marginBottom: 20 }}>
+            <Text style={{ fontSize: 36 }}>✨ ✨ ✨</Text>
+          </View>
+          <TextInput placeholder="(00) 00000-0000" placeholderTextColor={c.subtexto} keyboardType="phone-pad" value={telefone} maxLength={15} onChangeText={(text) => {
+            const clean = text.replace(/\D/g, '').slice(0, 11);
+            const formatted = clean.length <= 2 ? `(${clean}` : clean.length <= 7 ? `(${clean.slice(0, 2)}) ${clean.slice(2)}` : `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
+            setTelefone(formatted);
+          }} style={[styles.inputGigante, { backgroundColor: c.card, borderColor: c.borda, color: c.texto }]} />
+          <TouchableOpacity style={styles.buttonBig} onPress={avancarParaNPS} activeOpacity={0.8} disabled={carregando}>
             {carregando ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonTextBig}>JOGUE NA MESA 🕹️</Text>}
           </TouchableOpacity>
-          
-          {/* VERSION TEXT */}
           <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 40 }}>v5.8.0-exchange</Text>
-
-          {/* TOAST */}
-          {toast.visivel && (
-            <Animated.View style={{
-              position: 'absolute', top: toastAnim as any, left: 20, right: 20,
-              backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444',
-              padding: 16, borderRadius: 12, elevation: 10, zIndex: 9999,
-              flexDirection: 'row', alignItems: 'center'
-            }}>
-              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14, flex: 1 }}>{toast.mensagem}</Text>
-            </Animated.View>
-          )}
         </ScrollView>
       )}
 
@@ -462,29 +432,8 @@ export default function MesaRoleta() {
 }
 
 const styles = StyleSheet.create({
-  inputGigante: { 
-    padding: 22, 
-    borderRadius: 20, 
-    fontSize: 32, 
-    fontWeight: '900', 
-    textAlign: 'center', 
-    borderWidth: 2, 
-    marginBottom: 20 
-  },
-  buttonBig: { 
-    padding: 22, 
-    borderRadius: 20, 
-    alignItems: 'center', 
-    backgroundColor: '#10b981' 
-  },
-  buttonTextBig: { 
-    color: '#fff', 
-    fontWeight: '900', 
-    fontSize: 16 
-  },
-  center: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
+  inputGigante: { padding: 22, borderRadius: 20, fontSize: 32, fontWeight: '900', textAlign: 'center', borderWidth: 2, marginBottom: 20 },
+  buttonBig: { padding: 22, borderRadius: 20, alignItems: 'center', backgroundColor: '#10b981' },
+  buttonTextBig: { color: '#fff', fontWeight: '900', fontSize: 16 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });
