@@ -25,11 +25,7 @@ const DDD_VALIDOS = [
   '91', '92', '93', '94', '95', '96', '97', '98', '99'
 ];
 
-// ─── Storage helpers ──────────────────────────────────────────────────────────
-const salvarStorage = async (key: string, value: string) => {
-  if (typeof window !== 'undefined') localStorage.setItem(key, value);
-  else await AsyncStorage.setItem(key, value);
-};
+
 
 // ─── Componente WheelSVG ──────────────────────────────────────────────────────
 function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDark: boolean }) {
