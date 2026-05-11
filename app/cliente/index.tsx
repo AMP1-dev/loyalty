@@ -922,7 +922,7 @@ export default function Cliente() {
                           />
                         ) : (
                           <View style={{ flex: 1, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' }}>
-                            <Text style={{ fontize: 60 }}>🎁</Text>
+                            <Text style={{ fontSize: 60 }}>🎁</Text>
                           </View>
                         )}
                         <LinearGradient colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.95)']} style={StyleSheet.absoluteFill} />
@@ -937,9 +937,9 @@ export default function Cliente() {
                             {saldo >= item.custo_pontos ? 'RESGATAR AGORA' : 'SEM SALDO'}
                           </Text>
                         </TouchableOpacity>
-                      </View>
                     </View>
-                  ))}
+                  );
+                })}
               </ScrollView>
             </View>
           )}
@@ -974,18 +974,23 @@ export default function Cliente() {
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {recompensasRede.map((item, idx) => {
-                const imgUri = item.imagem || item.foto || item.imagem_url;
+                const rawImg = item.imagem || item.foto || item.imagem_url;
+                const hasImg = rawImg && String(rawImg).startsWith('http');
                 return (
                   <View key={idx} style={[styles.brindeCardGrande, { backgroundColor: c.card, borderColor: c.borda }]}>
-                    <View style={{ height: '100%', width: '100%', borderRadius: 28, overflow: 'hidden' }}>
-                      {imgUri ? (
-                        <Image source={{ uri: imgUri }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                    <View style={{ width: '100%', height: '100%', borderRadius: 28, overflow: 'hidden', backgroundColor: '#000' }}>
+                      {hasImg ? (
+                        <Image 
+                          source={{ uri: rawImg }} 
+                          style={StyleSheet.absoluteFill} 
+                          resizeMode="cover"
+                        />
                       ) : (
                         <View style={{ flex: 1, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' }}>
                           <Text style={{ fontSize: 60 }}>🎁</Text>
                         </View>
                       )}
-                      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.9)']} style={StyleSheet.absoluteFill} />
+                      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.95)']} style={StyleSheet.absoluteFill} />
 
                       <View style={{ position: 'absolute', bottom: 85, left: 20, right: 20 }}>
                         <Text style={{ color: '#fff', fontWeight: '900', fontSize: 22, marginBottom: 4 }}>{item.nome}</Text>
@@ -999,8 +1004,8 @@ export default function Cliente() {
                         </Text>
                       </TouchableOpacity>
                     </View>
-                  </View>
-                ))}
+                  );
+                })}
             </ScrollView>
           </View>
 
