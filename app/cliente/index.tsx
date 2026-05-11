@@ -347,6 +347,7 @@ export default function Cliente() {
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const pulse = useRef(new Animated.Value(1)).current;
   const resultAnim = useRef(new Animated.Value(0)).current;
+  const idleAnim = useRef(new Animated.Value(0)).current;
   const lidRef = useRef<string | null>(null);
   const toastAnim = useRef(new Animated.Value(-150)).current;
   const [toast, setToast] = useState({ visible: false, message: '', tipo: 'sucesso' });
@@ -366,6 +367,15 @@ export default function Cliente() {
   const temaSistema = useColorScheme();
   const [isDark, setIsDark] = useState(temaSistema === 'dark');
 
+
+  useEffect(() => {
+    const rodarIdle = () => {
+      idleAnim.setValue(0);
+      Animated.timing(idleAnim, { toValue: 1, duration: 20000, easing: Easing.linear, useNativeDriver: Platform.OS !== 'web' })
+        .start(({ finished }) => { if (finished) rodarIdle(); });
+    };
+    rodarIdle();
+  }, []);
 
   useEffect(() => {
     const carregarTema = async () => {
