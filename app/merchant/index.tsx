@@ -334,21 +334,21 @@ export default function MerchantPanel() {
   const buscarFinanceiroDetalhado = async (cpf: string, idCheckin?: string) => {
     if (!lojaId) return;
 
-    // Busca direta para garantir que bate com a tela do cliente (sem depender de RPC inexistente)
+    // Busca direta e correta baseada na estrutura real das tabelas
     const [{ data: trans }, { data: resg }, { data: cash }, { data: bonus }] = await Promise.all([
-      supabase.from('transacoes').select('pontos_gerados, pontos_usados').eq('cliente_cpf', cpf).eq('loja_id', lojaId),
+      supabase.from('transacoes').select('pontos_gerados').eq('cliente_cpf', cpf).eq('loja_id', lojaId),
       supabase.from('resgates').select('pontos_usados, valor_cashback').eq('cliente_cpf', cpf).eq('loja_id', lojaId),
-      supabase.from('cashbacks').select('valor').eq('cliente_cpf', cpf).eq('loja_id', lojaId),
+      supabase.from('cashbacks').select('valor').eq('cliente_cpf', cpf).eq('loja_id', lojaId).eq('usado', false),
       supabase.from('bonus_pendentes').select('pontos').eq('cliente_cpf', cpf).eq('loja_id', lojaId).gt('data_expiracao', new Date().toISOString()).eq('usado', false)
     ]);
 
+    // Cálculo de Springs: Ganhos em transações - Usados em resgates
     const totalGerado = (trans || []).reduce((s, t) => s + (t.pontos_gerados || 0), 0);
-    const totalUsado = (trans || []).reduce((s, t) => s + (t.pontos_usados || 0), 0) + (resg || []).reduce((s, r) => s + (r.pontos_usados || 0), 0);
+    const totalUsado = (resg || []).reduce((s, r) => s + (r.pontos_usados || 0), 0);
     const saldoFinal = totalGerado - totalUsado;
 
-    const totalCashbackGerado = (cash || []).reduce((s, c) => s + (c.valor || 0), 0);
-    const totalCashbackUsado = (resg || []).reduce((s, r) => s + (r.valor_cashback || 0), 0);
-    const cashbackFinal = Math.max(0, totalCashbackGerado - totalCashbackUsado);
+    // Cálculo de Cashback: Apenas os que não foram usados ainda
+    const cashbackFinal = (cash || []).reduce((s, c) => s + (Number(c.valor) || 0), 0);
 
     setCashbacks((prev: any) => ({ 
       ...prev, 
