@@ -366,14 +366,6 @@ export default function Cliente() {
   const temaSistema = useColorScheme();
   const [isDark, setIsDark] = useState(temaSistema === 'dark');
 
-  useEffect(() => {
-    const rodarIdle = () => {
-      idleAnim.setValue(0);
-      Animated.timing(idleAnim, { toValue: 1, duration: 20000, easing: Easing.linear, useNativeDriver: Platform.OS !== 'web' })
-        .start(({ finished }) => { if (finished) rodarIdle(); });
-    };
-    rodarIdle();
-  }, []);
 
   useEffect(() => {
     const carregarTema = async () => {
@@ -479,7 +471,7 @@ export default function Cliente() {
     return () => clearInterval(interval);
   }, [status]);
 
-  const carregarDados = async (cpfBusca: string, lojaIdEfetivo?: string) => {
+  const carregarDados = async (cpfBusca: string | null, lojaIdEfetivo?: string) => {
     const { data: lojas } = await supabase.from('lojas').select('id, nome');
     const { data: configs } = await supabase.from('configuracoes_loja').select('*');
     const mapLojas: any = {}; lojas?.forEach(l => mapLojas[l.id] = l.nome);
