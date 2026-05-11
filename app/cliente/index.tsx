@@ -227,6 +227,7 @@ function RoletaCTA({ onPress, isDark, c }: any) {
   const idleAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
+  const lidRef = useRef<string | null>(null);
 
   const WHEEL_SIZE = 310;
   const prizesDisplay = [
@@ -428,14 +429,17 @@ export default function Cliente() {
       if (loja_id === 'amp') {
         lid_final = 'b3f20184-d9e6-47d5-bc7f-3e484d3fe265';
         setUuidLojaReal(lid_final);
+        lidRef.current = lid_final;
       } else if (loja_id && !isUUID(String(loja_id))) {
         const { data: lData } = await supabase.from('lojas').select('id').ilike('nome', `%${loja_id}%`).maybeSingle();
         if (lData) {
           lid_final = lData.id;
           setUuidLojaReal(lData.id);
+          lidRef.current = lData.id;
         }
       } else if (loja_id) {
         setUuidLojaReal(String(loja_id));
+        lidRef.current = String(loja_id);
       }
 
       if (saved) {
@@ -450,6 +454,9 @@ export default function Cliente() {
           await carregarDados(saved, lid_final);
           setStatus('finalizado');
         }
+      } else {
+        // Carrega o catálogo da loja mesmo se não estiver logado
+        await carregarDados(null, lid_final);
       }
     };
     initApp();
@@ -461,12 +468,12 @@ export default function Cliente() {
     girar();
     const clean = cpf.replace(/\D/g, '');
     const interval = setInterval(async () => {
-      const { data, error } = await supabase.from('checkins').select('status').eq('cliente_cpf', clean).eq('loja_id', String(loja_id)).maybeSingle();
+      const { data, error } = await supabase.from('checkins').select('status').eq('cliente_cpf', clean).eq('loja_id', lidRef.current || String(loja_id)).maybeSingle();
 
       // Se o registro sumiu (foi atendido/removido) ou o status mudou, libera o cliente
       if (!data || data.status !== 'aguardando') {
         clearInterval(interval);
-        await carregarDados(clean, uuidLojaReal || String(loja_id));
+        await carregarDados(clean, lidRef.current || String(loja_id));
         setStatus('finalizado');
       }
     }, 3000);
@@ -906,16 +913,16 @@ export default function Cliente() {
                   const hasImg = rawImg && String(rawImg).startsWith('http');
                   return (
                     <View key={idx} style={[styles.brindeCardGrande, { backgroundColor: c.card, borderColor: c.borda }]}>
-                      <View style={{ flex: 1, borderRadius: 28, overflow: 'hidden', backgroundColor: '#000' }}>
+                      <View style={{ width: '100%', height: '100%', borderRadius: 28, overflow: 'hidden', backgroundColor: '#000' }}>
                         {hasImg ? (
-                          <Image 
-                            source={{ uri: rawImg }} 
-                            style={StyleSheet.absoluteFill} 
+                          <Image
+                            source={{ uri: rawImg }}
+                            style={StyleSheet.absoluteFill}
                             resizeMode="cover"
                           />
                         ) : (
                           <View style={{ flex: 1, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' }}>
-                            <Text style={{ fontSize: 60 }}>🎁</Text>
+                            <Text style={{ fontize: 60 }}>🎁</Text>
                           </View>
                         )}
                         <LinearGradient colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.95)']} style={StyleSheet.absoluteFill} />
