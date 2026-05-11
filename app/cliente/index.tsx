@@ -227,7 +227,6 @@ function RoletaCTA({ onPress, isDark, c }: any) {
   const idleAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
-  const lidRef = useRef<string | null>(null);
 
   const WHEEL_SIZE = 310;
   const prizesDisplay = [
@@ -348,9 +347,9 @@ export default function Cliente() {
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const pulse = useRef(new Animated.Value(1)).current;
   const resultAnim = useRef(new Animated.Value(0)).current;
+  const lidRef = useRef<string | null>(null);
   const toastAnim = useRef(new Animated.Value(-150)).current;
   const [toast, setToast] = useState({ visible: false, message: '', tipo: 'sucesso' });
-  const idleAnim = useRef(new Animated.Value(0)).current;
 
   // ════════════════════════════════════════════════════════════════════
   // STATES DO EXCHANGE
