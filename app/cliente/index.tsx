@@ -864,14 +864,16 @@ export default function Cliente() {
             </View>
 
             {/* Sub-cards Local */}
-            <View style={[styles.cardLocal, { width: '48%', backgroundColor: c.card, borderColor: c.borda, marginTop: 12 }]}>
-              <Text style={{ fontSize: 8, fontWeight: '800', color: c.subtexto }}>DISPONÍVEL NESTA LOJA</Text>
-              <Text style={{ fontSize: 16, fontWeight: '900', color: c.neonVerde, marginTop: 4 }}>{saldoPorLoja.find(s => s.id === loja_id)?.pontos || 0} Springs</Text>
+            <View style={[styles.cardLocal, { width: '48%', backgroundColor: c.card, borderColor: c.borda, marginTop: 12, padding: 18, height: 110, justifyContent: 'center' }]}>
+              <Text style={{ fontSize: 10, fontWeight: '800', color: c.subtexto, textAlign: 'left' }}>DISPONÍVEL NESTA LOJA</Text>
+              <Text style={{ fontSize: 24, fontWeight: '900', color: c.neonVerde, marginTop: 8, textAlign: 'left' }}>
+                {saldoPorLoja.find(s => s.id === loja_id)?.pontos || 0} SPG
+              </Text>
             </View>
 
-            <View style={[styles.cardLocal, { width: '48%', backgroundColor: c.card, borderColor: c.borda, marginTop: 12 }]}>
-              <Text style={{ fontSize: 8, fontWeight: '800', color: c.subtexto }}>DISPONÍVEL NESTA LOJA</Text>
-              <Text style={{ fontSize: 16, fontWeight: '900', color: c.neonAmarelo, marginTop: 4 }}>R$ 0,00</Text>
+            <View style={[styles.cardLocal, { width: '48%', backgroundColor: c.card, borderColor: c.borda, marginTop: 12, padding: 18, height: 110, justifyContent: 'center' }]}>
+              <Text style={{ fontSize: 10, fontWeight: '800', color: c.subtexto, textAlign: 'left' }}>DISPONÍVEL NESTA LOJA</Text>
+              <Text style={{ fontSize: 24, fontWeight: '900', color: c.neonAmarelo, marginTop: 8, textAlign: 'left' }}>R$ 0,00</Text>
             </View>
           </View>
 
