@@ -898,13 +898,12 @@ export default function Cliente() {
 
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {recompensas.map((item, idx) => {
-                  const rawImg = item.imagem || item.foto || item.imagem_url;
-                  const hasImg = rawImg && String(rawImg).startsWith('http');
+                  const imgUri = item.imagem || item.foto || item.imagem_url;
                   return (
                     <View key={idx} style={[styles.brindeCardGrande, { backgroundColor: c.card, borderColor: c.borda }]}>
                       <View style={{ height: '100%', width: '100%', borderRadius: 28, overflow: 'hidden' }}>
-                        {hasImg ? (
-                          <Image source={{ uri: rawImg }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                        {imgUri ? (
+                          <Image source={{ uri: imgUri }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
                         ) : (
                           <View style={{ flex: 1, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' }}>
                             <Text style={{ fontSize: 60 }}>🎁</Text>
