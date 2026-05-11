@@ -645,7 +645,23 @@ export default function MerchantPanel() {
       mostrarToast(`🎁 NOVO RESGATE: ${formatarTelefone(p.new.cliente_cpf)}\n1x ${premio?.nome || 'Produto'}`, 'sucesso');
     }).subscribe();
 
-    channelRef.current = channelCheckin; channelResgateRef.current = channelResgate;
+    const channelRemarketing = supabase.channel(`remarketing_escuta_${lojaId}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'contatos_mesa_remarketing' }, (p) => {
+      if (p.new.loja_id === lojaId) {
+        buscarContatosRemarketing();
+        Vibration.vibrate(200);
+        mostrarToast('📞 NOVO CONTATO PARA REMARKETING!', 'sucesso');
+      }
+    }).subscribe();
+
+    const channelMesa = supabase.channel(`mesa_participacoes_${lojaId}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'roleta_mesa_participacoes' }, (p) => {
+      if (p.new.loja_id === lojaId) {
+        buscarParticipacoesMesa();
+        mostrarToast('🎡 NOVO GIRO NA MESA!', 'sucesso');
+      }
+    }).subscribe();
+
+    channelRef.current = channelCheckin; 
+    channelResgateRef.current = channelResgate;
   };
 
   useEffect(() => {
@@ -669,6 +685,8 @@ export default function MerchantPanel() {
       buscarFila();
       buscarStats();
       buscarAvaliacoesERoleta();
+      buscarContatosRemarketing();
+      buscarParticipacoesMesa();
     }, 30000);
 
     return () => { 

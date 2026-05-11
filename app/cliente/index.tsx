@@ -59,10 +59,11 @@ const isPremioPositivo = (premio: any): boolean => {
 };
 
 const getIconePremio = (tipo: string) => {
-  if (tipo === 'cashback') return 'R$';
-  if (tipo === 'pontos') return '✦';
-  if (tipo === 'nada') return '✗';
-  return '🎁';
+  if (tipo === 'cashback') return '✨';
+  if (tipo === 'pontos') return '✨';
+  if (tipo === 'nada') return '✨';
+  if (tipo === 'bonus') return '✨';
+  return '✨';
 };
 
 // ─── Validação de Telefone Brasileira ──────────────────────────────────────────
@@ -137,11 +138,11 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
 
   const getTextPos = (index: number) => {
     const midAngle = index * sliceAngle - Math.PI / 2 + sliceAngle / 2;
-    const r = RADIUS * 0.65;
+    const r = RADIUS * 0.58;
     return {
       x: CENTER + r * Math.cos(midAngle),
       y: CENTER + r * Math.sin(midAngle),
-      rotation: (midAngle * 180) / Math.PI + 90,
+      rotation: (midAngle * 180) / Math.PI,
     };
   };
 
@@ -193,28 +194,29 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
                 strokeWidth="1.2"
               />
               <G transform={`rotate(${rotation} ${x} ${y})`}>
-                <SvgText x={x} y={y - 12}
-                  fill={iconColor} fontSize={size === 240 ? "8" : "11"}
-                  fontWeight="900" textAnchor="middle" letterSpacing="0">
+                <SvgText x={x} y={y - 25}
+                  fill={iconColor} fontSize={size > 300 ? "26" : "20"}
+                  fontWeight="900" textAnchor="middle">
                   {icon}
                 </SvgText>
-                <SvgText x={x} y={y - 1}
-                  fill={textColor} fontSize={size === 240 ? "5" : "7.5"}
-                  fontWeight="700" textAnchor="middle" letterSpacing="0">
-                  {lines[0]}
+                <SvgText x={x} y={y}
+                  fill={textColor} fontSize={size > 300 ? "18" : "14"}
+                  fontWeight="900" textAnchor="middle">
+                  {lines[0].toUpperCase()}
                 </SvgText>
                 {lines[1] && (
-                  <SvgText x={x} y={y + 9}
-                    fill={textColor} fontSize={size === 240 ? "5.5" : "8.5"}
-                    fontWeight="bold" textAnchor="middle" letterSpacing="0">
-                    {lines[1]}
+                  <SvgText x={x} y={y + 16}
+                    fill={textColor} fontSize={size > 300 ? "19" : "15"}
+                    fontWeight="900" textAnchor="middle">
+                    {lines[1].toUpperCase()}
                   </SvgText>
                 )}
               </G>
             </G>
           );
         })}
-        <Circle cx={CENTER} cy={CENTER} r={size * 0.075} fill="url(#gCenter)" stroke={isDark ? '#475569' : '#94a3b8'} strokeWidth="1.5" />
+        <Circle cx={CENTER} cy={CENTER} r={size * 0.12} fill="url(#gCenter)" stroke="#d4d4d8" strokeWidth="2" />
+        <Circle cx={CENTER} cy={CENTER} r={size * 0.04} fill="#fff" opacity="0.3" />
       </G>
     </Svg>
   );
@@ -226,20 +228,12 @@ function RoletaCTA({ onPress, isDark, c }: any) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
 
-  const WHEEL_SIZE = 240;
+  const WHEEL_SIZE = 310;
   const prizesDisplay = [
-    { nome: '10 SPG', tipo: 'pontos' },
-    { nome: 'R$ 2,00\nCashback', tipo: 'cashback' },
-    { nome: 'Café\nGrátis', tipo: 'brinde' },
-    { nome: 'R$ 5,00\nCashback', tipo: 'cashback' },
-    { nome: '5 SPG', tipo: 'pontos' },
-    { nome: 'Kit de\nFerramentas', tipo: 'brinde' },
-    { nome: '15 SPG', tipo: 'pontos' },
-    { nome: 'R$ 1,00\nCashback', tipo: 'cashback' },
-    { nome: 'Brinde\nSurpresa', tipo: 'brinde' },
-    { nome: '20 SPG', tipo: 'pontos' },
-    { nome: 'Cappuccino\nPremium', tipo: 'brinde' },
-    { nome: 'R$ 3,00\nCashback', tipo: 'cashback' },
+    { nome: 'Ganhou 10\nSprings', tipo: 'pontos' },
+    { nome: 'Tente\noutra vez', tipo: 'nada' },
+    { nome: 'R$\nCashback', tipo: 'cashback' },
+    { nome: 'Ganhe em\ndobro', tipo: 'bonus' },
   ];
 
   useEffect(() => {
@@ -272,15 +266,22 @@ function RoletaCTA({ onPress, isDark, c }: any) {
         position: 'absolute', top: 44, width: WHEEL_SIZE + 20, height: WHEEL_SIZE + 20,
         borderRadius: (WHEEL_SIZE + 20) / 2, shadowColor: '#10b981', shadowOpacity: glowOpacity as any, shadowRadius: 20, elevation: 20,
       }} />
-      <View style={{ zIndex: 10, marginBottom: -12 }}>
-        <Svg width={32} height={32} viewBox="0 0 32 32">
-          <Path d="M16 28 L4 6 L28 6 Z" fill="#10b981" stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
+      <View style={{ zIndex: 10, marginBottom: -15 }}>
+        <Svg width={44} height={44} viewBox="0 0 32 32">
+          <Defs>
+            <SvgLinearGradient id="gradPino" x1="0%" y1="0%" x2="0%" y2="100%">
+              <Stop offset="0%" stopColor="#facc15" />
+              <Stop offset="100%" stopColor="#854d0e" />
+            </SvgLinearGradient>
+          </Defs>
+          <Path d="M16 30 L4 4 L28 4 Z" fill="url(#gradPino)" stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
         </Svg>
       </View>
       <View style={{
-        width: WHEEL_SIZE + 16, height: WHEEL_SIZE + 16, borderRadius: (WHEEL_SIZE + 16) / 2,
-        backgroundColor: isDark ? '#334155' : '#ffffff', justifyContent: 'center', alignItems: 'center', elevation: 15,
-        borderWidth: 1, borderColor: isDark ? '#475569' : '#e2e8f0'
+        width: WHEEL_SIZE + 24, height: WHEEL_SIZE + 24, borderRadius: (WHEEL_SIZE + 24) / 2,
+        backgroundColor: isDark ? '#1e293b' : '#ffffff', justifyContent: 'center', alignItems: 'center',
+        elevation: 20, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 15,
+        borderWidth: 4, borderColor: isDark ? '#334155' : '#f1f5f9'
       }}>
         <Animated.View style={{ width: WHEEL_SIZE, height: WHEEL_SIZE, transform: [{ rotate: wheelRotate }] }}>
           <WheelSVG prizes={prizesDisplay} size={WHEEL_SIZE} isDark={isDark} />
@@ -321,6 +322,7 @@ export default function Cliente() {
   const [saldoPorLoja, setSaldoPorLoja] = useState<any[]>([]);
   const [recompensas, setRecompensas] = useState<any[]>([]);
   const [recompensasRede, setRecompensasRede] = useState<any[]>([]);
+  const [uuidLojaReal, setUuidLojaReal] = useState<string | null>(null);
   const [extrato, setExtrato] = useState<any[]>([]);
   const [mostrarExtrato, setMostrarExtrato] = useState(false);
   const [configLoja, setConfigLoja] = useState<any>(null);
@@ -347,6 +349,7 @@ export default function Cliente() {
   const resultAnim = useRef(new Animated.Value(0)).current;
   const toastAnim = useRef(new Animated.Value(-150)).current;
   const [toast, setToast] = useState({ visible: false, message: '', tipo: 'sucesso' });
+  const idleAnim = useRef(new Animated.Value(0)).current;
 
   // ════════════════════════════════════════════════════════════════════
   // STATES DO EXCHANGE
@@ -362,6 +365,15 @@ export default function Cliente() {
 
   const temaSistema = useColorScheme();
   const [isDark, setIsDark] = useState(temaSistema === 'dark');
+
+  useEffect(() => {
+    const rodarIdle = () => {
+      idleAnim.setValue(0);
+      Animated.timing(idleAnim, { toValue: 1, duration: 20000, easing: Easing.linear, useNativeDriver: Platform.OS !== 'web' })
+        .start(({ finished }) => { if (finished) rodarIdle(); });
+    };
+    rodarIdle();
+  }, []);
 
   useEffect(() => {
     const carregarTema = async () => {
@@ -407,17 +419,31 @@ export default function Cliente() {
         await salvarStorage('@app_version', APP_VERSION);
       }
       const saved = await carregarStorage('cliente_cpf');
+
+      // RESOLVER UUID DA LOJA SE FOR SLUG
+      let lid_final = String(loja_id);
+      const isUUID = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+
+      if (loja_id && !isUUID(String(loja_id))) {
+        const { data: lData } = await supabase.from('lojas').select('id').ilike('nome', `%${loja_id}%`).maybeSingle();
+        if (lData) {
+          lid_final = lData.id;
+          setUuidLojaReal(lData.id);
+        }
+      } else if (loja_id) {
+        setUuidLojaReal(String(loja_id));
+      }
+
       if (saved) {
         setCpf(saved);
         if (loja_id) {
-          // Garante que o check-in existe no banco ao ler o QR
           await supabase.from('checkins').upsert(
-            { cliente_cpf: saved, loja_id: String(loja_id), status: 'aguardando' },
+            { cliente_cpf: saved, loja_id: lid_final, status: 'aguardando' },
             { onConflict: 'cliente_cpf,loja_id' }
           );
           setStatus('aguardando');
         } else {
-          await carregarDados(saved);
+          await carregarDados(saved, lid_final);
           setStatus('finalizado');
         }
       }
@@ -432,11 +458,11 @@ export default function Cliente() {
     const clean = cpf.replace(/\D/g, '');
     const interval = setInterval(async () => {
       const { data, error } = await supabase.from('checkins').select('status').eq('cliente_cpf', clean).eq('loja_id', String(loja_id)).maybeSingle();
-      
+
       // Se o registro sumiu (foi atendido/removido) ou o status mudou, libera o cliente
       if (!data || data.status !== 'aguardando') {
         clearInterval(interval);
-        await carregarDados(clean, String(loja_id));
+        await carregarDados(clean, uuidLojaReal || String(loja_id));
         setStatus('finalizado');
       }
     }, 3000);
@@ -589,7 +615,7 @@ export default function Cliente() {
     try {
       if (loja_id) {
         // Fluxo Balcão: Check-in DIRETO (sem PIN) para aparecer no lojista
-        
+
         // 1. Garantir que o cliente existe na tabela 'clientes' (Manual para evitar erro 42P10)
         const { data: exCli } = await supabase.from('clientes').select('cpf').eq('cpf', clean).maybeSingle();
         if (!exCli) {
@@ -602,14 +628,15 @@ export default function Cliente() {
           }
         }
 
-        // 2. Garantir entrada na fila (Limpa se já existir e insere novo para evitar conflitos de status)
-        await supabase.from('checkins').delete().eq('cliente_cpf', clean).eq('loja_id', String(loja_id));
-        const { error: insError } = await supabase.from('checkins').insert([{ 
-          cliente_cpf: clean, 
-          loja_id: String(loja_id), 
-          status: 'aguardando' 
+        // 2. Garantir entrada na fila
+        const lid_final = uuidLojaReal || String(loja_id);
+        await supabase.from('checkins').delete().eq('cliente_cpf', clean).eq('loja_id', lid_final);
+        const { error: insError } = await supabase.from('checkins').insert([{
+          cliente_cpf: clean,
+          loja_id: lid_final,
+          status: 'aguardando'
         }]);
-        
+
         if (insError) {
           console.error('Erro ao inserir checkin:', insError);
           // Mostramos o código do erro para depuração precisa
@@ -700,13 +727,14 @@ export default function Cliente() {
     let rand = Math.random() * total;
     let win = premiosRoleta[0];
     for (const p of premiosRoleta) { if (rand < p.probabilidade) { win = p; break; } rand -= p.probabilidade; }
-    const target = 3600 + (360 - (premiosRoleta.indexOf(win) * (360 / premiosRoleta.length)));
+    const sliceAngle = 360 / premiosRoleta.length;
+    const target = 3600 + (360 - (premiosRoleta.indexOf(win) * sliceAngle + (sliceAngle / 2)));
     setRoletaTargetDeg(target);
-    Animated.timing(rotateAnim, { 
-      toValue: 1, 
-      duration: 3000, 
-      easing: Easing.out(Easing.cubic), 
-      useNativeDriver: false 
+    Animated.timing(rotateAnim, {
+      toValue: target,
+      duration: 3000,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false
     }).start(async () => {
       setPremioGanho(win); setRodando(false); setEtapaRoleta('resultado');
       const clean = cpf.replace(/\D/g, '');
@@ -740,11 +768,11 @@ export default function Cliente() {
           <Text style={{ fontSize: 36 }}>✨ ✨ ✨</Text>
         </View>
         <TextInput placeholder="(19) 99999-9999" placeholderTextColor={c.subtexto} value={cpf} onChangeText={formatarTelefone} keyboardType="phone-pad" maxLength={15} style={[styles.inputGigante, { backgroundColor: c.card, borderColor: c.borda, color: c.texto }]} />
-        
-        <TouchableOpacity 
-          style={styles.buttonBig} 
-          onPress={entrarFila} 
-          activeOpacity={0.8} 
+
+        <TouchableOpacity
+          style={styles.buttonBig}
+          onPress={entrarFila}
+          activeOpacity={0.8}
           disabled={carregando}
         >
           {carregando ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonTextBig}>ACESSAR MINHA CARTEIRA</Text>}
@@ -796,7 +824,7 @@ export default function Cliente() {
         </View>
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
-          
+
           {/* CARDS DE SALDO 2x2 */}
           <View style={{ padding: 20, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
             {/* Card Springs Rede */}
@@ -806,7 +834,7 @@ export default function Cliente() {
                 <Text style={{ fontSize: 24, marginRight: 8 }}>✨</Text>
                 <Text style={{ fontSize: 28, fontWeight: '900', color: c.neonVerde }}>{saldo}</Text>
                 <TouchableOpacity onPress={() => setMostraIntercambio(true)} style={{ marginLeft: 10 }}>
-                   <Text style={{ fontSize: 18 }}>👁️</Text>
+                  <Text style={{ fontSize: 18 }}>👁️</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -825,27 +853,27 @@ export default function Cliente() {
 
             {/* Sub-cards Local */}
             <View style={[styles.cardLocal, { width: '48%', backgroundColor: c.card, borderColor: c.borda, marginTop: 12 }]}>
-               <Text style={{ fontSize: 8, fontWeight: '800', color: c.subtexto }}>DISPONÍVEL NESTA LOJA</Text>
-               <Text style={{ fontSize: 16, fontWeight: '900', color: c.neonVerde, marginTop: 4 }}>{saldoPorLoja.find(s => s.id === loja_id)?.pontos || 0} Springs</Text>
+              <Text style={{ fontSize: 8, fontWeight: '800', color: c.subtexto }}>DISPONÍVEL NESTA LOJA</Text>
+              <Text style={{ fontSize: 16, fontWeight: '900', color: c.neonVerde, marginTop: 4 }}>{saldoPorLoja.find(s => s.id === loja_id)?.pontos || 0} Springs</Text>
             </View>
 
             <View style={[styles.cardLocal, { width: '48%', backgroundColor: c.card, borderColor: c.borda, marginTop: 12 }]}>
-               <Text style={{ fontSize: 8, fontWeight: '800', color: c.subtexto }}>DISPONÍVEL NESTA LOJA</Text>
-               <Text style={{ fontSize: 16, fontWeight: '900', color: c.neonAmarelo, marginTop: 4 }}>R$ 0,00</Text>
+              <Text style={{ fontSize: 8, fontWeight: '800', color: c.subtexto }}>DISPONÍVEL NESTA LOJA</Text>
+              <Text style={{ fontSize: 16, fontWeight: '900', color: c.neonAmarelo, marginTop: 4 }}>R$ 0,00</Text>
             </View>
           </View>
 
           {/* BOTÃO EXCHANGE (NOVO) */}
           <TouchableOpacity
             onPress={() => { carregarSaldosPorLoja(); setMostrarExchange(true); }}
-            style={{ 
-              backgroundColor: isDark ? '#1e293b' : '#ffffff', 
-              marginHorizontal: 20, 
-              paddingVertical: 18, 
-              borderRadius: 20, 
-              marginVertical: 10, 
-              flexDirection: 'row', 
-              alignItems: 'center', 
+            style={{
+              backgroundColor: isDark ? '#1e293b' : '#ffffff',
+              marginHorizontal: 20,
+              paddingVertical: 18,
+              borderRadius: 20,
+              marginVertical: 10,
+              flexDirection: 'row',
+              alignItems: 'center',
               justifyContent: 'center',
               borderWidth: 1,
               borderColor: c.borda,
@@ -867,29 +895,35 @@ export default function Cliente() {
                 <Text style={{ fontSize: 20, fontWeight: '900', color: c.texto }}>Brindes de {nomeLojaAtual || 'esta loja'}</Text>
               </View>
               <Text style={{ color: c.subtexto, fontSize: 13, marginBottom: 20, fontWeight: '600' }}>Exclusivos para você aproveitar agora</Text>
-              
+
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {recompensas.map((item, idx) => (
-                  <View key={idx} style={[styles.brindeCardGrande, { backgroundColor: c.card, borderColor: c.borda }]}>
-                    <View style={{ height: 220, backgroundColor: '#222', borderRadius: 24, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
-                       {item.foto ? (
-                         <Image source={{ uri: item.foto }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
-                       ) : (
-                         <Text style={{ fontSize: 60 }}>🎁</Text>
-                       )}
-                      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={StyleSheet.absoluteFill} />
-                      <View style={{ position: 'absolute', bottom: 15, left: 15 }}>
-                        <Text style={{ color: '#fff', fontWeight: '900', fontSize: 20 }}>{item.nome}</Text>
-                        <Text style={{ color: c.neonVerde, fontWeight: '800', fontSize: 14 }}>{item.custo_pontos} SPG</Text>
+                {recompensas.map((item, idx) => {
+                  const imgUri = item.imagem || item.foto || item.imagem_url;
+                  return (
+                    <View key={idx} style={[styles.brindeCardGrande, { backgroundColor: c.card, borderColor: c.borda }]}>
+                      <View style={{ height: '100%', width: '100%', borderRadius: 28, overflow: 'hidden' }}>
+                        {imgUri ? (
+                          <Image source={{ uri: imgUri }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                        ) : (
+                          <View style={{ flex: 1, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' }}>
+                            <Text style={{ fontSize: 60 }}>🎁</Text>
+                          </View>
+                        )}
+                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.9)']} style={StyleSheet.absoluteFill} />
+
+                        <View style={{ position: 'absolute', bottom: 85, left: 20, right: 20 }}>
+                          <Text style={{ color: '#fff', fontWeight: '900', fontSize: 22, marginBottom: 4 }}>{item.nome}</Text>
+                          <Text style={{ color: c.neonVerde, fontWeight: '800', fontSize: 16 }}>{item.custo_pontos} SPG</Text>
+                        </View>
+
+                        <TouchableOpacity style={[styles.btnResgateOverlay, { backgroundColor: saldo >= item.custo_pontos ? c.neonVerde : '#ffffff30' }]}>
+                          <Text style={{ color: saldo >= item.custo_pontos ? '#fff' : '#ccc', fontWeight: '900', fontSize: 13 }}>
+                            {saldo >= item.custo_pontos ? 'RESGATAR AGORA' : 'SEM SALDO'}
+                          </Text>
+                        </TouchableOpacity>
                       </View>
                     </View>
-                    <TouchableOpacity style={[styles.btnResgateGrande, { backgroundColor: saldo >= item.custo_pontos ? c.neonVerde : (isDark ? '#26334A' : '#E2E8F0') }]}>
-                      <Text style={{ color: saldo >= item.custo_pontos ? '#fff' : '#94A3B8', fontWeight: '900', fontSize: 12 }}>
-                        {saldo >= item.custo_pontos ? 'RESGATAR AGORA' : 'SEM SALDO'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
+                  ))}
               </ScrollView>
             </View>
           )}
@@ -897,21 +931,21 @@ export default function Cliente() {
           {/* ROLETA (AGORA ABAIXO DOS BRINDES DA LOJA) */}
           {loja_id && (
             <View style={{ marginVertical: 40 }}>
-               <RoletaCTA onPress={abrirRoleta} isDark={isDark} c={c} />
+              <RoletaCTA onPress={abrirRoleta} isDark={isDark} c={c} />
             </View>
           )}
 
           {/* CARROSSEL DE BANNERS */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, marginVertical: 25 }}>
-             <LinearGradient colors={['#0EA5E9', '#8B5CF6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 24, padding: 25, width: 310, height: 190, justifyContent: 'flex-end', marginRight: 15 }}>
-                <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900' }}>A Magia Continua ✨</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 4 }}>Acumule Springs hoje e troque por vantagens.</Text>
-             </LinearGradient>
+            <LinearGradient colors={['#0EA5E9', '#8B5CF6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 24, padding: 25, width: 310, height: 190, justifyContent: 'flex-end', marginRight: 15 }}>
+              <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900' }}>A Magia Continua ✨</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 4 }}>Acumule Springs hoje e troque por vantagens.</Text>
+            </LinearGradient>
 
-             <LinearGradient colors={['#475569', '#1E293B']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 24, padding: 25, width: 310, height: 190, justifyContent: 'flex-end' }}>
-                <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900' }}>Novidades da Rede</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 4 }}>Ofertas exclusivas para você.</Text>
-             </LinearGradient>
+            <LinearGradient colors={['#475569', '#1E293B']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 24, padding: 25, width: 310, height: 190, justifyContent: 'flex-end' }}>
+              <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900' }}>Novidades da Rede</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 4 }}>Ofertas exclusivas para você.</Text>
+            </LinearGradient>
           </ScrollView>
 
           {/* SEÇÃO DE BRINDES DA REDE */}
@@ -921,30 +955,36 @@ export default function Cliente() {
               <Text style={{ fontSize: 20, fontWeight: '900', color: c.texto }}>Brindes da Rede</Text>
             </View>
             <Text style={{ color: c.subtexto, fontSize: 13, marginBottom: 20, fontWeight: '600' }}>Troque seus Springs em qualquer loja parceira</Text>
-            
+
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {recompensasRede.map((item, idx) => (
-                <View key={idx} style={[styles.brindeCardGrande, { backgroundColor: c.card, borderColor: c.borda }]}>
-                  <View style={{ height: 220, backgroundColor: '#222', borderRadius: 24, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
-                     {item.foto ? (
-                       <Image source={{ uri: item.foto }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
-                     ) : (
-                       <Text style={{ fontSize: 60 }}>🎁</Text>
-                     )}
-                    <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={StyleSheet.absoluteFill} />
-                    <View style={{ position: 'absolute', bottom: 15, left: 15 }}>
-                      <Text style={{ color: '#fff', fontWeight: '900', fontSize: 20 }}>{item.nome}</Text>
-                      <Text style={{ color: c.neonVerde, fontWeight: '800', fontSize: 14 }}>{item.custo_pontos} SPG</Text>
-                      {item.nomeLoja && <Text style={{ color: '#aaa', fontSize: 10 }}>📍 {item.nomeLoja}</Text>}
+              {recompensasRede.map((item, idx) => {
+                const imgUri = item.imagem || item.foto || item.imagem_url;
+                return (
+                  <View key={idx} style={[styles.brindeCardGrande, { backgroundColor: c.card, borderColor: c.borda }]}>
+                    <View style={{ height: '100%', width: '100%', borderRadius: 28, overflow: 'hidden' }}>
+                      {imgUri ? (
+                        <Image source={{ uri: imgUri }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                      ) : (
+                        <View style={{ flex: 1, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' }}>
+                          <Text style={{ fontSize: 60 }}>🎁</Text>
+                        </View>
+                      )}
+                      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.9)']} style={StyleSheet.absoluteFill} />
+
+                      <View style={{ position: 'absolute', bottom: 85, left: 20, right: 20 }}>
+                        <Text style={{ color: '#fff', fontWeight: '900', fontSize: 22, marginBottom: 4 }}>{item.nome}</Text>
+                        <Text style={{ color: c.neonVerde, fontWeight: '800', fontSize: 16 }}>{item.custo_pontos} SPG</Text>
+                        {item.nomeLoja && <Text style={{ color: '#aaa', fontSize: 11, marginTop: 4 }}>📍 {item.nomeLoja}</Text>}
+                      </View>
+
+                      <TouchableOpacity style={[styles.btnResgateOverlay, { backgroundColor: saldo >= item.custo_pontos ? c.neonVerde : '#ffffff30' }]}>
+                        <Text style={{ color: saldo >= item.custo_pontos ? '#fff' : '#ccc', fontWeight: '900', fontSize: 13 }}>
+                          {saldo >= item.custo_pontos ? 'RESGATAR AGORA' : 'SEM SALDO'}
+                        </Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
-                  <TouchableOpacity style={[styles.btnResgateGrande, { backgroundColor: saldo >= item.custo_pontos ? c.neonVerde : (isDark ? '#26334A' : '#E2E8F0') }]}>
-                    <Text style={{ color: saldo >= item.custo_pontos ? '#fff' : '#94A3B8', fontWeight: '900', fontSize: 12 }}>
-                      {saldo >= item.custo_pontos ? 'RESGATAR AGORA' : 'SEM SALDO'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
+                ))}
             </ScrollView>
           </View>
 
@@ -952,29 +992,29 @@ export default function Cliente() {
 
           {/* GRID DE AÇÕES */}
           <View style={{ paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
-             <TouchableOpacity style={[styles.actionBox, { backgroundColor: c.card, borderColor: c.borda }]}>
-                <View style={{ width: 40, height: 40, backgroundColor: '#0284C720', borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: 10 }}>
-                   <Text style={{ fontSize: 20 }}>📘</Text>
-                </View>
-                <Text style={{ fontSize: 12, fontWeight: '900', color: c.texto, textAlign: 'center' }}>Saiba como funciona</Text>
-                <Text style={{ fontSize: 9, color: c.subtexto, textAlign: 'center', marginTop: 4 }}>Entenda o programa de benefícios</Text>
-             </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionBox, { backgroundColor: c.card, borderColor: c.borda }]}>
+              <View style={{ width: 40, height: 40, backgroundColor: '#0284C720', borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: 10 }}>
+                <Text style={{ fontSize: 20 }}>📘</Text>
+              </View>
+              <Text style={{ fontSize: 12, fontWeight: '900', color: c.texto, textAlign: 'center' }}>Saiba como funciona</Text>
+              <Text style={{ fontSize: 9, color: c.subtexto, textAlign: 'center', marginTop: 4 }}>Entenda o programa de benefícios</Text>
+            </TouchableOpacity>
 
-             <TouchableOpacity style={[styles.actionBox, { backgroundColor: c.card, borderColor: c.borda }]}>
-                <View style={{ width: 40, height: 40, backgroundColor: '#10B98120', borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: 10 }}>
-                   <Text style={{ fontSize: 20 }}>🎁</Text>
-                </View>
-                <Text style={{ fontSize: 12, fontWeight: '900', color: '#10B981', textAlign: 'center' }}>Indique e Ganhe</Text>
-                <Text style={{ fontSize: 9, color: c.subtexto, textAlign: 'center', marginTop: 4 }}>Convide amigos e ganhe Springs</Text>
-             </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionBox, { backgroundColor: c.card, borderColor: c.borda }]}>
+              <View style={{ width: 40, height: 40, backgroundColor: '#10B98120', borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: 10 }}>
+                <Text style={{ fontSize: 20 }}>🎁</Text>
+              </View>
+              <Text style={{ fontSize: 12, fontWeight: '900', color: '#10B981', textAlign: 'center' }}>Indique e Ganhe</Text>
+              <Text style={{ fontSize: 9, color: c.subtexto, textAlign: 'center', marginTop: 4 }}>Convide amigos e ganhe Springs</Text>
+            </TouchableOpacity>
           </View>
 
           {/* BOTÃO SAIR */}
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => { setStatus('idle'); salvarStorage('cliente_cpf', ''); }}
             style={{ marginHorizontal: 20, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#ef444450', alignItems: 'center' }}
           >
-             <Text style={{ color: '#ef4444', fontWeight: '900', fontSize: 12, letterSpacing: 1 }}>🚪 SAIR DA CONTA</Text>
+            <Text style={{ color: '#ef4444', fontWeight: '900', fontSize: 12, letterSpacing: 1 }}>🚪 SAIR DA CONTA</Text>
           </TouchableOpacity>
 
           <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 20 }}>Versão 5.8.0-exchange</Text>
@@ -1049,11 +1089,22 @@ export default function Cliente() {
             )}
             {etapaRoleta === 'girando' && (
               <View style={{ alignItems: 'center' }}>
-                <Animated.View style={{ transform: [{ rotate: rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', `${roletaTargetDeg}deg`] }) }] }}>
-                  <WheelSVG prizes={premiosRoleta} size={250} isDark={isDark} />
+                <View style={{ zIndex: 10, marginBottom: -15 }}>
+                  <Svg width={30} height={30} viewBox="0 0 32 32">
+                    <Path d="M16 28 L6 6 L26 6 Z" fill={c.neonVerde} stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
+                  </Svg>
+                </View>
+                <Animated.View style={{
+                  transform: [{
+                    rotate: rodando
+                      ? rotateAnim.interpolate({ inputRange: [0, 36000], outputRange: ['0deg', '36000deg'] })
+                      : idleAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] })
+                  }]
+                }}>
+                  <WheelSVG prizes={premiosRoleta.length > 0 ? premiosRoleta : [{ nome: 'Carregando...', tipo: 'nada' }]} size={250} isDark={isDark} />
                 </Animated.View>
-                <TouchableOpacity onPress={girarRoleta} disabled={rodando} style={{ backgroundColor: c.neonVerde, padding: 20, borderRadius: 50, marginTop: 30 }}>
-                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>{rodando ? 'GIRANDO...' : 'GIRAR!'}</Text>
+                <TouchableOpacity onPress={girarRoleta} disabled={rodando} style={{ backgroundColor: c.neonVerde, paddingHorizontal: 40, paddingVertical: 15, borderRadius: 50, marginTop: 30, elevation: 5 }}>
+                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>{rodando ? 'GIRANDO...' : 'GIRAR AGORA!'}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -1130,57 +1181,57 @@ export default function Cliente() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-               {(extrato || []).length === 0 ? (
-                 <View style={{ alignItems: 'center', marginTop: 100 }}>
-                    <Text style={{ fontSize: 50 }}>📦</Text>
-                    <Text style={{ color: c.subtexto, marginTop: 10 }}>Nenhuma atividade ainda.</Text>
-                 </View>
-               ) : (
-                 (extrato || []).map((t, idx) => {
-                   const isResgate = t.tipo === 'resgate';
-                   const icon = isResgate ? '🎁' : (t.tipo_origem === 'roleta' || t.premio_nome ? '🎡' : '🛍️');
-                   const iconBg = isResgate ? '#fee2e2' : (isDark ? '#0f172a' : '#ecfdf5');
+              {(extrato || []).length === 0 ? (
+                <View style={{ alignItems: 'center', marginTop: 100 }}>
+                  <Text style={{ fontSize: 50 }}>📦</Text>
+                  <Text style={{ color: c.subtexto, marginTop: 10 }}>Nenhuma atividade ainda.</Text>
+                </View>
+              ) : (
+                (extrato || []).map((t, idx) => {
+                  const isResgate = t.tipo === 'resgate';
+                  const icon = isResgate ? '🎁' : (t.tipo_origem === 'roleta' || t.premio_nome ? '🎡' : '🛍️');
+                  const iconBg = isResgate ? '#fee2e2' : (isDark ? '#0f172a' : '#ecfdf5');
 
-                   return (
-                     <View key={idx} style={{ backgroundColor: isDark ? '#1e293b' : '#fff', padding: 16, borderRadius: 24, marginBottom: 12, borderWidth: 1, borderColor: c.borda, flexDirection: 'row', alignItems: 'center' }}>
-                       <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: iconBg, justifyContent: 'center', alignItems: 'center', marginRight: 15 }}>
-                          <Text style={{ fontSize: 24 }}>{icon}</Text>
-                       </View>
-                       
-                       <View style={{ flex: 1 }}>
-                         <Text style={{ color: c.texto, fontWeight: '900', fontSize: 15 }}>{isResgate ? (t.premio_nome || 'Resgate Efetuado') : 'Compra Realizada'}</Text>
-                         <Text style={{ color: c.subtexto, fontSize: 11, fontWeight: '700', marginTop: 2 }}>
-                            {t.loja_nome || 'A M P'} • {new Date(t.created_at).toLocaleDateString('pt-BR')} {new Date(t.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                         </Text>
-                       </View>
+                  return (
+                    <View key={idx} style={{ backgroundColor: isDark ? '#1e293b' : '#fff', padding: 16, borderRadius: 24, marginBottom: 12, borderWidth: 1, borderColor: c.borda, flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: iconBg, justifyContent: 'center', alignItems: 'center', marginRight: 15 }}>
+                        <Text style={{ fontSize: 24 }}>{icon}</Text>
+                      </View>
 
-                       <View style={{ alignItems: 'flex-end' }}>
-                          <Text style={{ color: isResgate ? '#ef4444' : c.neonVerde, fontWeight: '900', fontSize: 16 }}>
-                             {isResgate ? `-${t.pontos_usados}` : `+${t.pontos_gerados}`}
-                          </Text>
-                          <Text style={{ color: c.subtexto, fontSize: 8, fontWeight: '900', letterSpacing: 0.5 }}>SPRINGS</Text>
-                       </View>
-                     </View>
-                   );
-                 })
-               )}
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: c.texto, fontWeight: '900', fontSize: 15 }}>{isResgate ? (t.premio_nome || 'Resgate Efetuado') : 'Compra Realizada'}</Text>
+                        <Text style={{ color: c.subtexto, fontSize: 11, fontWeight: '700', marginTop: 2 }}>
+                          {t.loja_nome || 'A M P'} • {new Date(t.created_at).toLocaleDateString('pt-BR')} {new Date(t.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                      </View>
+
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={{ color: isResgate ? '#ef4444' : c.neonVerde, fontWeight: '900', fontSize: 16 }}>
+                          {isResgate ? `-${t.pontos_usados}` : `+${t.pontos_gerados}`}
+                        </Text>
+                        <Text style={{ color: c.subtexto, fontSize: 8, fontWeight: '900', letterSpacing: 0.5 }}>SPRINGS</Text>
+                      </View>
+                    </View>
+                  );
+                })
+              )}
             </ScrollView>
           </View>
         </View>
       </Modal>
 
       {
-    toast.visible && (
-      <Animated.View style={{
-        position: 'absolute', top: toastAnim, left: 20, right: 20,
-        backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444',
-        padding: 16, borderRadius: 12, elevation: 10, zIndex: 9999,
-        flexDirection: 'row', alignItems: 'center'
-      }}>
-        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14, flex: 1 }}>{toast.message}</Text>
-      </Animated.View>
-    )
-  }
+        toast.visible && (
+          <Animated.View style={{
+            position: 'absolute', top: toastAnim, left: 20, right: 20,
+            backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444',
+            padding: 16, borderRadius: 12, elevation: 10, zIndex: 9999,
+            flexDirection: 'row', alignItems: 'center'
+          }}>
+            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14, flex: 1 }}>{toast.message}</Text>
+          </Animated.View>
+        )
+      }
     </View >
 
   );
@@ -1210,7 +1261,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   cardLocal: { padding: 12, borderRadius: 16, borderWidth: 1 },
-  brindeCardGrande: { width: 280, marginRight: 20, borderRadius: 28, borderWidth: 1, padding: 12, elevation: 10, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 15 },
-  btnResgateGrande: { marginTop: 15, padding: 16, borderRadius: 18, alignItems: 'center' },
+  brindeCardGrande: { width: 280, height: 480, marginRight: 20, borderRadius: 28, borderWidth: 1, padding: 0, elevation: 12, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 15, overflow: 'hidden' },
+  btnResgateOverlay: { position: 'absolute', bottom: 20, left: 20, right: 20, padding: 18, borderRadius: 20, alignItems: 'center' },
   actionBox: { width: '48%', padding: 20, borderRadius: 24, borderWidth: 1, alignItems: 'center' }
 });

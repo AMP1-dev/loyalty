@@ -34,10 +34,6 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
   const numSlices = prizes.length;
   const sliceAngle = (2 * Math.PI) / numSlices;
 
-  const COLORS_LIGHT = ['#fdf8ec', '#d1fae5'];
-  const COLORS_DARK = ['#1e293b', '#134e4a'];
-  const colors = isDark ? COLORS_DARK : COLORS_LIGHT;
-
   const buildSlicePath = (index: number) => {
     const startAngle = index * sliceAngle - Math.PI / 2;
     const endAngle = startAngle + sliceAngle;
@@ -51,24 +47,26 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
 
   const getTextPos = (index: number) => {
     const midAngle = index * sliceAngle - Math.PI / 2 + sliceAngle / 2;
-    const r = RADIUS * 0.7;
+    const r = RADIUS * 0.58;
     return {
       x: CENTER + r * Math.cos(midAngle),
       y: CENTER + r * Math.sin(midAngle),
-      rotation: (midAngle * 180) / Math.PI + 90,
+      rotation: (midAngle * 180) / Math.PI,
     };
   };
+
+  const textColor = isDark ? '#f8fafc' : '#0f172a';
 
   return (
     <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       <Defs>
         <SvgLinearGradient id="gradMesa1" x1="0%" y1="0%" x2="100%" y2="100%">
-          <Stop offset="0%" stopColor={isDark ? "#1e293b" : "#fdf8ec"} />
-          <Stop offset="100%" stopColor={isDark ? "#0f172a" : "#f0e5d8"} />
+          <Stop offset="0%" stopColor="#fdf8ec" />
+          <Stop offset="100%" stopColor="#f0e5d8" />
         </SvgLinearGradient>
         <SvgLinearGradient id="gradMesa2" x1="0%" y1="0%" x2="100%" y2="100%">
-          <Stop offset="0%" stopColor={isDark ? "#134e4a" : "#d1fae5"} />
-          <Stop offset="100%" stopColor={isDark ? "#042f2e" : "#a7f3d0"} />
+          <Stop offset="0%" stopColor="#d1fae5" />
+          <Stop offset="100%" stopColor="#a7f3d0" />
         </SvgLinearGradient>
         <RadialGradient id="gCenterMesa" cx="50%" cy="30%" rx="60%" ry="60%">
           <Stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
@@ -86,41 +84,41 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
       <G filter="url(#dropShadowMesa)">
         {prizes.map((prize: any, i: number) => {
           const { x, y, rotation } = getTextPos(i);
-          const words = (prize.nome || '').split(' ');
-          const displayLines = words.length > 2 ? [words.slice(0, 2).join(' '), words.slice(2).join(' ')] : [prize.nome || ''];
+          const lines = (prize.nome || '').split('\n');
 
           return (
             <G key={i}>
               <Path
                 d={buildSlicePath(i)}
                 fill={i % 2 === 0 ? 'url(#gradMesa1)' : 'url(#gradMesa2)'}
-                stroke={isDark ? '#334155' : '#ffffff'}
-                strokeWidth="2"
+                stroke={isDark ? '#475569' : '#ffffff'}
+                strokeWidth="1.2"
               />
               <G transform={`rotate(${rotation} ${x} ${y})`}>
-                {displayLines.map((line, lineIdx) => {
-                  const fontSize = numSlices > 8 ? 8 : 10;
-                  const offsetY = (lineIdx - (displayLines.length - 1) / 2) * (fontSize + 2);
-                  return (
-                    <SvgText
-                      key={lineIdx}
-                      x={x}
-                      y={y + offsetY}
-                      fontSize={fontSize}
-                      fontWeight="900"
-                      textAnchor="middle"
-                      fill={isDark ? "#e2e8f0" : "#1e293b"}
-                    >
-                      {line.toUpperCase()}
-                    </SvgText>
-                  );
-                })}
+                <SvgText x={x} y={y - 25}
+                  fill={isDark ? "#e2e8f0" : "#1e293b"} fontSize={size > 300 ? "26" : "20"}
+                  fontWeight="900" textAnchor="middle">
+                  ✨
+                </SvgText>
+                <SvgText x={x} y={y}
+                  fill={textColor} fontSize={size > 300 ? "18" : "14"}
+                  fontWeight="900" textAnchor="middle">
+                  {lines[0].toUpperCase()}
+                </SvgText>
+                {lines[1] && (
+                  <SvgText x={x} y={y + 16}
+                    fill={textColor} fontSize={size > 300 ? "19" : "15"}
+                    fontWeight="900" textAnchor="middle">
+                    {lines[1].toUpperCase()}
+                  </SvgText>
+                )}
               </G>
             </G>
           );
         })}
       </G>
-      <Circle cx={CENTER} cy={CENTER} r={18} fill="url(#gCenterMesa)" stroke="#fff" strokeWidth="2" />
+      <Circle cx={CENTER} cy={CENTER} r={size * 0.12} fill="url(#gCenterMesa)" stroke="#d4d4d8" strokeWidth="2" />
+      <Circle cx={CENTER} cy={CENTER} r={size * 0.04} fill="#fff" opacity="0.3" />
     </Svg>
   );
 }
@@ -170,11 +168,15 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
   const [premioGanho, setPremioGanho] = useState<any>(null);
   const [rodando, setRodando] = useState(false);
   const [carregando, setCarregando] = useState(false);
+  const [uuidLojaReal, setUuidLojaReal] = useState<string | null>(null);
 
   const [configLoja, setConfigLoja] = useState<any>(null);
   const [nomeLojaAtual, setNomeLojaAtual] = useState('');
 
   const rotateAnim = useRef(new Animated.Value(0)).current;
+  const idleAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
 
   const [toast, setToast] = useState({ visivel: false, mensagem: '', tipo: 'erro' as 'sucesso' | 'erro' });
   const toastAnim = useRef(new Animated.Value(-100)).current;
@@ -209,13 +211,27 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
   const carregarDadosMesa = async () => {
     try {
       setCarregando(true);
-      const { data: config } = await supabase.from('configuracoes_loja').select('*').eq('loja_id', loja_id).single();
+      
+      let lid_final = String(loja_id);
+      const isUUID = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+
+      if (loja_id && !isUUID(String(loja_id))) {
+        const { data: lData } = await supabase.from('lojas').select('id, nome').ilike('nome', `%${loja_id}%`).maybeSingle();
+        if (lData) {
+          lid_final = lData.id;
+          setUuidLojaReal(lData.id);
+          setNomeLojaAtual(lData.nome);
+        }
+      } else if (loja_id) {
+        setUuidLojaReal(String(loja_id));
+        const { data: loja } = await supabase.from('lojas').select('nome').eq('id', String(loja_id)).single();
+        if (loja) setNomeLojaAtual(loja.nome);
+      }
+
+      const { data: config } = await supabase.from('configuracoes_loja').select('*').eq('loja_id', lid_final).single();
       if (config) setConfigLoja(config);
 
-      const { data: loja } = await supabase.from('lojas').select('nome').eq('id', loja_id).single();
-      if (loja) setNomeLojaAtual(loja.nome);
-
-      const { data: premios } = await supabase.from('roleta_mesa_premios').select('*').eq('loja_id', loja_id).eq('ativo', true);
+      const { data: premios } = await supabase.from('roleta_mesa_premios').select('*').eq('loja_id', lid_final).eq('ativo', true);
 
       if (premios && premios.length > 0) {
         let listaBonita = [...premios];
@@ -227,12 +243,10 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
         setPremiosRoletaMesa(listaBonita);
       } else {
         setPremiosRoletaMesa([
-          { id: 'd1', nome: 'TENTE NOVAMENTE', tipo: 'outro', probabilidade: 50 },
-          { id: 'd2', nome: 'PRÓXIMA VISITA', tipo: 'outro', probabilidade: 50 },
-          { id: 'd3', nome: 'TENTE NOVAMENTE', tipo: 'outro', probabilidade: 50 },
-          { id: 'd4', nome: 'PRÓXIMA VISITA', tipo: 'outro', probabilidade: 50 },
-          { id: 'd5', nome: 'TENTE NOVAMENTE', tipo: 'outro', probabilidade: 50 },
-          { id: 'd6', nome: 'SORTE NA PRÓXIMA', tipo: 'outro', probabilidade: 50 }
+          { id: 'd1', nome: 'GANHOU 10\nSPRINGS', tipo: 'pontos', probabilidade: 50 },
+          { id: 'd2', nome: 'TENTE\nOUTRA VEZ', tipo: 'nada', probabilidade: 50 },
+          { id: 'd3', nome: 'R$\nCASHBACK', tipo: 'cashback', probabilidade: 50 },
+          { id: 'd4', nome: 'GANHE EM\nDOBRO', tipo: 'bonus', probabilidade: 50 }
         ]);
       }
 
@@ -249,6 +263,29 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
       setCarregando(false);
     }
   };
+
+  useEffect(() => {
+    const rodarIdle = () => {
+      idleAnim.setValue(0);
+      Animated.timing(idleAnim, { toValue: 1, duration: 20000, easing: Easing.linear, useNativeDriver: Platform.OS !== 'web' })
+        .start(({ finished }) => { if (finished) rodarIdle(); });
+    };
+    rodarIdle();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(scaleAnim, { toValue: 1.02, duration: 2000, useNativeDriver: false }),
+        Animated.timing(scaleAnim, { toValue: 1, duration: 2000, useNativeDriver: false })
+      ])
+    ).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, { toValue: 1, duration: 1800, useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 0, duration: 1800, useNativeDriver: false })
+      ])
+    ).start();
+  }, []);
 
   const validarJogueDiario = async (telefone: string, lojaId: string): Promise<boolean> => {
     try {
@@ -269,8 +306,8 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
       }
 
       // 2. Trava de Banco (Segurança de Nuvem)
-      const hoje = new Date();
-      const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).toISOString();
+      const agora = new Date();
+      const inicioHoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate()).toISOString();
 
       const { data, error } = await supabase
         .from('roleta_mesa_participacoes')
@@ -383,8 +420,9 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
       await salvarStorage(`mesa_telefone_${loja_id}`, telefone);
 
       // 2. SALVAR PARTICIPAÇÃO
+      const lid_final = uuidLojaReal || String(loja_id);
       const { error: errPart } = await supabase.from('roleta_mesa_participacoes').insert({
-        loja_id: loja_id,
+        loja_id: lid_final,
         cliente_cpf: telefone,
         premio_id: premio.id,
         premio_nome: premio.nome,
@@ -405,7 +443,8 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
 
   const sincronizarComRemarketig = async (telefone: string, premio: any) => {
     try {
-      const { data: existente } = await supabase.from('contatos_mesa_remarketing').select('id').eq('loja_id', loja_id).eq('cliente_cpf', telefone).limit(1);
+      const lid_final = uuidLojaReal || String(loja_id);
+      const { data: existente } = await supabase.from('contatos_mesa_remarketing').select('id').eq('loja_id', lid_final).eq('cliente_cpf', telefone).limit(1);
       if (existente && existente.length > 0) {
         await supabase.from('contatos_mesa_remarketing').update({ premio_ganho: premio.nome, nota_nps: notaNps, data_ultimo_contato: new Date().toISOString() }).eq('id', existente[0].id);
       } else {
@@ -413,7 +452,7 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
         if (notaNps === 5) tags.push('5_estrelas');
         if (premio.tipo === 'desconto') tags.push('desconto');
         if (premio.tipo === 'brinde') tags.push('brinde');
-        await supabase.from('contatos_mesa_remarketing').insert({ loja_id: loja_id, cliente_cpf: telefone, premio_ganho: premio.nome, nota_nps: notaNps, status: 'nao_contatado', data_participacao: new Date().toISOString(), tags: tags, marketing_consentido: true });
+        await supabase.from('contatos_mesa_remarketing').insert({ loja_id: lid_final, cliente_cpf: telefone, premio_ganho: premio.nome, nota_nps: notaNps, status: 'nao_contatado', data_participacao: new Date().toISOString(), tags: tags, marketing_consentido: true });
       }
     } catch (error) {
       console.error('Erro ao sincronizar remarketing:', error);
@@ -484,9 +523,48 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
       {etapa === 'roleta' && premiosRoletaMesa.length > 0 && (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
           <Text style={{ fontSize: 24, fontWeight: '900', color: c.roxo, marginBottom: 20 }}>{rodando ? '🎡 GIRANDO...' : 'BOA SORTE!'}</Text>
-          <View style={{ zIndex: 10, marginBottom: -15 }}><Svg width={40} height={40} viewBox="0 0 32 32"><Path d="M16 28 L6 6 L26 6 Z" fill={c.roxo} stroke="#fff" strokeWidth="2" strokeLinejoin="round" /></Svg></View>
-          <Animated.View style={[{ transform: [{ rotate: rotateAnim.interpolate({ inputRange: [0, 360], outputRange: ['0deg', '360deg'] }) }] }, { marginBottom: 30 }]}><WheelSVG prizes={premiosRoletaMesa} size={320} isDark={isDark} /></Animated.View>
-          <TouchableOpacity onPress={girarRoleta} disabled={rodando} style={{ backgroundColor: rodando ? '#ccc' : c.roxo, borderRadius: 16, paddingVertical: 18, paddingHorizontal: 40, alignItems: 'center' }}><Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>{rodando ? 'GIRANDO...' : '🎰 GIRAR AGORA!'}</Text></TouchableOpacity>
+          <View style={{ zIndex: 10, marginBottom: -15 }}>
+            <Svg width={50} height={50} viewBox="0 0 32 32">
+               <Defs>
+                 <SvgLinearGradient id="gradPinoMesa" x1="0%" y1="0%" x2="0%" y2="100%">
+                   <Stop offset="0%" stopColor="#facc15" />
+                   <Stop offset="100%" stopColor="#854d0e" />
+                 </SvgLinearGradient>
+               </Defs>
+               <Path d="M16 30 L4 4 L28 4 Z" fill="url(#gradPinoMesa)" stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
+            </Svg>
+          </View>
+          <Animated.View style={{ 
+             padding: 12, 
+             borderRadius: (Math.min(width * 0.85, 400) + 24) / 2, 
+             backgroundColor: 'transparent',
+             shadowColor: isDark ? c.roxo : '#000',
+             shadowOffset: { width: 0, height: 0 },
+             shadowOpacity: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.2, 0.9] }),
+             shadowRadius: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [15, 35] }),
+             elevation: 25,
+             transform: [{ scale: scaleAnim }]
+          }}>
+            <Animated.View style={{ 
+              width: Math.min(width * 0.85, 400), 
+              height: Math.min(width * 0.85, 400), 
+              transform: [{ 
+                rotate: rotateAnim.interpolate({ inputRange: [0, 36000], outputRange: ['0deg', '36000deg'] })
+              }] 
+            }}>
+              <Animated.View style={{ 
+                width: '100%', height: '100%', 
+                transform: [{ 
+                  rotate: idleAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) 
+                }] 
+              }}>
+                <WheelSVG prizes={premiosRoletaMesa} size={Math.min(width * 0.85, 400)} isDark={isDark} />
+              </Animated.View>
+            </Animated.View>
+          </Animated.View>
+          <TouchableOpacity onPress={girarRoleta} disabled={rodando} style={{ backgroundColor: rodando ? '#ccc' : c.roxo, borderRadius: 16, paddingVertical: 22, paddingHorizontal: 50, alignItems: 'center', marginTop: 40, elevation: 10 }}>
+            <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', letterSpacing: 1 }}>{rodando ? 'GIRANDO...' : '🎰 GIRAR AGORA!'}</Text>
+          </TouchableOpacity>
         </View>
       )}
 
