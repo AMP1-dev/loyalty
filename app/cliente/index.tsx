@@ -936,10 +936,11 @@ export default function Cliente() {
                           <Text style={{ color: saldo >= item.custo_pontos ? '#fff' : '#ccc', fontWeight: '900', fontSize: 13 }}>
                             {saldo >= item.custo_pontos ? 'RESGATAR AGORA' : 'SEM SALDO'}
                           </Text>
-                        </TouchableOpacity>
+                       </TouchableOpacity>
                     </View>
-                  );
-                })}
+                  </View>
+                );
+              })}
               </ScrollView>
             </View>
           )}
@@ -1004,8 +1005,9 @@ export default function Cliente() {
                         </Text>
                       </TouchableOpacity>
                     </View>
-                  );
-                })}
+                  </View>
+                );
+              })}
             </ScrollView>
           </View>
 
