@@ -1,3 +1,9 @@
+import {
+  buscarCaixaAtivaCliente,
+  calcularSaldoCliente,
+  gerarToken,
+  tokenJaExiste
+} from '@/lib/exchange';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import bcrypt from 'bcryptjs';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,15 +21,6 @@ import {
 } from 'react-native';
 import Svg, { Circle, Defs, FeComponentTransfer, FeFuncA, FeGaussianBlur, FeMerge, FeMergeNode, FeOffset, Filter, G, Path, RadialGradient, Stop, LinearGradient as SvgLinearGradient, Text as SvgText } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
-import {
-  calcularSaldoCliente,
-  gerarToken,
-  tokenJaExiste,
-  tokenExpirou,
-  aplicarTaxa,
-  buscarCaixaAtivaCliente,
-  carregarHistoricoExchange
-} from '@/lib/exchange';
 import MesaRoleta from './components/MesaRoleta';
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
@@ -864,14 +861,14 @@ export default function Cliente() {
             </View>
 
             {/* Sub-cards Local */}
-            <View style={[styles.cardLocal, { width: '48%', backgroundColor: c.card, borderColor: c.borda, marginTop: 12, padding: 18, height: 110, justifyContent: 'center' }]}>
+            <View style={[styles.cardLocal, { width: '48%', backgroundColor: c.card, borderColor: c.borda, marginTop: 8, padding: 18, height: 110, justifyContent: 'center' }]}>
               <Text style={{ fontSize: 10, fontWeight: '800', color: c.subtexto, textAlign: 'left' }}>DISPONÍVEL NESTA LOJA</Text>
               <Text style={{ fontSize: 24, fontWeight: '900', color: c.neonVerde, marginTop: 8, textAlign: 'left' }}>
                 {saldoPorLoja.find(s => s.id === loja_id)?.pontos || 0} SPG
               </Text>
             </View>
 
-            <View style={[styles.cardLocal, { width: '48%', backgroundColor: c.card, borderColor: c.borda, marginTop: 12, padding: 18, height: 110, justifyContent: 'center' }]}>
+            <View style={[styles.cardLocal, { width: '48%', backgroundColor: c.card, borderColor: c.borda, marginTop: 8, padding: 18, height: 110, justifyContent: 'center' }]}>
               <Text style={{ fontSize: 10, fontWeight: '800', color: c.subtexto, textAlign: 'left' }}>DISPONÍVEL NESTA LOJA</Text>
               <Text style={{ fontSize: 24, fontWeight: '900', color: c.neonAmarelo, marginTop: 8, textAlign: 'left' }}>R$ 0,00</Text>
             </View>
@@ -939,11 +936,11 @@ export default function Cliente() {
                           <Text style={{ color: saldo >= item.custo_pontos ? '#fff' : '#ccc', fontWeight: '900', fontSize: 13 }}>
                             {saldo >= item.custo_pontos ? 'RESGATAR AGORA' : 'SEM SALDO'}
                           </Text>
-                       </TouchableOpacity>
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                  </View>
-                );
-              })}
+                  );
+                })}
               </ScrollView>
             </View>
           )}
@@ -984,9 +981,9 @@ export default function Cliente() {
                   <View key={idx} style={[styles.brindeCardGrande, { backgroundColor: c.card, borderColor: c.borda }]}>
                     <View style={{ width: '100%', height: '100%', borderRadius: 28, overflow: 'hidden', backgroundColor: '#000' }}>
                       {hasImg ? (
-                        <Image 
-                          source={{ uri: rawImg }} 
-                          style={StyleSheet.absoluteFill} 
+                        <Image
+                          source={{ uri: rawImg }}
+                          style={StyleSheet.absoluteFill}
                           resizeMode="cover"
                         />
                       ) : (
