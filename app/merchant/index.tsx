@@ -333,14 +333,36 @@ export default function MerchantPanel() {
 
   const buscarFinanceiroDetalhado = async (cpf: string, idCheckin?: string) => {
     if (!lojaId) return;
-    const { data: cb } = await supabase.rpc('buscar_saldo_cashback_v2', { p_cliente_cpf: cpf, p_loja_id: lojaId });
-    setCashbacks((prev: any) => ({ ...prev, [cpf]: cb ? cb[0] : { total: 0, proximo: 0, pontos: 0 } }));
 
-    const { data: bp } = await supabase.from('bonus_pendentes').select('sum(pontos)').eq('cliente_cpf', cpf).eq('loja_id', lojaId).gt('data_expiracao', new Date().toISOString()).maybeSingle();
-    setBonusPendentes((prev: any) => ({ ...prev, [cpf]: bp?.sum || 0 }));
+    // Busca direta para garantir que bate com a tela do cliente (sem depender de RPC inexistente)
+    const [{ data: trans }, { data: resg }, { data: cash }, { data: bonus }] = await Promise.all([
+      supabase.from('transacoes').select('pontos_gerados, pontos_usados').eq('cliente_cpf', cpf).eq('loja_id', lojaId),
+      supabase.from('resgates').select('pontos_usados, valor_cashback').eq('cliente_cpf', cpf).eq('loja_id', lojaId),
+      supabase.from('cashbacks').select('valor').eq('cliente_cpf', cpf).eq('loja_id', lojaId),
+      supabase.from('bonus_pendentes').select('pontos').eq('cliente_cpf', cpf).eq('loja_id', lojaId).gt('data_expiracao', new Date().toISOString()).eq('usado', false)
+    ]);
 
-    const pontosBonus = Number(bp?.sum || 0);
-    if (idCheckin && pontosBonus > 0) setUsarBonus((prev: any) => ({ ...prev, [idCheckin]: true }));
+    const totalGerado = (trans || []).reduce((s, t) => s + (t.pontos_gerados || 0), 0);
+    const totalUsado = (trans || []).reduce((s, t) => s + (t.pontos_usados || 0), 0) + (resg || []).reduce((s, r) => s + (r.pontos_usados || 0), 0);
+    const saldoFinal = totalGerado - totalUsado;
+
+    const totalCashbackGerado = (cash || []).reduce((s, c) => s + (c.valor || 0), 0);
+    const totalCashbackUsado = (resg || []).reduce((s, r) => s + (r.valor_cashback || 0), 0);
+    const cashbackFinal = Math.max(0, totalCashbackGerado - totalCashbackUsado);
+
+    setCashbacks((prev: any) => ({ 
+      ...prev, 
+      [cpf]: { 
+        total: cashbackFinal, 
+        proximo: cashbackFinal, 
+        pontos: saldoFinal 
+      } 
+    }));
+
+    const totalBonus = (bonus || []).reduce((s, b) => s + (b.pontos || 0), 0);
+    setBonusPendentes((prev: any) => ({ ...prev, [cpf]: totalBonus }));
+
+    if (idCheckin && totalBonus > 0) setUsarBonus((prev: any) => ({ ...prev, [idCheckin]: true }));
 
     const { data: br } = await supabase.from('brindes_pendentes').select('*').eq('cliente_cpf', cpf).eq('loja_id', lojaId).eq('resgatado', false);
     setBrindesPendentes((prev: any) => ({ ...prev, [cpf]: br || [] }));
