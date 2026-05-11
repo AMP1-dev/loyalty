@@ -424,7 +424,11 @@ export default function Cliente() {
       let lid_final = String(loja_id);
       const isUUID = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 
-      if (loja_id && !isUUID(String(loja_id))) {
+      // Atalho fixo para a loja principal para evitar falhas de busca por nome
+      if (loja_id === 'amp') {
+        lid_final = 'b3f20184-d9e6-47d5-bc7f-3e484d3fe265';
+        setUuidLojaReal(lid_final);
+      } else if (loja_id && !isUUID(String(loja_id))) {
         const { data: lData } = await supabase.from('lojas').select('id').ilike('nome', `%${loja_id}%`).maybeSingle();
         if (lData) {
           lid_final = lData.id;
@@ -898,18 +902,23 @@ export default function Cliente() {
 
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {recompensas.map((item, idx) => {
-                  const imgUri = item.imagem || item.foto || item.imagem_url;
+                  const rawImg = item.imagem || item.foto || item.imagem_url;
+                  const hasImg = rawImg && String(rawImg).startsWith('http');
                   return (
                     <View key={idx} style={[styles.brindeCardGrande, { backgroundColor: c.card, borderColor: c.borda }]}>
-                      <View style={{ height: '100%', width: '100%', borderRadius: 28, overflow: 'hidden' }}>
-                        {imgUri ? (
-                          <Image source={{ uri: imgUri }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+                      <View style={{ flex: 1, borderRadius: 28, overflow: 'hidden', backgroundColor: '#000' }}>
+                        {hasImg ? (
+                          <Image 
+                            source={{ uri: rawImg }} 
+                            style={StyleSheet.absoluteFill} 
+                            resizeMode="cover"
+                          />
                         ) : (
                           <View style={{ flex: 1, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' }}>
                             <Text style={{ fontSize: 60 }}>🎁</Text>
                           </View>
                         )}
-                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.9)']} style={StyleSheet.absoluteFill} />
+                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.95)']} style={StyleSheet.absoluteFill} />
 
                         <View style={{ position: 'absolute', bottom: 85, left: 20, right: 20 }}>
                           <Text style={{ color: '#fff', fontWeight: '900', fontSize: 22, marginBottom: 4 }}>{item.nome}</Text>
