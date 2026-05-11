@@ -835,68 +835,56 @@ export default function Cliente() {
             </View>
           </View>
 
-          {caixaAtiva && (
-            <View style={{ marginHorizontal: 20, backgroundColor: `${c.neonVerde}20`, borderRadius: 12, padding: 16, marginVertical: 15, borderWidth: 2, borderColor: c.neonVerde }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <Text style={{ color: c.neonVerde, fontWeight: '900', fontSize: 16 }}>💰 PONTOS EM IMPORTAÇÃO</Text>
-              </View>
-              <Text style={{ color: c.texto, fontSize: 14, fontWeight: 'bold' }}>{caixaAtiva.pontos_disponiveis} SPG disponíveis</Text>
-            </View>
-          )}
-
+          {/* BOTÃO EXCHANGE (NOVO) */}
           <TouchableOpacity
             onPress={() => { carregarSaldosPorLoja(); setMostrarExchange(true); }}
-            style={{ backgroundColor: c.roxo, marginHorizontal: 20, paddingVertical: 14, borderRadius: 12, marginVertical: 10, alignItems: 'center' }}
+            style={{ 
+              backgroundColor: isDark ? '#1e293b' : '#ffffff', 
+              marginHorizontal: 20, 
+              paddingVertical: 18, 
+              borderRadius: 20, 
+              marginVertical: 10, 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: c.borda,
+              shadowColor: '#000',
+              shadowOpacity: 0.1,
+              shadowRadius: 10,
+              elevation: 4
+            }}
           >
-            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>🔄 IMPORTAR PONTOS DE OUTRAS LOJAS</Text>
+            <Text style={{ fontSize: 24, marginRight: 12 }}>🤝</Text>
+            <Text style={{ color: c.texto, fontWeight: '900', fontSize: 18, letterSpacing: 1 }}>EXCHANGE</Text>
           </TouchableOpacity>
-
-          {/* CARROSSEL DE BANNERS */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, marginVertical: 25 }}>
-             <LinearGradient colors={['#0EA5E9', '#8B5CF6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 24, padding: 25, width: 300, height: 180, justifyContent: 'flex-end', marginRight: 15 }}>
-                <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900' }}>A Magia Continua ✨</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, marginTop: 4 }}>Acumule Springs hoje e troque por vantagens.</Text>
-             </LinearGradient>
-
-             <LinearGradient colors={['#475569', '#1E293B']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 24, padding: 25, width: 300, height: 180, justifyContent: 'flex-end' }}>
-                <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900' }}>Novidades da Rede</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, marginTop: 4 }}>Ofertas exclusivas para você.</Text>
-             </LinearGradient>
-          </ScrollView>
-
-          {/* ROLETA (SE ESTIVER NA LOJA) */}
-          {loja_id && (
-            <View style={{ marginVertical: 30 }}>
-               <RoletaCTA onPress={abrirRoleta} isDark={isDark} c={c} />
-            </View>
-          )}
 
           {/* SEÇÃO DE BRINDES DA LOJA */}
           {loja_id && recompensas.length > 0 && (
             <View style={{ paddingLeft: 20, marginVertical: 30 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
                 <Text style={{ fontSize: 22, marginRight: 8 }}>✨</Text>
-                <Text style={{ fontSize: 18, fontWeight: '900', color: c.texto }}>Brindes de {nomeLojaAtual || 'esta loja'}</Text>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: c.texto }}>Brindes de {nomeLojaAtual || 'esta loja'}</Text>
               </View>
-              <Text style={{ color: c.subtexto, fontSize: 12, marginBottom: 15, fontWeight: '600' }}>Exclusivos para você aproveitar agora</Text>
+              <Text style={{ color: c.subtexto, fontSize: 13, marginBottom: 20, fontWeight: '600' }}>Exclusivos para você aproveitar agora</Text>
               
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {recompensas.map((item, idx) => (
-                  <View key={idx} style={[styles.brindeCard, { backgroundColor: c.card, borderColor: c.borda }]}>
-                    <View style={{ height: 160, backgroundColor: '#222', borderRadius: 20, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
+                  <View key={idx} style={[styles.brindeCardGrande, { backgroundColor: c.card, borderColor: c.borda }]}>
+                    <View style={{ height: 220, backgroundColor: '#222', borderRadius: 24, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
                        {item.foto ? (
                          <Image source={{ uri: item.foto }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
                        ) : (
-                         <Text style={{ fontSize: 40 }}>🎁</Text>
+                         <Text style={{ fontSize: 60 }}>🎁</Text>
                        )}
-                      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={StyleSheet.absoluteFill} />
-                      <View style={{ position: 'absolute', bottom: 12, left: 12 }}>
-                        <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>{item.nome}</Text>
-                        <Text style={{ color: c.neonVerde, fontWeight: '800', fontSize: 12 }}>{item.custo_pontos} SPG</Text>
+                      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={StyleSheet.absoluteFill} />
+                      <View style={{ position: 'absolute', bottom: 15, left: 15 }}>
+                        <Text style={{ color: '#fff', fontWeight: '900', fontSize: 20 }}>{item.nome}</Text>
+                        <Text style={{ color: c.neonVerde, fontWeight: '800', fontSize: 14 }}>{item.custo_pontos} SPG</Text>
                       </View>
                     </View>
-                    <TouchableOpacity style={[styles.btnResgate, { backgroundColor: saldo >= item.custo_pontos ? c.neonVerde : (isDark ? '#26334A' : '#E2E8F0') }]}>
-                      <Text style={{ color: saldo >= item.custo_pontos ? '#fff' : '#94A3B8', fontWeight: '900', fontSize: 10 }}>
+                    <TouchableOpacity style={[styles.btnResgateGrande, { backgroundColor: saldo >= item.custo_pontos ? c.neonVerde : (isDark ? '#26334A' : '#E2E8F0') }]}>
+                      <Text style={{ color: saldo >= item.custo_pontos ? '#fff' : '#94A3B8', fontWeight: '900', fontSize: 12 }}>
                         {saldo >= item.custo_pontos ? 'RESGATAR AGORA' : 'SEM SALDO'}
                       </Text>
                     </TouchableOpacity>
@@ -906,32 +894,52 @@ export default function Cliente() {
             </View>
           )}
 
+          {/* ROLETA (AGORA ABAIXO DOS BRINDES DA LOJA) */}
+          {loja_id && (
+            <View style={{ marginVertical: 40 }}>
+               <RoletaCTA onPress={abrirRoleta} isDark={isDark} c={c} />
+            </View>
+          )}
+
+          {/* CARROSSEL DE BANNERS */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, marginVertical: 25 }}>
+             <LinearGradient colors={['#0EA5E9', '#8B5CF6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 24, padding: 25, width: 310, height: 190, justifyContent: 'flex-end', marginRight: 15 }}>
+                <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900' }}>A Magia Continua ✨</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 4 }}>Acumule Springs hoje e troque por vantagens.</Text>
+             </LinearGradient>
+
+             <LinearGradient colors={['#475569', '#1E293B']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 24, padding: 25, width: 310, height: 190, justifyContent: 'flex-end' }}>
+                <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900' }}>Novidades da Rede</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 4 }}>Ofertas exclusivas para você.</Text>
+             </LinearGradient>
+          </ScrollView>
+
           {/* SEÇÃO DE BRINDES DA REDE */}
           <View style={{ paddingLeft: 20, marginVertical: 30 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
               <Text style={{ fontSize: 22, marginRight: 8 }}>🌐</Text>
-              <Text style={{ fontSize: 18, fontWeight: '900', color: c.texto }}>Brindes da Rede</Text>
+              <Text style={{ fontSize: 20, fontWeight: '900', color: c.texto }}>Brindes da Rede</Text>
             </View>
-            <Text style={{ color: c.subtexto, fontSize: 12, marginBottom: 15, fontWeight: '600' }}>Troque seus Springs em qualquer loja parceira</Text>
+            <Text style={{ color: c.subtexto, fontSize: 13, marginBottom: 20, fontWeight: '600' }}>Troque seus Springs em qualquer loja parceira</Text>
             
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {recompensasRede.map((item, idx) => (
-                <View key={idx} style={[styles.brindeCard, { backgroundColor: c.card, borderColor: c.borda }]}>
-                  <View style={{ height: 160, backgroundColor: '#222', borderRadius: 20, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
+                <View key={idx} style={[styles.brindeCardGrande, { backgroundColor: c.card, borderColor: c.borda }]}>
+                  <View style={{ height: 220, backgroundColor: '#222', borderRadius: 24, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
                      {item.foto ? (
                        <Image source={{ uri: item.foto }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
                      ) : (
-                       <Text style={{ fontSize: 40 }}>🎁</Text>
+                       <Text style={{ fontSize: 60 }}>🎁</Text>
                      )}
-                    <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={StyleSheet.absoluteFill} />
-                    <View style={{ position: 'absolute', bottom: 12, left: 12 }}>
-                      <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>{item.nome}</Text>
-                      <Text style={{ color: c.neonVerde, fontWeight: '800', fontSize: 12 }}>{item.custo_pontos} SPG</Text>
-                      {item.nomeLoja && <Text style={{ color: '#aaa', fontSize: 8 }}>📍 {item.nomeLoja}</Text>}
+                    <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={StyleSheet.absoluteFill} />
+                    <View style={{ position: 'absolute', bottom: 15, left: 15 }}>
+                      <Text style={{ color: '#fff', fontWeight: '900', fontSize: 20 }}>{item.nome}</Text>
+                      <Text style={{ color: c.neonVerde, fontWeight: '800', fontSize: 14 }}>{item.custo_pontos} SPG</Text>
+                      {item.nomeLoja && <Text style={{ color: '#aaa', fontSize: 10 }}>📍 {item.nomeLoja}</Text>}
                     </View>
                   </View>
-                  <TouchableOpacity style={[styles.btnResgate, { backgroundColor: saldo >= item.custo_pontos ? c.neonVerde : (isDark ? '#26334A' : '#E2E8F0') }]}>
-                    <Text style={{ color: saldo >= item.custo_pontos ? '#fff' : '#94A3B8', fontWeight: '900', fontSize: 10 }}>
+                  <TouchableOpacity style={[styles.btnResgateGrande, { backgroundColor: saldo >= item.custo_pontos ? c.neonVerde : (isDark ? '#26334A' : '#E2E8F0') }]}>
+                    <Text style={{ color: saldo >= item.custo_pontos ? '#fff' : '#94A3B8', fontWeight: '900', fontSize: 12 }}>
                       {saldo >= item.custo_pontos ? 'RESGATAR AGORA' : 'SEM SALDO'}
                     </Text>
                   </TouchableOpacity>
@@ -1201,30 +1209,8 @@ const styles = StyleSheet.create({
     elevation: 2,
     marginBottom: 10,
   },
-  cardLocal: {
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    backgroundColor: '#fff',
-  },
-  brindeCard: {
-    width: 220,
-    marginRight: 15,
-    borderRadius: 24,
-    borderWidth: 1,
-    padding: 10,
-  },
-  btnResgate: {
-    marginTop: 10,
-    paddingVertical: 12,
-    borderRadius: 15,
-    alignItems: 'center',
-  },
-  actionBox: {
-    width: '48%',
-    padding: 16,
-    borderRadius: 24,
-    borderWidth: 1,
-    alignItems: 'center',
-  }
+  cardLocal: { padding: 12, borderRadius: 16, borderWidth: 1 },
+  brindeCardGrande: { width: 280, marginRight: 20, borderRadius: 28, borderWidth: 1, padding: 12, elevation: 10, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 15 },
+  btnResgateGrande: { marginTop: 15, padding: 16, borderRadius: 18, alignItems: 'center' },
+  actionBox: { width: '48%', padding: 20, borderRadius: 24, borderWidth: 1, alignItems: 'center' }
 });
