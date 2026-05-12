@@ -12,7 +12,7 @@ import {
   buscarCaixaAtivaCliente
 } from '@/lib/exchange';
 
-const APP_VERSION = "v5.8.1-exchange";
+const APP_VERSION = "v5.8.2-exchange";
 const { width } = Dimensions.get('window');
 const itemWidth = width > 600 ? (600 - 60) / 3 : (width - 60) / 2;
 
@@ -761,13 +761,20 @@ export default function MerchantPanel() {
     const sucesso = await processarPagamento(item.cliente_cpf, valorReal, usarBonus[item.id] !== false);
     if (sucesso) {
       await supabase.from('checkins').update({ status: 'atendido' }).eq('id', id);
+      
+      // Atualizar status no Remarketing se existir
+      await supabase.from('contatos_mesa_remarketing')
+        .update({ status: 'converteu', data_conversao: new Date().toISOString() })
+        .eq('cliente_cpf', item.cliente_cpf)
+        .eq('loja_id', lojaId);
+
       setTimeout(async () => { await supabase.from('checkins').delete().eq('id', id); }, 5000); 
       Vibration.vibrate(200);
       setFila(prev => prev.filter(f => f.id !== id));
       setValorVenda((prev: any) => { const n = { ...prev }; delete n[id]; return n; });
       setUsarBonus((prev: any) => { const n = { ...prev }; delete n[id]; return n; });
       mostrarToast('✅ Venda registrada com sucesso!', 'sucesso');
-      setTimeout(() => { buscarStats(); }, 1000);
+      setTimeout(() => { buscarStats(); buscarContatosRemarketing(); }, 1000);
     }
   };
 
@@ -797,8 +804,16 @@ export default function MerchantPanel() {
     const sucesso = await processarPagamento(cpfTarget, valorReal, usarBonus['manual'] !== false);
     if (sucesso) {
       await supabase.from('checkins').delete().eq('cliente_cpf', cpfTarget).eq('loja_id', lojaId);
+      
+      // Atualizar status no Remarketing se existir
+      await supabase.from('contatos_mesa_remarketing')
+        .update({ status: 'converteu', data_conversao: new Date().toISOString() })
+        .eq('cliente_cpf', cpfTarget)
+        .eq('loja_id', lojaId);
+
       Vibration.vibrate(200); setTelefoneManual(''); setValorManual(''); setUsarBonus((prev: any) => ({ ...prev, ['manual']: false })); buscarFila(); setMostrarManual(false);
-      mostrarToast('✅ Venda Manual registrada!', 'sucesso'); setTimeout(() => { buscarStats(); }, 1000);
+      mostrarToast('✅ Venda Manual registrada!', 'sucesso'); 
+      setTimeout(() => { buscarStats(); buscarContatosRemarketing(); }, 1000);
     }
   };
 
@@ -1482,9 +1497,20 @@ export default function MerchantPanel() {
                                </View>
                                <Text style={{ color: '#fff', fontSize: 42, fontWeight: '900', letterSpacing: -1.5, marginTop: -5 }}>{formatarTelefone(clienteAtual.cliente_cpf)}</Text>
                             </View>
-                            <TouchableOpacity onPress={() => removerDaFila(clienteAtual.id)} style={{ backgroundColor: '#ef444420', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#ef444440' }}>
-                              <Text style={{ color: '#ef4444', fontSize: 11, fontWeight: '900' }}>REMOVER</Text>
-                            </TouchableOpacity>
+                            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                              {clienteAtual.temToken && (
+                                <TouchableOpacity 
+                                  onPress={() => setMostrarValidarToken(true)}
+                                  style={{ backgroundColor: '#8B5CF6', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                                >
+                                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>VALIDAR TOKEN</Text>
+                                  <Text style={{ fontSize: 12 }}>🔑</Text>
+                                </TouchableOpacity>
+                              )}
+                              <TouchableOpacity onPress={() => removerDaFila(clienteAtual.id)} style={{ backgroundColor: '#ef444420', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#ef444440' }}>
+                                <Text style={{ color: '#ef4444', fontSize: 11, fontWeight: '900' }}>REMOVER</Text>
+                              </TouchableOpacity>
+                            </View>
                           </View>
 
                           <View style={{ flexDirection: 'row', gap: 12 }}>
