@@ -1173,7 +1173,7 @@ export default function Cliente() {
             <Text style={{ color: '#ef4444', fontWeight: '900', fontSize: 12, letterSpacing: 1 }}>🚪 SAIR DA CONTA</Text>
           </TouchableOpacity>
 
-          <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 20 }}>Versão 5.8.0-exchange</Text>
+          <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 20 }}>Versão 5.8.4-exchange</Text>
         </ScrollView>
       </View>
     );
@@ -1282,21 +1282,30 @@ export default function Cliente() {
             )}
             {etapaRoleta === 'resultado' && (
               <View style={{ alignItems: 'center', padding: 20 }}>
-                <LinearGradient 
-                  colors={['#f59e0b', '#d97706']} 
-                  style={{ width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', marginBottom: 20, elevation: 10 }}
-                >
-                  <Text style={{ fontSize: 50 }}>🎁</Text>
-                </LinearGradient>
-                
-                <Text style={{ color: c.subtexto, fontSize: 14, fontWeight: '800', letterSpacing: 1 }}>PARABÉNS!</Text>
-                <Text style={{ color: c.texto, fontSize: 26, fontWeight: '900', textAlign: 'center', marginTop: 10, lineHeight: 32 }}>
-                  Você ganhou:{"\n"}{premioGanho?.nome}
-                </Text>
-                
-                <Text style={{ color: c.subtexto, fontSize: 12, textAlign: 'center', marginTop: 15, opacity: 0.8 }}>
-                  O prêmio já foi adicionado à sua conta e pode ser resgatado no balcão.
-                </Text>
+                {(() => {
+                  const nome = (premioGanho?.nome || '').toLowerCase();
+                  const isNada = premioGanho?.tipo === 'nada' || nome.includes('tente') || nome.includes('não ganhou') || nome.includes('nao ganhou');
+                  
+                  return (
+                    <>
+                      <LinearGradient 
+                        colors={isNada ? ['#475569', '#1e293b'] : ['#f59e0b', '#d97706']} 
+                        style={{ width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', marginBottom: 20, elevation: 10 }}
+                      >
+                        <Text style={{ fontSize: 50 }}>{isNada ? '🎡' : '🎁'}</Text>
+                      </LinearGradient>
+                      
+                      <Text style={{ color: c.subtexto, fontSize: 14, fontWeight: '800', letterSpacing: 1 }}>{isNada ? 'QUASE LÁ!' : 'PARABÉNS!'}</Text>
+                      <Text style={{ color: c.texto, fontSize: 26, fontWeight: '900', textAlign: 'center', marginTop: 10, lineHeight: 32 }}>
+                        {isNada ? 'Não foi dessa vez...' : `Você ganhou:\n${premioGanho?.nome}`}
+                      </Text>
+                      
+                      <Text style={{ color: c.subtexto, fontSize: 12, textAlign: 'center', marginTop: 15, opacity: 0.8 }}>
+                        {isNada ? 'Mas não desista! Tente novamente na sua próxima compra. ✨' : 'O prêmio já foi adicionado à sua conta e pode ser resgatado no balcão.'}
+                      </Text>
+                    </>
+                  );
+                })()}
 
                 <TouchableOpacity 
                   onPress={() => setMostrarRoletaModal(false)} 

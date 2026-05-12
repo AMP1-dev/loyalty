@@ -11,7 +11,7 @@ import Svg, { Circle, Defs, FeComponentTransfer, FeFuncA, FeGaussianBlur, FeMerg
 import { supabase } from '../../../lib/supabase';
 import OfertaGoogle from './OfertaGoogle';
 
-const APP_VERSION = "v5.8.3-exchange";
+const APP_VERSION = "v5.8.4-exchange";
 
 // ─── DDDs válidos brasileiros ──────────────────────────────────────────────────
 const DDD_VALIDOS = [
@@ -590,18 +590,18 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
               colors={['#f59e0b', '#d97706']} 
               style={{ width: 120, height: 120, borderRadius: 60, justifyContent: 'center', alignItems: 'center', marginBottom: 25, elevation: 12 }}
             >
-              <Text style={{ fontSize: 60 }}>{(premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? '😕' : '🎁'}</Text>
+              <Text style={{ fontSize: 60 }}>{(premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'nada') ? '🎡' : '🎁'}</Text>
             </LinearGradient>
             
-            <Text style={{ fontSize: 16, fontWeight: '800', color: c.subtexto, letterSpacing: 2 }}>{(premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? 'QUASE LÁ!' : 'PARABÉNS!'}</Text>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: c.subtexto, letterSpacing: 2 }}>{(premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'nada') ? 'QUASE LÁ!' : 'PARABÉNS!'}</Text>
             
             <Text style={{ fontSize: 32, fontWeight: '900', color: c.texto, textAlign: 'center', marginTop: 15, lineHeight: 40 }}>
-              {premioGanho.nome}
+              {(premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'nada') ? 'Não foi dessa vez...' : `Você ganhou:\n${premioGanho.nome}`}
             </Text>
 
             <View style={{ backgroundColor: c.card, borderRadius: 24, padding: 30, marginTop: 30, borderWidth: 1, borderColor: c.borda, width: '100%', alignItems: 'center', elevation: 5 }}>
               <Text style={{ fontSize: 14, color: c.subtexto, textAlign: 'center', lineHeight: 20 }}>
-                {(!premioGanho.nome.toLowerCase().includes('tente') && premioGanho.tipo !== 'outro') 
+                {(!premioGanho.nome.toLowerCase().includes('tente') && premioGanho.tipo !== 'nada') 
                   ? 'Mostre esta tela para o atendente e retire seu prêmio agora mesmo! 🍀' 
                   : 'Não foi dessa vez, mas não desista! Amanhã tem mais sorte pra você. ✨'}
               </Text>
