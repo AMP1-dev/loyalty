@@ -411,6 +411,13 @@ export default function Cliente() {
 
   useEffect(() => {
     const initApp = async () => {
+      // Truque para forçar limpeza via URL: ?clear=true
+      if (typeof window !== 'undefined' && window.location.search.includes('clear=true')) {
+        localStorage.clear();
+        window.location.href = window.location.pathname; // Recarrega sem o parâmetro
+        return;
+      }
+
       const APP_VERSION = 'v5.8.2-exchange';
       const savedVersion = await carregarStorage('@app_version');
       if (savedVersion !== APP_VERSION) {
