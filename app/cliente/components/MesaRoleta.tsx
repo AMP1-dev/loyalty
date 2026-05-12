@@ -30,95 +30,71 @@ const DDD_VALIDOS = [
 // ─── Componente WheelSVG ──────────────────────────────────────────────────────
 function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDark: boolean }) {
   const CENTER = size / 2;
-  const RADIUS = CENTER - 6;
+  const RADIUS = CENTER - 15; 
   const numSlices = prizes.length;
-  const sliceAngle = (2 * Math.PI) / numSlices;
+  const ANGLE = 360 / numSlices;
 
-  const buildSlicePath = (index: number) => {
-    const startAngle = index * sliceAngle - Math.PI / 2;
-    const endAngle = startAngle + sliceAngle;
-    const x1 = CENTER + RADIUS * Math.cos(startAngle);
-    const y1 = CENTER + RADIUS * Math.sin(startAngle);
-    const x2 = CENTER + RADIUS * Math.cos(endAngle);
-    const y2 = CENTER + RADIUS * Math.sin(endAngle);
-    const largeArc = sliceAngle > Math.PI ? 1 : 0;
-    return `M${CENTER},${CENTER} L${x1},${y1} A${RADIUS},${RADIUS} 0 ${largeArc} 1 ${x2},${y2} Z`;
-  };
-
-  const getTextPos = (index: number) => {
-    const midAngle = index * sliceAngle - Math.PI / 2 + sliceAngle / 2;
-    const r = RADIUS * 0.58;
+  const polarToCartesian = (cx: number, cy: number, r: number, angleDeg: number) => {
+    const rad = (angleDeg - 90) * (Math.PI / 180);
     return {
-      x: CENTER + r * Math.cos(midAngle),
-      y: CENTER + r * Math.sin(midAngle),
-      rotation: (midAngle * 180) / Math.PI,
+      x: cx + r * Math.cos(rad),
+      y: cy + r * Math.sin(rad),
     };
   };
 
-  const textColor = isDark ? '#f8fafc' : '#0f172a';
+  const getIconePremio = (tipo: string) => {
+    if (tipo === 'cashback') return '✨';
+    if (tipo === 'pontos') return '✨';
+    if (tipo === 'nada') return '✨';
+    if (tipo === 'bonus') return '✨';
+    return '✨';
+  };
 
   return (
-    <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    <Svg width={size} height={size}>
       <Defs>
-        <SvgLinearGradient id="gradMesa1" x1="0%" y1="0%" x2="100%" y2="100%">
-          <Stop offset="0%" stopColor="#fdf8ec" />
-          <Stop offset="100%" stopColor="#f0e5d8" />
-        </SvgLinearGradient>
-        <SvgLinearGradient id="gradMesa2" x1="0%" y1="0%" x2="100%" y2="100%">
-          <Stop offset="0%" stopColor="#d1fae5" />
-          <Stop offset="100%" stopColor="#a7f3d0" />
-        </SvgLinearGradient>
-        <RadialGradient id="gCenterMesa" cx="50%" cy="30%" rx="60%" ry="60%">
-          <Stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
-          <Stop offset="50%" stopColor="#d1d5db" stopOpacity="0.8" />
-          <Stop offset="100%" stopColor="#6b7280" stopOpacity="1" />
+        <RadialGradient id="metalMesa" cx="50%" cy="50%" r="50%" fx="50%" fy="50%" gradientUnits="userSpaceOnUse">
+          <Stop offset="0%" stopColor={isDark ? "#4b5563" : "#ffffff"} />
+          <Stop offset="100%" stopColor={isDark ? "#1f2937" : "#cfcfcf"} />
         </RadialGradient>
-        <Filter id="dropShadowMesa" x="-50%" y="-50%" width="200%" height="200%">
-          <FeGaussianBlur in="SourceAlpha" stdDeviation="3" />
-          <FeOffset dx="0" dy="8" result="offsetblur" />
-          <FeComponentTransfer><FeFuncA type="linear" slope="0.4" /></FeComponentTransfer>
-          <FeMerge><FeMergeNode /><FeMergeNode in="SourceGraphic" /></FeMerge>
-        </Filter>
+        <RadialGradient id="centerGlowMesa" cx="50%" cy="50%" r="50%" fx="50%" fy="50%" gradientUnits="userSpaceOnUse">
+          <Stop offset="0%" stopColor="#ffffff" />
+          <Stop offset="100%" stopColor={isDark ? "#374151" : "#eaeaea"} />
+        </RadialGradient>
       </Defs>
 
-      <G filter="url(#dropShadowMesa)">
-        {prizes.map((prize: any, i: number) => {
-          const { x, y, rotation } = getTextPos(i);
-          const lines = (prize.nome || '').split('\n');
+      <Circle cx={CENTER} cy={CENTER} r={CENTER - 5} fill="url(#metalMesa)" />
+      
+      <G>
+        {prizes.map((p, i) => {
+          const startAngle = i * ANGLE;
+          const endAngle = startAngle + ANGLE;
+          const midAngle = startAngle + ANGLE / 2;
+
+          const start = polarToCartesian(CENTER, CENTER, RADIUS, endAngle);
+          const end = polarToCartesian(CENTER, CENTER, RADIUS, startAngle);
+          const textPos = polarToCartesian(CENTER, CENTER, RADIUS * 0.65, midAngle);
+
+          const colors = isDark 
+            ? ['#1e293b', '#334155', '#1e293b', '#475569']
+            : ['#dff3ef', '#f7efe5', '#ffffff', '#e2e8f0'];
+          const sliceColor = colors[i % colors.length];
+
+          const d = `M ${CENTER} ${CENTER} L ${start.x} ${start.y} A ${RADIUS} ${RADIUS} 0 0 0 ${end.x} ${end.y} Z`;
 
           return (
             <G key={i}>
-              <Path
-                d={buildSlicePath(i)}
-                fill={i % 2 === 0 ? 'url(#gradMesa1)' : 'url(#gradMesa2)'}
-                stroke={isDark ? '#475569' : '#ffffff'}
-                strokeWidth="1.2"
-              />
-              <G transform={`rotate(${rotation} ${x} ${y})`}>
-                <SvgText x={x} y={y - 25}
-                  fill={isDark ? "#e2e8f0" : "#1e293b"} fontSize={size > 300 ? "26" : "20"}
-                  fontWeight="900" textAnchor="middle">
-                  ✨
-                </SvgText>
-                <SvgText x={x} y={y}
-                  fill={textColor} fontSize={size > 300 ? "18" : "14"}
-                  fontWeight="900" textAnchor="middle">
-                  {lines[0].toUpperCase()}
-                </SvgText>
-                {lines[1] && (
-                  <SvgText x={x} y={y + 16}
-                    fill={textColor} fontSize={size > 300 ? "19" : "15"}
-                    fontWeight="900" textAnchor="middle">
-                    {lines[1].toUpperCase()}
-                  </SvgText>
-                )}
-              </G>
+              <Path d={d} fill={sliceColor} stroke={isDark ? "#475569" : "#d4a373"} strokeWidth="1" />
+              <SvgText x={textPos.x} y={textPos.y - 8} fontSize="14" textAnchor="middle" fill={isDark ? "#fff" : "#333"}>{getIconePremio(p.tipo)}</SvgText>
+              <SvgText x={textPos.x} y={textPos.y + 10} fontSize="9" fontWeight="bold" textAnchor="middle" fill={isDark ? "#cbd5e1" : "#333"} transform={`rotate(${midAngle} ${textPos.x} ${textPos.y})`}>
+                {p.nome.length > 10 ? p.nome.substring(0, 8) + '...' : p.nome}
+              </SvgText>
             </G>
           );
         })}
       </G>
-      <Circle cx={CENTER} cy={CENTER} r={size * 0.12} fill="url(#gCenterMesa)" stroke="#d4d4d8" strokeWidth="2" />
-      <Circle cx={CENTER} cy={CENTER} r={size * 0.04} fill="#fff" opacity="0.3" />
+      <Circle cx={CENTER} cy={CENTER} r={RADIUS * 0.2} fill="url(#centerGlowMesa)" stroke="#ccc" strokeWidth="2" />
+      <SvgText x={CENTER} y={CENTER + 5} fontSize="16" textAnchor="middle">✨</SvgText>
     </Svg>
   );
 }
@@ -446,13 +422,31 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
       const lid_final = uuidLojaReal || String(loja_id);
       const { data: existente } = await supabase.from('contatos_mesa_remarketing').select('id').eq('loja_id', lid_final).eq('cliente_cpf', telefone).limit(1);
       if (existente && existente.length > 0) {
-        await supabase.from('contatos_mesa_remarketing').update({ premio_ganho: premio.nome, nota_nps: notaNps, data_ultimo_contato: new Date().toISOString() }).eq('id', existente[0].id);
+        // Resetar status para nao_contatado para que reapareça no painel como novo lead de remarketing
+        await supabase.from('contatos_mesa_remarketing')
+          .update({ 
+            premio_ganho: premio.nome, 
+            nota_nps: notaNps, 
+            status: 'nao_contatado',
+            data_participacao: new Date().toISOString(),
+            data_ultimo_contato: null 
+          })
+          .eq('id', existente[0].id);
       } else {
         const tags = [];
         if (notaNps === 5) tags.push('5_estrelas');
         if (premio.tipo === 'desconto') tags.push('desconto');
         if (premio.tipo === 'brinde') tags.push('brinde');
-        await supabase.from('contatos_mesa_remarketing').insert({ loja_id: lid_final, cliente_cpf: telefone, premio_ganho: premio.nome, nota_nps: notaNps, status: 'nao_contatado', data_participacao: new Date().toISOString(), tags: tags, marketing_consentido: true });
+        await supabase.from('contatos_mesa_remarketing').insert({ 
+          loja_id: lid_final, 
+          cliente_cpf: telefone, 
+          premio_ganho: premio.nome, 
+          nota_nps: notaNps, 
+          status: 'nao_contatado', 
+          data_participacao: new Date().toISOString(), 
+          tags: tags, 
+          marketing_consentido: true 
+        });
       }
     } catch (error) {
       console.error('Erro ao sincronizar remarketing:', error);
@@ -523,15 +517,9 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
       {etapa === 'roleta' && premiosRoletaMesa.length > 0 && (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
           <Text style={{ fontSize: 24, fontWeight: '900', color: c.roxo, marginBottom: 20 }}>{rodando ? '🎡 GIRANDO...' : 'BOA SORTE!'}</Text>
-          <View style={{ zIndex: 10, marginBottom: -15 }}>
-            <Svg width={50} height={50} viewBox="0 0 32 32">
-               <Defs>
-                 <SvgLinearGradient id="gradPinoMesa" x1="0%" y1="0%" x2="0%" y2="100%">
-                   <Stop offset="0%" stopColor="#facc15" />
-                   <Stop offset="100%" stopColor="#854d0e" />
-                 </SvgLinearGradient>
-               </Defs>
-               <Path d="M16 30 L4 4 L28 4 Z" fill="url(#gradPinoMesa)" stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
+          <View style={{ zIndex: 10, marginBottom: -10 }}>
+            <Svg width={50} height={50} viewBox="0 0 50 50">
+               <Path d="M25 50 L50 5 L0 5 Z" fill="#1f8f7a" stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
             </Svg>
           </View>
           <Animated.View style={{ 
@@ -570,16 +558,34 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
 
       {etapa === 'resultado' && premioGanho && (
         <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
-          <View style={{ alignItems: 'center', width: '90%' }}>
-            <Text style={{ fontSize: 48, marginBottom: 20 }}>{(premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? '😕' : '🎉'}</Text>
-            <Text style={{ fontSize: 28, fontWeight: '900', color: (premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? '#64748B' : c.roxo, textAlign: 'center', marginBottom: 12 }}>{(premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? 'QUASE LÁ!' : 'PARABÉNS!'}</Text>
-            <Text style={{ fontSize: 18, fontWeight: '700', color: c.texto, textAlign: 'center', marginBottom: 20 }}>{premioGanho.nome}</Text>
-            <View style={{ backgroundColor: c.card, borderRadius: 16, padding: 25, marginBottom: 20, borderWidth: 1, borderColor: c.borda, minWidth: 300, alignItems: 'center' }}>
-              <Text style={{ fontSize: 13, color: c.subtexto, marginBottom: 12, fontWeight: '700' }}>VOCÊ GANHOU</Text>
-              <Text style={{ fontSize: 36, fontWeight: '900', color: (premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? '#64748B' : c.roxo, textAlign: 'center' }}>{premioGanho.tipo === 'desconto' ? `${premioGanho.valor}%` : `${premioGanho.nome}`}</Text>
-              {(!premioGanho.nome.toLowerCase().includes('tente') && premioGanho.tipo !== 'outro') && <Text style={{ fontSize: 14, color: c.subtexto, marginTop: 10, textAlign: 'center' }}>{premioGanho.tipo === 'desconto' ? 'de desconto para sua próxima visita!' : 'Retire seu brinde com o atendente'}</Text>}
+          <View style={{ alignItems: 'center', width: '90%', padding: 20 }}>
+            <LinearGradient 
+              colors={['#f59e0b', '#d97706']} 
+              style={{ width: 120, height: 120, borderRadius: 60, justifyContent: 'center', alignItems: 'center', marginBottom: 25, elevation: 12 }}
+            >
+              <Text style={{ fontSize: 60 }}>{(premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? '😕' : '🎁'}</Text>
+            </LinearGradient>
+            
+            <Text style={{ fontSize: 16, fontWeight: '800', color: c.subtexto, letterSpacing: 2 }}>{(premioGanho.nome.toLowerCase().includes('tente') || premioGanho.tipo === 'outro') ? 'QUASE LÁ!' : 'PARABÉNS!'}</Text>
+            
+            <Text style={{ fontSize: 32, fontWeight: '900', color: c.texto, textAlign: 'center', marginTop: 15, lineHeight: 40 }}>
+              {premioGanho.nome}
+            </Text>
+
+            <View style={{ backgroundColor: c.card, borderRadius: 24, padding: 30, marginTop: 30, borderWidth: 1, borderColor: c.borda, width: '100%', alignItems: 'center', elevation: 5 }}>
+              <Text style={{ fontSize: 14, color: c.subtexto, textAlign: 'center', lineHeight: 20 }}>
+                {(!premioGanho.nome.toLowerCase().includes('tente') && premioGanho.tipo !== 'outro') 
+                  ? 'Mostre esta tela para o atendente e retire seu prêmio agora mesmo! 🍀' 
+                  : 'Não foi dessa vez, mas não desista! Amanhã tem mais sorte pra você. ✨'}
+              </Text>
             </View>
-            <TouchableOpacity onPress={() => { setEtapa('telefone'); setTelefone(''); setNotaNps(0); setPremioGanho(null); rotateAnim.setValue(0); }} style={{ backgroundColor: c.roxo, borderRadius: 12, padding: 16, alignItems: 'center', minWidth: 300 }}><Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>JOGAR NOVAMENTE? 🎮</Text></TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => { setEtapa('telefone'); setTelefone(''); setNotaNps(0); setPremioGanho(null); rotateAnim.setValue(0); }} 
+              style={{ backgroundColor: c.roxo, borderRadius: 20, paddingVertical: 20, paddingHorizontal: 60, alignItems: 'center', marginTop: 40, width: '100%', elevation: 10 }}
+            >
+              <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', letterSpacing: 1 }}>VOLTAR AO INÍCIO 🏠</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       )}

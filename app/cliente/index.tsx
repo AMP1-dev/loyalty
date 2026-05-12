@@ -116,105 +116,63 @@ const PulsingAI = ({ color }: { color: string }) => {
 // ─── Componente WheelSVG (compartilhado entre CTA e Modal) ───────────────────
 function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDark: boolean }) {
   const CENTER = size / 2;
-  const RADIUS = CENTER - 6;
+  const RADIUS = CENTER - 15; 
   const numSlices = prizes.length;
-  const sliceAngle = (2 * Math.PI) / numSlices;
+  const ANGLE = 360 / numSlices;
 
-  const textColor = isDark ? '#f8fafc' : '#0f172a';
-
-  const buildSlicePath = (index: number) => {
-    const startAngle = index * sliceAngle - Math.PI / 2;
-    const endAngle = startAngle + sliceAngle;
-    const x1 = CENTER + RADIUS * Math.cos(startAngle);
-    const y1 = CENTER + RADIUS * Math.sin(startAngle);
-    const x2 = CENTER + RADIUS * Math.cos(endAngle);
-    const y2 = CENTER + RADIUS * Math.sin(endAngle);
-    const largeArc = sliceAngle > Math.PI ? 1 : 0;
-    return `M${CENTER},${CENTER} L${x1},${y1} A${RADIUS},${RADIUS} 0 ${largeArc} 1 ${x2},${y2} Z`;
-  };
-
-  const getTextPos = (index: number) => {
-    const midAngle = index * sliceAngle - Math.PI / 2 + sliceAngle / 2;
-    const r = RADIUS * 0.58;
+  const polarToCartesian = (cx: number, cy: number, r: number, angleDeg: number) => {
+    const rad = (angleDeg - 90) * (Math.PI / 180);
     return {
-      x: CENTER + r * Math.cos(midAngle),
-      y: CENTER + r * Math.sin(midAngle),
-      rotation: (midAngle * 180) / Math.PI,
+      x: cx + r * Math.cos(rad),
+      y: cy + r * Math.sin(rad),
     };
   };
 
   return (
-    <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    <Svg width={size} height={size}>
       <Defs>
-        <SvgLinearGradient id="gradBege" x1="0%" y1="0%" x2="100%" y2="100%">
-          <Stop offset="0%" stopColor="#fdf8ec" />
-          <Stop offset="100%" stopColor="#f0e5d8" />
-        </SvgLinearGradient>
-        <SvgLinearGradient id="gradVerde" x1="0%" y1="0%" x2="100%" y2="100%">
-          <Stop offset="0%" stopColor="#d1fae5" />
-          <Stop offset="100%" stopColor="#a7f3d0" />
-        </SvgLinearGradient>
-        <RadialGradient id="gCenter" cx="50%" cy="30%" rx="60%" ry="60%">
-          <Stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
-          <Stop offset="50%" stopColor="#d1d5db" stopOpacity="0.8" />
-          <Stop offset="100%" stopColor="#6b7280" stopOpacity="1" />
+        <RadialGradient id="metal" cx="50%" cy="50%" r="50%" fx="50%" fy="50%" gradientUnits="userSpaceOnUse">
+          <Stop offset="0%" stopColor={isDark ? "#4b5563" : "#ffffff"} />
+          <Stop offset="100%" stopColor={isDark ? "#1f2937" : "#cfcfcf"} />
         </RadialGradient>
-        <Filter id="dropShadow" x="-50%" y="-50%" width="200%" height="200%">
-          <FeGaussianBlur in="SourceAlpha" stdDeviation="3" />
-          <FeOffset dx="0" dy="8" result="offsetblur" />
-          <FeComponentTransfer>
-            <FeFuncA type="linear" slope="0.4" />
-          </FeComponentTransfer>
-          <FeMerge>
-            <FeMergeNode />
-            <FeMergeNode in="SourceGraphic" />
-          </FeMerge>
-        </Filter>
+        <RadialGradient id="centerGlow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%" gradientUnits="userSpaceOnUse">
+          <Stop offset="0%" stopColor="#ffffff" />
+          <Stop offset="100%" stopColor={isDark ? "#374151" : "#eaeaea"} />
+        </RadialGradient>
       </Defs>
 
-      <G filter="url(#dropShadow)">
-        {prizes.map((prize: any, i: number) => {
-          const { x, y, rotation } = getTextPos(i);
-          const lines = (prize.nome || '').split('\n');
-          const icon = getIconePremio(prize.tipo);
-          const iconColor = prize.tipo === 'cashback' ? '#d97706'
-            : prize.tipo === 'pontos' ? '#10b981'
-              : prize.tipo === 'nada' ? '#ef4444'
-                : '#7c3aed';
+      <Circle cx={CENTER} cy={CENTER} r={CENTER - 5} fill="url(#metal)" />
+      
+      <G>
+        {prizes.map((p, i) => {
+          const startAngle = i * ANGLE;
+          const endAngle = startAngle + ANGLE;
+          const midAngle = startAngle + ANGLE / 2;
+
+          const start = polarToCartesian(CENTER, CENTER, RADIUS, endAngle);
+          const end = polarToCartesian(CENTER, CENTER, RADIUS, startAngle);
+          const textPos = polarToCartesian(CENTER, CENTER, RADIUS * 0.65, midAngle);
+
+          const colors = isDark 
+            ? ['#1e293b', '#334155', '#1e293b', '#475569']
+            : ['#dff3ef', '#f7efe5', '#ffffff', '#e2e8f0'];
+          const sliceColor = colors[i % colors.length];
+
+          const d = `M ${CENTER} ${CENTER} L ${start.x} ${start.y} A ${RADIUS} ${RADIUS} 0 0 0 ${end.x} ${end.y} Z`;
 
           return (
             <G key={i}>
-              <Path
-                d={buildSlicePath(i)}
-                fill={i % 2 === 0 ? 'url(#gradBege)' : 'url(#gradVerde)'}
-                stroke={isDark ? '#475569' : '#94a3b8'}
-                strokeWidth="1.2"
-              />
-              <G transform={`rotate(${rotation} ${x} ${y})`}>
-                <SvgText x={x} y={y - 25}
-                  fill={iconColor} fontSize={size > 300 ? "26" : "20"}
-                  fontWeight="900" textAnchor="middle">
-                  {icon}
-                </SvgText>
-                <SvgText x={x} y={y}
-                  fill={textColor} fontSize={size > 300 ? "18" : "14"}
-                  fontWeight="900" textAnchor="middle">
-                  {lines[0].toUpperCase()}
-                </SvgText>
-                {lines[1] && (
-                  <SvgText x={x} y={y + 16}
-                    fill={textColor} fontSize={size > 300 ? "19" : "15"}
-                    fontWeight="900" textAnchor="middle">
-                    {lines[1].toUpperCase()}
-                  </SvgText>
-                )}
-              </G>
+              <Path d={d} fill={sliceColor} stroke={isDark ? "#475569" : "#d4a373"} strokeWidth="1" />
+              <SvgText x={textPos.x} y={textPos.y - 8} fontSize="14" textAnchor="middle" fill={isDark ? "#fff" : "#333"}>{getIconePremio(p.tipo)}</SvgText>
+              <SvgText x={textPos.x} y={textPos.y + 10} fontSize="9" fontWeight="bold" textAnchor="middle" fill={isDark ? "#cbd5e1" : "#333"} transform={`rotate(${midAngle} ${textPos.x} ${textPos.y})`}>
+                {p.nome.length > 10 ? p.nome.substring(0, 8) + '...' : p.nome}
+              </SvgText>
             </G>
           );
         })}
-        <Circle cx={CENTER} cy={CENTER} r={size * 0.12} fill="url(#gCenter)" stroke="#d4d4d8" strokeWidth="2" />
-        <Circle cx={CENTER} cy={CENTER} r={size * 0.04} fill="#fff" opacity="0.3" />
       </G>
+      <Circle cx={CENTER} cy={CENTER} r={RADIUS * 0.2} fill="url(#centerGlow)" stroke="#ccc" strokeWidth="2" />
+      <SvgText x={CENTER} y={CENTER + 5} fontSize="16" textAnchor="middle">✨</SvgText>
     </Svg>
   );
 }
@@ -411,14 +369,7 @@ export default function Cliente() {
 
   useEffect(() => {
     const initApp = async () => {
-      // Truque para forçar limpeza via URL: ?clear=true
-      if (typeof window !== 'undefined' && window.location.search.includes('clear=true')) {
-        localStorage.clear();
-        window.location.href = window.location.pathname; // Recarrega sem o parâmetro
-        return;
-      }
-
-      const APP_VERSION = 'v5.8.2-exchange';
+      const APP_VERSION = "v5.8.3-exchange";
       const savedVersion = await carregarStorage('@app_version');
       if (savedVersion !== APP_VERSION) {
         if (typeof window !== 'undefined') localStorage.clear();
@@ -512,8 +463,8 @@ export default function Cliente() {
     const extratoFinal: any[] = [];
     comb.forEach(item => {
       if (item.tipo === 'ganho') {
-        const cb = (cash || []).find(c => 
-          c.loja_id === item.loja_id && 
+        const cb = (cash || []).find(c =>
+          c.loja_id === item.loja_id &&
           Math.abs(new Date(c.created_at).getTime() - new Date(item.created_at).getTime()) < 5000
         );
         extratoFinal.push({ ...item, cashback_valor: cb?.valor });
@@ -641,7 +592,7 @@ export default function Cliente() {
   const resgatarBrinde = async (item: any) => {
     if (!loja_id || !cpf) return;
     const clean = cpf.replace(/\D/g, '');
-    
+
     if (saldo < item.custo_pontos) {
       mostrarToast('Saldo insuficiente de Springs.', 'erro');
       return;
@@ -660,7 +611,7 @@ export default function Cliente() {
         .eq('cliente_cpf', clean)
         .eq('loja_id', uuidLojaReal || String(loja_id))
         .gte('created_at', hoje);
-      
+
       if (count && count >= configLoja.limite_resgates_diario_cliente) {
         mostrarToast('Limite diário de resgates atingido nesta loja.', 'erro');
         return;
@@ -670,7 +621,7 @@ export default function Cliente() {
     setCarregando(true);
     try {
       const lid = uuidLojaReal || String(loja_id);
-      
+
       // 1. Registrar o resgate (Consome os pontos)
       const { error: resError } = await supabase.from('resgates').insert([{
         cliente_cpf: clean,
@@ -690,7 +641,7 @@ export default function Cliente() {
 
       mostrarToast(`✅ Resgate de ${item.nome} solicitado!`, 'sucesso');
       Alert.alert('🎉 Resgate Confirmado!', `Você usou ${item.custo_pontos} SPG para resgatar ${item.nome}. Mostre esta tela ao atendente para receber seu prêmio.`);
-      
+
       await carregarDados(clean, lid);
     } catch (error) {
       console.error('Erro ao resgatar:', error);
@@ -950,9 +901,9 @@ export default function Cliente() {
         </View>
 
         {status === 'atendido' && (
-          <LinearGradient 
-            colors={['#10b981', '#059669']} 
-            start={{ x: 0, y: 0 }} 
+          <LinearGradient
+            colors={['#10b981', '#059669']}
+            start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={{ marginHorizontal: 20, marginTop: 15, padding: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}
           >
@@ -1078,7 +1029,7 @@ export default function Cliente() {
                           <Text style={{ color: c.neonVerde, fontWeight: '800', fontSize: 16 }}>{item.custo_pontos} SPG</Text>
                         </View>
 
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           onPress={() => resgatarBrinde(item)}
                           style={[styles.btnResgateOverlay, { backgroundColor: saldo >= item.custo_pontos ? c.neonVerde : '#ffffff30' }]}
                         >
@@ -1259,9 +1210,9 @@ export default function Cliente() {
             )}
             {etapaRoleta === 'girando' && (
               <View style={{ alignItems: 'center' }}>
-                <View style={{ zIndex: 10, marginBottom: -15 }}>
-                  <Svg width={30} height={30} viewBox="0 0 32 32">
-                    <Path d="M16 28 L6 6 L26 6 Z" fill={c.neonVerde} stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
+                <View style={{ zIndex: 10, marginBottom: -10 }}>
+                  <Svg width={40} height={40} viewBox="0 0 40 40">
+                    <Path d="M20 40 L40 5 L0 5 Z" fill="#1f8f7a" stroke="#fff" strokeWidth="2" strokeLinejoin="round" />
                   </Svg>
                 </View>
                 <Animated.View style={{
@@ -1271,18 +1222,53 @@ export default function Cliente() {
                       : idleAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] })
                   }]
                 }}>
-                  <WheelSVG prizes={premiosRoleta.length > 0 ? premiosRoleta : [{ nome: 'Carregando...', tipo: 'nada' }]} size={250} isDark={isDark} />
+                  <WheelSVG prizes={premiosRoleta.length > 0 ? premiosRoleta : [{ nome: 'Carregando...', tipo: 'nada' }]} size={320} isDark={isDark} />
                 </Animated.View>
-                <TouchableOpacity onPress={girarRoleta} disabled={rodando} style={{ backgroundColor: c.neonVerde, paddingHorizontal: 40, paddingVertical: 15, borderRadius: 50, marginTop: 30, elevation: 5 }}>
-                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>{rodando ? 'GIRANDO...' : 'GIRAR AGORA!'}</Text>
+                <TouchableOpacity 
+                  onPress={girarRoleta} 
+                  disabled={rodando} 
+                  style={{ 
+                    backgroundColor: rodando ? '#9ca3af' : c.neonVerde, 
+                    paddingHorizontal: 50, 
+                    paddingVertical: 18, 
+                    borderRadius: 50, 
+                    marginTop: 35, 
+                    elevation: 8, 
+                    shadowColor: c.neonVerde, 
+                    shadowOpacity: 0.4, 
+                    shadowRadius: 10 
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 18, letterSpacing: 1 }}>
+                    {rodando ? 'SORTEANDO...' : 'GIRAR AGORA 🔄'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}
             {etapaRoleta === 'resultado' && (
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{ fontSize: 60 }}>🎉</Text>
-                <Text style={{ color: c.texto, fontSize: 24, fontWeight: 'bold', textAlign: 'center' }}>Você ganhou: {premioGanho?.nome}</Text>
-                <TouchableOpacity onPress={() => setMostrarRoletaModal(false)} style={{ marginTop: 30, backgroundColor: c.neonVerde, padding: 15, borderRadius: 15 }}><Text style={{ color: '#fff' }}>FECHAR</Text></TouchableOpacity>
+              <View style={{ alignItems: 'center', padding: 20 }}>
+                <LinearGradient 
+                  colors={['#f59e0b', '#d97706']} 
+                  style={{ width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', marginBottom: 20, elevation: 10 }}
+                >
+                  <Text style={{ fontSize: 50 }}>🎁</Text>
+                </LinearGradient>
+                
+                <Text style={{ color: c.subtexto, fontSize: 14, fontWeight: '800', letterSpacing: 1 }}>PARABÉNS!</Text>
+                <Text style={{ color: c.texto, fontSize: 26, fontWeight: '900', textAlign: 'center', marginTop: 10, lineHeight: 32 }}>
+                  Você ganhou:{"\n"}{premioGanho?.nome}
+                </Text>
+                
+                <Text style={{ color: c.subtexto, fontSize: 12, textAlign: 'center', marginTop: 15, opacity: 0.8 }}>
+                  O prêmio já foi adicionado à sua conta e pode ser resgatado no balcão.
+                </Text>
+
+                <TouchableOpacity 
+                  onPress={() => setMostrarRoletaModal(false)} 
+                  style={{ marginTop: 40, backgroundColor: c.neonVerde, paddingHorizontal: 60, paddingVertical: 15, borderRadius: 20, elevation: 5 }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>FECHAR</Text>
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -1370,7 +1356,7 @@ export default function Cliente() {
 
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: c.texto, fontWeight: '900', fontSize: 15 }}>{isResgate ? (t.premio_nome || 'Resgate Efetuado') : t.loja_nome}</Text>
-                        
+
                         <Text style={{ color: c.subtexto, fontSize: 11, fontWeight: '700', marginTop: 2 }}>
                           {new Date(t.created_at).toLocaleDateString('pt-BR')} {new Date(t.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           {!isResgate && t.valor ? ` • R$ ${Number(t.valor).toFixed(2)}` : ''}

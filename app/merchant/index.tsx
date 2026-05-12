@@ -12,7 +12,7 @@ import {
   buscarCaixaAtivaCliente
 } from '@/lib/exchange';
 
-const APP_VERSION = "v5.8.2-exchange";
+const APP_VERSION = "v5.8.3-exchange";
 const { width } = Dimensions.get('window');
 const itemWidth = width > 600 ? (600 - 60) / 3 : (width - 60) / 2;
 
@@ -763,10 +763,17 @@ export default function MerchantPanel() {
       await supabase.from('checkins').update({ status: 'atendido' }).eq('id', id);
       
       // Atualizar status no Remarketing se existir
-      await supabase.from('contatos_mesa_remarketing')
+      const { data: remarketUpdate } = await supabase.from('contatos_mesa_remarketing')
         .update({ status: 'converteu', data_conversao: new Date().toISOString() })
         .eq('cliente_cpf', item.cliente_cpf)
-        .eq('loja_id', lojaId);
+        .eq('loja_id', lojaId)
+        .select();
+
+      if (remarketUpdate && remarketUpdate.length > 0) {
+        setContatosMesa(prev => prev.map(c => 
+          c.cliente_cpf === item.cliente_cpf ? { ...c, status: 'converteu', data_conversao: new Date().toISOString() } : c
+        ));
+      }
 
       setTimeout(async () => { await supabase.from('checkins').delete().eq('id', id); }, 5000); 
       Vibration.vibrate(200);
@@ -774,7 +781,7 @@ export default function MerchantPanel() {
       setValorVenda((prev: any) => { const n = { ...prev }; delete n[id]; return n; });
       setUsarBonus((prev: any) => { const n = { ...prev }; delete n[id]; return n; });
       mostrarToast('✅ Venda registrada com sucesso!', 'sucesso');
-      setTimeout(() => { buscarStats(); buscarContatosRemarketing(); }, 1000);
+      setTimeout(() => { buscarStats(); buscarContatosRemarketing(); }, 1500);
     }
   };
 
@@ -806,14 +813,21 @@ export default function MerchantPanel() {
       await supabase.from('checkins').delete().eq('cliente_cpf', cpfTarget).eq('loja_id', lojaId);
       
       // Atualizar status no Remarketing se existir
-      await supabase.from('contatos_mesa_remarketing')
+      const { data: remUpdate } = await supabase.from('contatos_mesa_remarketing')
         .update({ status: 'converteu', data_conversao: new Date().toISOString() })
         .eq('cliente_cpf', cpfTarget)
-        .eq('loja_id', lojaId);
+        .eq('loja_id', lojaId)
+        .select();
+
+      if (remUpdate && remUpdate.length > 0) {
+        setContatosMesa(prev => prev.map(c => 
+          c.cliente_cpf === cpfTarget ? { ...c, status: 'converteu', data_conversao: new Date().toISOString() } : c
+        ));
+      }
 
       Vibration.vibrate(200); setTelefoneManual(''); setValorManual(''); setUsarBonus((prev: any) => ({ ...prev, ['manual']: false })); buscarFila(); setMostrarManual(false);
       mostrarToast('✅ Venda Manual registrada!', 'sucesso'); 
-      setTimeout(() => { buscarStats(); buscarContatosRemarketing(); }, 1000);
+      setTimeout(() => { buscarStats(); buscarContatosRemarketing(); }, 1500);
     }
   };
 
