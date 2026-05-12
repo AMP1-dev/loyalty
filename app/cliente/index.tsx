@@ -642,7 +642,11 @@ export default function Cliente() {
 
     // Verificar limites da configuração
     if (configLoja?.limite_resgates_diario_cliente) {
-      const hoje = new Date().toISOString().split('T')[0];
+      // Ajuste de Fuso: Pegar o início do dia no horário LOCAL (Brasil)
+      const agora = new Date();
+      const inicioDiaLocal = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+      const hoje = inicioDiaLocal.toISOString();
+
       const { count } = await supabase
         .from('resgates')
         .select('*', { count: 'exact', head: true })
