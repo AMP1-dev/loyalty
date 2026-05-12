@@ -822,26 +822,48 @@ export default function Cliente() {
           <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde }}>PALM</Text>
           <Text style={{ fontSize: 48, fontWeight: '900', color: c.neonVerde }}>SPRINGS</Text>
         </View>
-        <View style={{ alignItems: 'center', marginBottom: 20 }}>
-          <Text style={{ fontSize: 36 }}>✨ ✨ ✨</Text>
-        </View>
-        <TextInput placeholder="(19) 99999-9999" placeholderTextColor={c.subtexto} value={cpf} onChangeText={formatarTelefone} keyboardType="phone-pad" maxLength={15} style={[styles.inputGigante, { backgroundColor: c.card, borderColor: c.borda, color: c.texto }]} />
+        
+        {loja_id && loja_id !== 'undefined' ? (
+          <>
+            <View style={{ alignItems: 'center', marginBottom: 20 }}>
+              <Text style={{ fontSize: 36 }}>✨ ✨ ✨</Text>
+            </View>
+            <TextInput 
+              placeholder="(19) 99999-9999" 
+              placeholderTextColor={c.subtexto} 
+              value={cpf} 
+              onChangeText={formatarTelefone} 
+              keyboardType="phone-pad" 
+              maxLength={15} 
+              style={[styles.inputGigante, { backgroundColor: c.card, borderColor: c.borda, color: c.texto }]} 
+            />
 
-        <TouchableOpacity
-          style={styles.buttonBig}
-          onPress={entrarFila}
-          activeOpacity={0.8}
-          disabled={carregando}
-        >
-          {carregando ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonTextBig}>ACESSAR MINHA CARTEIRA</Text>}
-        </TouchableOpacity>
-
-        {!loja_id && (
-          <Text style={{ color: '#ef4444', fontSize: 10, marginTop: 15, textAlign: 'center', fontWeight: 'bold' }}>
-            ⚠️ ATENÇÃO: QR CODE NÃO DETECTADO. ESCANEIE O QR DO BALCÃO PARA ENTRAR NA FILA.
-          </Text>
+            <TouchableOpacity
+              style={styles.buttonBig}
+              onPress={entrarFila}
+              activeOpacity={0.8}
+              disabled={carregando}
+            >
+              {carregando ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonTextBig}>ACESSAR MINHA CARTEIRA</Text>}
+            </TouchableOpacity>
+          </>
+        ) : (
+          <View style={{ alignItems: 'center', marginTop: 20, padding: 30, backgroundColor: '#ef444410', borderRadius: 24, borderWidth: 1, borderColor: '#ef444430' }}>
+            <Text style={{ fontSize: 60, marginBottom: 20 }}>📸</Text>
+            <Text style={{ color: c.texto, fontSize: 18, fontWeight: '900', textAlign: 'center', lineHeight: 26 }}>
+              ACESSO RESTRITO AO BALCÃO
+            </Text>
+            <Text style={{ color: c.subtexto, fontSize: 14, textAlign: 'center', marginTop: 10, lineHeight: 22 }}>
+              Para acessar seus benefícios e participar da roleta, escaneie o QR Code localizado no balcão da loja.
+            </Text>
+            <View style={{ marginTop: 30, width: '100%', height: 2, backgroundColor: '#ef444420' }} />
+            <Text style={{ color: '#ef4444', fontSize: 11, fontWeight: '800', marginTop: 15, letterSpacing: 1 }}>
+              ⚠️ AGUARDANDO LEITURA DO QR CODE
+            </Text>
+          </View>
         )}
-        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 40 }}>v5.8.0-exchange</Text>
+        
+        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 40 }}>v5.8.3-exchange</Text>
       </ScrollView>
     );
   } else if (status === 'aguardando') {

@@ -474,7 +474,21 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
         <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14, flex: 1 }}>{toast.mensagem}</Text>
       </Animated.View>
 
-      {etapa === 'telefone' && (
+      {(!loja_id || loja_id === 'undefined') ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 30 }}>
+          <Text style={{ fontSize: 80, marginBottom: 20 }}>🔒</Text>
+          <Text style={{ fontSize: 24, fontWeight: '900', color: c.texto, textAlign: 'center' }}>ACESSO RESTRITO</Text>
+          <Text style={{ fontSize: 14, color: c.subtexto, textAlign: 'center', marginTop: 10, lineHeight: 22 }}>
+            Esta funcionalidade é exclusiva para uso na mesa através do QR Code da loja.
+          </Text>
+          <TouchableOpacity 
+            onPress={() => router.replace('/')} 
+            style={{ marginTop: 40, backgroundColor: c.roxo, paddingHorizontal: 40, paddingVertical: 15, borderRadius: 15 }}
+          >
+            <Text style={{ color: '#fff', fontWeight: 'bold' }}>VOLTAR AO INÍCIO</Text>
+          </TouchableOpacity>
+        </View>
+      ) : etapa === 'telefone' ? (
         <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ padding: 25, paddingTop: 60 }}>
           <View style={{ alignItems: 'center', marginBottom: 20 }}>
             <Text style={{ fontSize: 36, marginBottom: 10 }}>✨ ✨ ✨</Text>
