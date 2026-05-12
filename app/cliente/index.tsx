@@ -1237,6 +1237,7 @@ export default function Cliente() {
                         <Text style={{ color: c.texto, fontWeight: '900', fontSize: 15 }}>{isResgate ? (t.premio_nome || 'Resgate Efetuado') : 'Compra Realizada'}</Text>
                         <Text style={{ color: c.subtexto, fontSize: 11, fontWeight: '700', marginTop: 2 }}>
                           {t.loja_nome || 'A M P'} • {new Date(t.created_at).toLocaleDateString('pt-BR')} {new Date(t.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          {!isResgate && t.valor ? ` • R$ ${Number(t.valor).toFixed(2)}` : ''}
                         </Text>
                       </View>
 
