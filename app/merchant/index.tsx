@@ -12,7 +12,7 @@ import {
   buscarCaixaAtivaCliente
 } from '@/lib/exchange';
 
-const APP_VERSION = "v5.8.0-exchange";
+const APP_VERSION = "v5.8.1-exchange";
 const { width } = Dimensions.get('window');
 const itemWidth = width > 600 ? (600 - 60) / 3 : (width - 60) / 2;
 
@@ -315,6 +315,12 @@ export default function MerchantPanel() {
 
   useEffect(() => {
     const load = async () => {
+      const savedVersion = localStorage.getItem('@app_version_merchant');
+      if (savedVersion !== APP_VERSION) {
+        // Para o lojista, limpamos apenas caches técnicos, sem deslogar (mantendo @loja_id_merchant)
+        localStorage.setItem('@app_version_merchant', APP_VERSION);
+      }
+      
       const id = localStorage.getItem('@loja_id_merchant');
       if (!id) { router.replace('/login'); return; }
       setLojaId(id);
