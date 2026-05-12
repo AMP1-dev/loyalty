@@ -304,7 +304,7 @@ export default function Cliente() {
   }
 
   const [cpf, setCpf] = useState('');
-  const [status, setStatus] = useState<'idle' | 'aguardando' | 'finalizado'>('idle');
+  const [status, setStatus] = useState<'idle' | 'aguardando' | 'atendido' | 'finalizado'>('idle');
   const [saldo, setSaldo] = useState(0);
   const [cashback, setCashback] = useState(0);
   const [saldoLocal, setSaldoLocal] = useState(0);
