@@ -618,13 +618,74 @@ export default function Cliente() {
       const { error: itensError } = await supabase.from('intercambio_itens').insert(itens);
       if (itensError) throw itensError;
 
+      setMostrarExchange(false);
+      setSelecaoPontos({});
+      setLojasSelecionadas([]);
+      setTotalSelecionado(0);
+      setAccordionAberto(null);
+      await carregarDados(clean);
       mostrarToast(`✅ Código gerado: ${token}`, 'sucesso');
-      Alert.alert('🎉 Código de Importação Gerado!', `Código: ${token}\n\nLeve este código ao caixa da loja para importar ${totalSelecionado} SPG`,
-        [{ text: 'OK', onPress: () => { setMostrarExchange(false); setSelecaoPontos({}); setLojasSelecionadas([]); setTotalSelecionado(0); setAccordionAberto(null); } }]
-      );
     } catch (error) {
       console.error('Erro ao gerar token:', error);
       mostrarToast('Erro ao gerar token.', 'erro');
+    }
+  };
+
+  const resgatarBrinde = async (item: any) => {
+    if (!loja_id || !cpf) return;
+    const clean = cpf.replace(/\D/g, '');
+    
+    if (saldo < item.custo_pontos) {
+      mostrarToast('Saldo insuficiente de Springs.', 'erro');
+      return;
+    }
+
+    // Verificar limites da configuração
+    if (configLoja?.limite_resgates_diario_cliente) {
+      const hoje = new Date().toISOString().split('T')[0];
+      const { count } = await supabase
+        .from('resgates')
+        .select('*', { count: 'exact', head: true })
+        .eq('cliente_cpf', clean)
+        .eq('loja_id', uuidLojaReal || String(loja_id))
+        .gte('created_at', hoje);
+      
+      if (count && count >= configLoja.limite_resgates_diario_cliente) {
+        mostrarToast('Limite diário de resgates atingido nesta loja.', 'erro');
+        return;
+      }
+    }
+
+    setCarregando(true);
+    try {
+      const lid = uuidLojaReal || String(loja_id);
+      
+      // 1. Registrar o resgate (Consome os pontos)
+      const { error: resError } = await supabase.from('resgates').insert([{
+        cliente_cpf: clean,
+        loja_id: lid,
+        recompensa_id: item.id,
+        pontos_usados: item.custo_pontos
+      }]);
+      if (resError) throw resError;
+
+      // 2. Adicionar aos brindes pendentes para o lojista ver e "entregar"
+      await supabase.from('brindes_pendentes').insert([{
+        cliente_cpf: clean,
+        loja_id: lid,
+        nome_brinde: item.nome,
+        resgatado: false
+      }]);
+
+      mostrarToast(`✅ Resgate de ${item.nome} solicitado!`, 'sucesso');
+      Alert.alert('🎉 Resgate Confirmado!', `Você usou ${item.custo_pontos} SPG para resgatar ${item.nome}. Mostre esta tela ao atendente para receber seu prêmio.`);
+      
+      await carregarDados(clean, lid);
+    } catch (error) {
+      console.error('Erro ao resgatar:', error);
+      mostrarToast('Erro ao processar resgate.', 'erro');
+    } finally {
+      setCarregando(false);
     }
   };
 
@@ -899,6 +960,24 @@ export default function Cliente() {
             </View>
           </View>
 
+          {/* CARD DE PIN ATIVO (BALCÃO) */}
+          {tokenAtivo && (
+            <View style={{ marginHorizontal: 20, marginTop: 10, padding: 25, backgroundColor: '#8B5CF615', borderRadius: 28, borderWidth: 2, borderColor: '#8B5CF640', borderStyle: 'dashed' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                <View>
+                  <Text style={{ color: '#8B5CF6', fontSize: 10, fontWeight: '900', letterSpacing: 1 }}>TOKEN DE IMPORTAÇÃO ATIVO:</Text>
+                  <Text style={{ color: '#fff', fontSize: 42, fontWeight: '900', letterSpacing: 2, marginTop: 4 }}>{tokenAtivo.token}</Text>
+                </View>
+                <View style={{ backgroundColor: '#8B5CF620', padding: 12, borderRadius: 15 }}>
+                  <Text style={{ fontSize: 24 }}>📱</Text>
+                </View>
+              </View>
+              <Text style={{ color: '#94A3B8', fontSize: 11, fontWeight: '700', lineHeight: 16 }}>
+                Mostre este código ao lojista para importar seus <Text style={{ color: '#8B5CF6' }}>{tokenAtivo.total_pontos_a_transferir} SPG</Text> da rede.
+              </Text>
+            </View>
+          )}
+
           {/* BOTÃO EXCHANGE (NOVO) */}
           <TouchableOpacity
             onPress={() => { carregarSaldosPorLoja(); setMostrarExchange(true); }}
@@ -957,7 +1036,10 @@ export default function Cliente() {
                           <Text style={{ color: c.neonVerde, fontWeight: '800', fontSize: 16 }}>{item.custo_pontos} SPG</Text>
                         </View>
 
-                        <TouchableOpacity style={[styles.btnResgateOverlay, { backgroundColor: saldo >= item.custo_pontos ? c.neonVerde : '#ffffff30' }]}>
+                        <TouchableOpacity 
+                          onPress={() => resgatarBrinde(item)}
+                          style={[styles.btnResgateOverlay, { backgroundColor: saldo >= item.custo_pontos ? c.neonVerde : '#ffffff30' }]}
+                        >
                           <Text style={{ color: saldo >= item.custo_pontos ? '#fff' : '#ccc', fontWeight: '900', fontSize: 13 }}>
                             {saldo >= item.custo_pontos ? 'RESGATAR AGORA' : 'SEM SALDO'}
                           </Text>
@@ -1024,11 +1106,9 @@ export default function Cliente() {
                         {item.nomeLoja && <Text style={{ color: '#aaa', fontSize: 11, marginTop: 4 }}>📍 {item.nomeLoja}</Text>}
                       </View>
 
-                      <TouchableOpacity style={[styles.btnResgateOverlay, { backgroundColor: saldo >= item.custo_pontos ? c.neonVerde : '#ffffff30' }]}>
-                        <Text style={{ color: saldo >= item.custo_pontos ? '#fff' : '#ccc', fontWeight: '900', fontSize: 13 }}>
-                          {saldo >= item.custo_pontos ? 'RESGATAR AGORA' : 'SEM SALDO'}
-                        </Text>
-                      </TouchableOpacity>
+                      <View style={{ position: 'absolute', top: 20, right: 20, backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: '#ffffff30' }}>
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>REDE</Text>
+                      </View>
                     </View>
                   </View>
                 );
@@ -1248,18 +1328,22 @@ export default function Cliente() {
 
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: c.texto, fontWeight: '900', fontSize: 15 }}>{isResgate ? (t.premio_nome || 'Resgate Efetuado') : t.loja_nome}</Text>
+                        
                         <Text style={{ color: c.subtexto, fontSize: 11, fontWeight: '700', marginTop: 2 }}>
                           {new Date(t.created_at).toLocaleDateString('pt-BR')} {new Date(t.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           {!isResgate && t.valor ? ` • R$ ${Number(t.valor).toFixed(2)}` : ''}
-                          {t.cashback_valor ? <Text style={{ color: c.neonAmarelo }}> • + R$ {Number(t.cashback_valor).toFixed(2)} CB</Text> : ''}
                         </Text>
-                      </View>
 
-                      <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={{ color: isResgate ? '#ef4444' : c.neonVerde, fontWeight: '900', fontSize: 16 }}>
-                          {isResgate ? `-${t.pontos_usados}` : `+${t.pontos_gerados}`}
-                        </Text>
-                        <Text style={{ color: c.subtexto, fontSize: 8, fontWeight: '900', letterSpacing: 0.5 }}>SPRINGS</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 8 }}>
+                          <Text style={{ color: isResgate ? '#ef4444' : c.neonVerde, fontWeight: '900', fontSize: 12 }}>
+                            {isResgate ? `-${t.pontos_usados}` : `+${t.pontos_gerados}`} SPRINGS
+                          </Text>
+                          {t.cashback_valor ? (
+                            <Text style={{ color: c.neonAmarelo, fontWeight: '900', fontSize: 12 }}>
+                              • + R$ {Number(t.cashback_valor).toFixed(2)} CB
+                            </Text>
+                          ) : null}
+                        </View>
                       </View>
                     </View>
                   );

@@ -327,8 +327,21 @@ export default function MerchantPanel() {
 
   const buscarFila = async () => {
     if (!lojaId) return;
-    const { data } = await supabase.from('checkins').select('*').eq('loja_id', lojaId).eq('status', 'aguardando').order('created_at', { ascending: true });
-    setFila(data || []);
+    const { data: ckData } = await supabase.from('checkins').select('*').eq('loja_id', lojaId).eq('status', 'aguardando').order('created_at', { ascending: true });
+    
+    // Buscar se clientes na fila possuem tokens de intercâmbio
+    if (ckData && ckData.length > 0) {
+      const cpfs = ckData.map(c => c.cliente_cpf);
+      const { data: tkData } = await supabase.from('intercambio_tokens').select('cliente_cpf, token').in('cliente_cpf', cpfs).eq('status', 'pendente');
+      
+      const filaComTokens = ckData.map(c => ({
+        ...c,
+        temToken: tkData?.some(t => t.cliente_cpf === c.cliente_cpf)
+      }));
+      setFila(filaComTokens);
+    } else {
+      setFila([]);
+    }
   };
 
   const buscarFinanceiroDetalhado = async (cpf: string, idCheckin?: string) => {
@@ -1448,8 +1461,16 @@ export default function MerchantPanel() {
                        <>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                             <View>
-                              <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', letterSpacing: 1 }}>ATENDENDO AGORA:</Text>
-                              <Text style={{ color: '#fff', fontSize: 42, fontWeight: '900', letterSpacing: -1.5, marginTop: -5 }}>{formatarTelefone(clienteAtual.cliente_cpf)}</Text>
+                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                 <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', letterSpacing: 1 }}>ATENDENDO AGORA:</Text>
+                                 {clienteAtual.temToken && (
+                                   <View style={{ backgroundColor: '#8B5CF620', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#8B5CF640', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                     <Text style={{ fontSize: 10 }}>🔄</Text>
+                                     <Text style={{ color: '#8B5CF6', fontSize: 9, fontWeight: '900' }}>EXCHANGE</Text>
+                                   </View>
+                                 )}
+                               </View>
+                               <Text style={{ color: '#fff', fontSize: 42, fontWeight: '900', letterSpacing: -1.5, marginTop: -5 }}>{formatarTelefone(clienteAtual.cliente_cpf)}</Text>
                             </View>
                             <TouchableOpacity onPress={() => removerDaFila(clienteAtual.id)} style={{ backgroundColor: '#ef444420', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#ef444440' }}>
                               <Text style={{ color: '#ef4444', fontSize: 11, fontWeight: '900' }}>REMOVER</Text>
@@ -1486,7 +1507,10 @@ export default function MerchantPanel() {
                       {fila.filter(c => c.id !== (clienteAtual?.id)).length === 0 ? (<Text style={{ color: '#334155', fontSize: 12, fontStyle: 'italic', marginTop: 10 }}>Ninguém aguardando...</Text>) : (
                          fila.filter(c => c.id !== (clienteAtual?.id)).map((c, i) => (
                             <View key={c.id} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1e293b', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                               <Text style={{ color: '#cbd5e1', fontSize: 14, fontWeight: 'bold' }}>{i + 2}º • {formatarTelefone(c.cliente_cpf)}</Text>
+                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                 <Text style={{ color: '#cbd5e1', fontSize: 14, fontWeight: 'bold' }}>{i + 2}º • {formatarTelefone(c.cliente_cpf)}</Text>
+                                 {c.temToken && <Text style={{ fontSize: 14 }}>🔄</Text>}
+                               </View>
                                <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}><TouchableOpacity onPress={() => removerDaFila(c.id)} style={{ paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: '#ef4444', fontSize: 12, fontWeight: 'bold' }}>✕</Text></TouchableOpacity><TouchableOpacity onPress={() => setClienteFocadoId(c.id)} style={{ backgroundColor: '#38bdf820', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}><Text style={{ color: '#38bdf8', fontSize: 10, fontWeight: 'bold' }}>PUXAR ⬆️</Text></TouchableOpacity></View>
                             </View>
                           ))
