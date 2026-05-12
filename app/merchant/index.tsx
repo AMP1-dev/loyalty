@@ -337,7 +337,7 @@ export default function MerchantPanel() {
     // Busca direta e correta baseada na estrutura real das tabelas
     const [{ data: trans }, { data: resg }, { data: cash }, { data: bonus }] = await Promise.all([
       supabase.from('transacoes').select('pontos_gerados').eq('cliente_cpf', cpf).eq('loja_id', lojaId),
-      supabase.from('resgates').select('pontos_usados, valor_cashback').eq('cliente_cpf', cpf).eq('loja_id', lojaId),
+      supabase.from('resgates').select('pontos_usados').eq('cliente_cpf', cpf).eq('loja_id', lojaId),
       supabase.from('cashbacks').select('valor').eq('cliente_cpf', cpf).eq('loja_id', lojaId).eq('usado', false),
       supabase.from('bonus_pendentes').select('pontos').eq('cliente_cpf', cpf).eq('loja_id', lojaId).gt('data_expiracao', new Date().toISOString()).eq('usado', false)
     ]);
