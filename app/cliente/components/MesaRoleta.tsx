@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -10,7 +11,7 @@ import Svg, { Circle, Defs, FeComponentTransfer, FeFuncA, FeGaussianBlur, FeMerg
 import { supabase } from '../../../lib/supabase';
 import OfertaGoogle from './OfertaGoogle';
 
-const APP_VERSION = 'v5.8.0-exchange';
+const APP_VERSION = "v5.8.3-exchange";
 
 // ─── DDDs válidos brasileiros ──────────────────────────────────────────────────
 const DDD_VALIDOS = [
