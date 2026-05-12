@@ -31,16 +31,13 @@ const DDD_VALIDOS = [
 // ─── Componente WheelSVG ──────────────────────────────────────────────────────
 function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDark: boolean }) {
   const CENTER = size / 2;
-  const RADIUS = CENTER - 15; 
+  const RADIUS = CENTER - 10; 
   const numSlices = prizes.length;
   const ANGLE = 360 / numSlices;
 
   const polarToCartesian = (cx: number, cy: number, r: number, angleDeg: number) => {
     const rad = (angleDeg - 90) * (Math.PI / 180);
-    return {
-      x: cx + r * Math.cos(rad),
-      y: cy + r * Math.sin(rad),
-    };
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
   };
 
   const getIconePremio = (tipo: string) => {
@@ -52,19 +49,17 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
   };
 
   return (
-    <Svg width={size} height={size}>
+    <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       <Defs>
-        <RadialGradient id="metalMesa" cx="50%" cy="50%" r="50%" fx="50%" fy="50%" gradientUnits="userSpaceOnUse">
-          <Stop offset="0%" stopColor={isDark ? "#4b5563" : "#ffffff"} />
-          <Stop offset="100%" stopColor={isDark ? "#1f2937" : "#cfcfcf"} />
-        </RadialGradient>
-        <RadialGradient id="centerGlowMesa" cx="50%" cy="50%" r="50%" fx="50%" fy="50%" gradientUnits="userSpaceOnUse">
-          <Stop offset="0%" stopColor="#ffffff" />
-          <Stop offset="100%" stopColor={isDark ? "#374151" : "#eaeaea"} />
+        <RadialGradient id="metallicGradMesa" cx="50%" cy="50%" r="50%">
+          <Stop offset="0%" stopColor={isDark ? "#475569" : "#ffffff"} />
+          <Stop offset="80%" stopColor={isDark ? "#1e293b" : "#e2e8f0"} />
+          <Stop offset="100%" stopColor={isDark ? "#0f172a" : "#cbd5e1"} />
         </RadialGradient>
       </Defs>
 
-      <Circle cx={CENTER} cy={CENTER} r={CENTER - 5} fill="url(#metalMesa)" />
+      {/* Borda Metálica Externa */}
+      <Circle cx={CENTER} cy={CENTER} r={CENTER - 2} fill="url(#metallicGradMesa)" stroke={isDark ? "#334155" : "#94a3b8"} strokeWidth="4" />
       
       <G>
         {prizes.map((p, i) => {
@@ -75,27 +70,44 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
           const start = polarToCartesian(CENTER, CENTER, RADIUS, endAngle);
           const end = polarToCartesian(CENTER, CENTER, RADIUS, startAngle);
           const textPos = polarToCartesian(CENTER, CENTER, RADIUS * 0.65, midAngle);
+          const iconPos = polarToCartesian(CENTER, CENTER, RADIUS * 0.82, midAngle);
 
           const colors = isDark 
             ? ['#1e293b', '#334155', '#1e293b', '#475569']
-            : ['#dff3ef', '#f7efe5', '#ffffff', '#e2e8f0'];
+            : ['#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0'];
           const sliceColor = colors[i % colors.length];
 
           const d = `M ${CENTER} ${CENTER} L ${start.x} ${start.y} A ${RADIUS} ${RADIUS} 0 0 0 ${end.x} ${end.y} Z`;
 
           return (
             <G key={i}>
-              <Path d={d} fill={sliceColor} stroke={isDark ? "#475569" : "#d4a373"} strokeWidth="1" />
-              <SvgText x={textPos.x} y={textPos.y - 8} fontSize="14" textAnchor="middle" fill={isDark ? "#fff" : "#333"}>{getIconePremio(p.tipo)}</SvgText>
-              <SvgText x={textPos.x} y={textPos.y + 10} fontSize="9" fontWeight="bold" textAnchor="middle" fill={isDark ? "#cbd5e1" : "#333"} transform={`rotate(${midAngle} ${textPos.x} ${textPos.y})`}>
-                {p.nome.length > 10 ? p.nome.substring(0, 8) + '...' : p.nome}
+              <Path d={d} fill={sliceColor} stroke={isDark ? "#334155" : "#cbd5e1"} strokeWidth="1" />
+              
+              {/* Ícone na borda */}
+              <SvgText x={iconPos.x} y={iconPos.y + 4} fontSize="12" textAnchor="middle" transform={`rotate(${midAngle} ${iconPos.x} ${iconPos.y})`}>
+                {getIconePremio(p.tipo)}
+              </SvgText>
+
+              {/* Texto Radial (Perpendicular ao centro) */}
+              <SvgText 
+                x={textPos.x} 
+                y={textPos.y + 4} 
+                fontSize="10" 
+                fontWeight="900" 
+                textAnchor="middle" 
+                fill={isDark ? "#f8fafc" : "#1e293b"}
+                transform={`rotate(${midAngle + 90} ${textPos.x} ${textPos.y})`}
+              >
+                {p.nome.length > 12 ? p.nome.substring(0, 10) + '..' : p.nome.toUpperCase()}
               </SvgText>
             </G>
           );
         })}
       </G>
-      <Circle cx={CENTER} cy={CENTER} r={RADIUS * 0.2} fill="url(#centerGlowMesa)" stroke="#ccc" strokeWidth="2" />
-      <SvgText x={CENTER} y={CENTER + 5} fontSize="16" textAnchor="middle">✨</SvgText>
+
+      {/* Pino Central Premium */}
+      <Circle cx={CENTER} cy={CENTER} r={RADIUS * 0.15} fill="url(#metallicGradMesa)" stroke={isDark ? "#475569" : "#cbd5e1"} strokeWidth="2" />
+      <Circle cx={CENTER} cy={CENTER} r={RADIUS * 0.05} fill={isDark ? "#10b981" : "#7c3aed"} />
     </Svg>
   );
 }

@@ -116,32 +116,32 @@ const PulsingAI = ({ color }: { color: string }) => {
 // ─── Componente WheelSVG (compartilhado entre CTA e Modal) ───────────────────
 function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDark: boolean }) {
   const CENTER = size / 2;
-  const RADIUS = CENTER - 15; 
+  const RADIUS = CENTER - 10;
   const numSlices = prizes.length;
   const ANGLE = 360 / numSlices;
 
   const polarToCartesian = (cx: number, cy: number, r: number, angleDeg: number) => {
     const rad = (angleDeg - 90) * (Math.PI / 180);
-    return {
-      x: cx + r * Math.cos(rad),
-      y: cy + r * Math.sin(rad),
-    };
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
   };
 
   return (
-    <Svg width={size} height={size}>
+    <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       <Defs>
-        <RadialGradient id="metal" cx="50%" cy="50%" r="50%" fx="50%" fy="50%" gradientUnits="userSpaceOnUse">
-          <Stop offset="0%" stopColor={isDark ? "#4b5563" : "#ffffff"} />
-          <Stop offset="100%" stopColor={isDark ? "#1f2937" : "#cfcfcf"} />
+        <RadialGradient id="metallicGrad" cx="50%" cy="50%" r="50%">
+          <Stop offset="0%" stopColor={isDark ? "#475569" : "#ffffff"} />
+          <Stop offset="80%" stopColor={isDark ? "#1e293b" : "#e2e8f0"} />
+          <Stop offset="100%" stopColor={isDark ? "#0f172a" : "#cbd5e1"} />
         </RadialGradient>
-        <RadialGradient id="centerGlow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%" gradientUnits="userSpaceOnUse">
-          <Stop offset="0%" stopColor="#ffffff" />
-          <Stop offset="100%" stopColor={isDark ? "#374151" : "#eaeaea"} />
-        </RadialGradient>
+        <SvgLinearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <Stop offset="0%" stopColor="#fbbf24" />
+          <Stop offset="50%" stopColor="#f59e0b" />
+          <Stop offset="100%" stopColor="#d97706" />
+        </SvgLinearGradient>
       </Defs>
 
-      <Circle cx={CENTER} cy={CENTER} r={CENTER - 5} fill="url(#metal)" />
+      {/* Borda Metálica Externa */}
+      <Circle cx={CENTER} cy={CENTER} r={CENTER - 2} fill="url(#metallicGrad)" stroke={isDark ? "#334155" : "#94a3b8"} strokeWidth="4" />
       
       <G>
         {prizes.map((p, i) => {
@@ -152,27 +152,44 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
           const start = polarToCartesian(CENTER, CENTER, RADIUS, endAngle);
           const end = polarToCartesian(CENTER, CENTER, RADIUS, startAngle);
           const textPos = polarToCartesian(CENTER, CENTER, RADIUS * 0.65, midAngle);
+          const iconPos = polarToCartesian(CENTER, CENTER, RADIUS * 0.82, midAngle);
 
           const colors = isDark 
             ? ['#1e293b', '#334155', '#1e293b', '#475569']
-            : ['#dff3ef', '#f7efe5', '#ffffff', '#e2e8f0'];
+            : ['#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0'];
           const sliceColor = colors[i % colors.length];
 
           const d = `M ${CENTER} ${CENTER} L ${start.x} ${start.y} A ${RADIUS} ${RADIUS} 0 0 0 ${end.x} ${end.y} Z`;
 
           return (
             <G key={i}>
-              <Path d={d} fill={sliceColor} stroke={isDark ? "#475569" : "#d4a373"} strokeWidth="1" />
-              <SvgText x={textPos.x} y={textPos.y - 8} fontSize="14" textAnchor="middle" fill={isDark ? "#fff" : "#333"}>{getIconePremio(p.tipo)}</SvgText>
-              <SvgText x={textPos.x} y={textPos.y + 10} fontSize="9" fontWeight="bold" textAnchor="middle" fill={isDark ? "#cbd5e1" : "#333"} transform={`rotate(${midAngle} ${textPos.x} ${textPos.y})`}>
-                {p.nome.length > 10 ? p.nome.substring(0, 8) + '...' : p.nome}
+              <Path d={d} fill={sliceColor} stroke={isDark ? "#334155" : "#cbd5e1"} strokeWidth="1" />
+              
+              {/* Ícone na borda */}
+              <SvgText x={iconPos.x} y={iconPos.y + 4} fontSize="12" textAnchor="middle" transform={`rotate(${midAngle} ${iconPos.x} ${iconPos.y})`}>
+                {getIconePremio(p.tipo)}
+              </SvgText>
+
+              {/* Texto Radial (Perpendicular ao centro) */}
+              <SvgText 
+                x={textPos.x} 
+                y={textPos.y + 4} 
+                fontSize="10" 
+                fontWeight="900" 
+                textAnchor="middle" 
+                fill={isDark ? "#f8fafc" : "#1e293b"}
+                transform={`rotate(${midAngle + 90} ${textPos.x} ${textPos.y})`}
+              >
+                {p.nome.length > 12 ? p.nome.substring(0, 10) + '..' : p.nome.toUpperCase()}
               </SvgText>
             </G>
           );
         })}
       </G>
-      <Circle cx={CENTER} cy={CENTER} r={RADIUS * 0.2} fill="url(#centerGlow)" stroke="#ccc" strokeWidth="2" />
-      <SvgText x={CENTER} y={CENTER + 5} fontSize="16" textAnchor="middle">✨</SvgText>
+
+      {/* Pino Central Premium */}
+      <Circle cx={CENTER} cy={CENTER} r={RADIUS * 0.15} fill="url(#metallicGrad)" stroke={isDark ? "#475569" : "#cbd5e1"} strokeWidth="2" />
+      <Circle cx={CENTER} cy={CENTER} r={RADIUS * 0.05} fill={isDark ? "#10b981" : "#f59e0b"} />
     </Svg>
   );
 }
@@ -184,11 +201,15 @@ function RoletaCTA({ onPress, isDark, c }: any) {
   const glowAnim = useRef(new Animated.Value(0)).current;
 
   const WHEEL_SIZE = 310;
-  const prizesDisplay = [
-    { nome: 'Ganhou 10\nSprings', tipo: 'pontos' },
-    { nome: 'Tente\noutra vez', tipo: 'nada' },
-    { nome: 'R$\nCashback', tipo: 'cashback' },
-    { nome: 'Ganhe em\ndobro', tipo: 'bonus' },
+  const prizesDisplay = (premiosRoleta && premiosRoleta.length > 0) ? premiosRoleta : [
+    { nome: '10 SPRINGS', tipo: 'pontos' },
+    { nome: 'R$ 2,00 CB', tipo: 'cashback' },
+    { nome: 'CAFÉ GRÁTIS', tipo: 'brinde' },
+    { nome: 'R$ 5,00 CB', tipo: 'cashback' },
+    { nome: '5 SPRINGS', tipo: 'pontos' },
+    { nome: 'BRINDE SURPRESA', tipo: 'brinde' },
+    { nome: '15 SPRINGS', tipo: 'pontos' },
+    { nome: 'R$ 1,00 CB', tipo: 'cashback' },
   ];
 
   useEffect(() => {
@@ -401,6 +422,10 @@ export default function Cliente() {
       if (saved) {
         setCpf(saved);
         if (loja_id) {
+          // Pre-fetch prêmios para a roleta do CTA ficar com dados REAIS
+          const { data: pRol } = await supabase.from('roleta_premios').select('*').eq('loja_id', lid_final);
+          if (pRol && pRol.length > 0) setPremiosRoleta(pRol);
+
           await supabase.from('checkins').upsert(
             { cliente_cpf: saved, loja_id: lid_final, status: 'aguardando' },
             { onConflict: 'cliente_cpf,loja_id' }
