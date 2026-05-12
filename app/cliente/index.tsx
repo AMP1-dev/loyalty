@@ -901,6 +901,25 @@ export default function Cliente() {
         >
           <Text style={{ color: '#ef4444', fontWeight: 'bold', fontSize: 12, letterSpacing: 1 }}>CANCELAR CHECK-IN</Text>
         </TouchableOpacity>
+
+        {tokenAtivo && (
+          <View style={{ marginHorizontal: 20, marginTop: 40, width: '100%', paddingHorizontal: 20 }}>
+            <View style={{ padding: 25, backgroundColor: '#8B5CF615', borderRadius: 28, borderWidth: 2, borderColor: '#8B5CF640', borderStyle: 'dashed' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                <View>
+                  <Text style={{ color: '#8B5CF6', fontSize: 10, fontWeight: '900', letterSpacing: 1 }}>TOKEN DE IMPORTAÇÃO ATIVO:</Text>
+                  <Text style={{ color: '#fff', fontSize: 42, fontWeight: '900', letterSpacing: 2, marginTop: 4 }}>{tokenAtivo.token}</Text>
+                </View>
+                <View style={{ backgroundColor: '#8B5CF620', padding: 12, borderRadius: 15 }}>
+                  <Text style={{ fontSize: 24 }}>📱</Text>
+                </View>
+              </View>
+              <Text style={{ color: '#94A3B8', fontSize: 11, fontWeight: '700', lineHeight: 16 }}>
+                Mostre este código ao lojista para importar seus <Text style={{ color: '#8B5CF6' }}>{tokenAtivo.total_pontos_a_transferir} SPG</Text> da rede.
+              </Text>
+            </View>
+          </View>
+        )}
       </View>
     );
   } else {
