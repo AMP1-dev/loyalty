@@ -501,15 +501,25 @@ export default function Cliente() {
     ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     setExtrato(comb);
 
-    const total = (trans || []).reduce((a, t) => a + (t.pontos_gerados || 0), 0) + (bonus || []).reduce((a, b) => a + b.pontos, 0);
-    const usados = (res || []).reduce((a, r) => a + r.pontos_usados, 0);
+    const total = (trans || []).reduce((a, t) => a + (t.pontos_gerados || 0), 0) + (bonus || []).reduce((a, b) => a + (b.pontos || 0), 0);
+    const usados = (res || []).reduce((a, r) => a + (r.pontos_usados || 0), 0);
     setSaldo(total - usados);
-    setCashback((cash || []).filter(c => !c.usado).reduce((a, c) => a + Number(c.valor), 0));
+    
+    const cashbackDisponivel = (cash || []).filter(c => !c.usado).reduce((a, c) => a + Number(c.valor), 0);
+    setCashback(cashbackDisponivel);
 
     const saldos: any[] = [];
     Object.keys(mapLojas).forEach(k => {
-      const s = (trans || []).filter(t => t.loja_id === k).reduce((a, t) => a + (t.pontos_gerados || 0), 0) - (res || []).filter(r => r.loja_id === k).reduce((a, r) => a + r.pontos_usados, 0);
-      if (s > 0) saldos.push({ id: k, nome: mapLojas[k], pontos: s });
+      const pTrans = (trans || []).filter(t => t.loja_id === k).reduce((a, t) => a + (t.pontos_gerados || 0), 0);
+      const pBonus = (bonus || []).filter(b => b.loja_id === k).reduce((a, b) => a + (b.pontos || 0), 0);
+      const pUsados = (res || []).filter(r => r.loja_id === k).reduce((a, r) => a + (r.pontos_usados || 0), 0);
+      
+      const s = (pTrans + pBonus) - pUsados;
+      const c = (cash || []).filter(item => item.loja_id === k && !item.usado).reduce((a, item) => a + Number(item.valor), 0);
+      
+      if (s > 0 || c > 0) {
+        saldos.push({ id: k, nome: mapLojas[k], pontos: s, cashback: c });
+      }
     });
     setSaldoPorLoja(saldos);
 
@@ -864,13 +874,15 @@ export default function Cliente() {
             <View style={[styles.cardLocal, { width: '48%', backgroundColor: c.card, borderColor: c.borda, marginTop: 8, padding: 18, height: 110, justifyContent: 'center' }]}>
               <Text style={{ fontSize: 10, fontWeight: '800', color: c.subtexto, textAlign: 'left' }}>DISPONÍVEL NESTA LOJA</Text>
               <Text style={{ fontSize: 24, fontWeight: '900', color: c.neonVerde, marginTop: 8, textAlign: 'left' }}>
-                {saldoPorLoja.find(s => s.id === loja_id)?.pontos || 0} SPG
+                {saldoPorLoja.find(s => s.id === loja_id)?.pontos || 0} spg
               </Text>
             </View>
 
             <View style={[styles.cardLocal, { width: '48%', backgroundColor: c.card, borderColor: c.borda, marginTop: 8, padding: 18, height: 110, justifyContent: 'center' }]}>
               <Text style={{ fontSize: 10, fontWeight: '800', color: c.subtexto, textAlign: 'left' }}>DISPONÍVEL NESTA LOJA</Text>
-              <Text style={{ fontSize: 24, fontWeight: '900', color: c.neonAmarelo, marginTop: 8, textAlign: 'left' }}>R$ 0,00</Text>
+              <Text style={{ fontSize: 24, fontWeight: '900', color: c.neonAmarelo, marginTop: 8, textAlign: 'left' }}>
+                R$ {(saldoPorLoja.find(s => s.id === loja_id)?.cashback || 0).toFixed(2)}
+              </Text>
             </View>
           </View>
 
