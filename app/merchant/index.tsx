@@ -1501,10 +1501,12 @@ export default function MerchantPanel() {
                               {clienteAtual.temToken && (
                                 <TouchableOpacity 
                                   onPress={() => setMostrarValidarToken(true)}
-                                  style={{ backgroundColor: '#8B5CF6', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                                  style={{ backgroundColor: '#8B5CF6', paddingHorizontal: 15, paddingVertical: 10, borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 2, borderColor: '#A78BFA' }}
                                 >
-                                  <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>VALIDAR TOKEN</Text>
-                                  <Text style={{ fontSize: 12 }}>🔑</Text>
+                                  <View>
+                                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900', opacity: 0.8 }}>AÇÃO REQUERIDA:</Text>
+                                    <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900' }}>VALIDAR TOKEN 🔑</Text>
+                                  </View>
                                 </TouchableOpacity>
                               )}
                               <TouchableOpacity onPress={() => removerDaFila(clienteAtual.id)} style={{ backgroundColor: '#ef444420', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#ef444440' }}>
@@ -1512,6 +1514,12 @@ export default function MerchantPanel() {
                               </TouchableOpacity>
                             </View>
                           </View>
+                          
+                          {clienteAtual.temToken && (
+                            <Text style={{ color: '#8B5CF6', fontSize: 10, fontWeight: 'bold', marginBottom: 10, backgroundColor: '#8B5CF610', padding: 6, borderRadius: 6, alignSelf: 'flex-start' }}>
+                              💡 Dica: Valide os pontos de outras lojas antes de finalizar a venda.
+                            </Text>
+                          )}
 
                           <View style={{ flexDirection: 'row', gap: 12 }}>
                             <View style={{ flex: 1, backgroundColor: '#10b98115', padding: 12, borderRadius: 16, borderWidth: 1, borderColor: '#10b98130', flexDirection: 'row', alignItems: 'center' }}>

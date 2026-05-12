@@ -942,6 +942,18 @@ export default function Cliente() {
           </View>
         </View>
 
+        {status === 'atendido' && (
+          <LinearGradient 
+            colors={['#10b981', '#059669']} 
+            start={{ x: 0, y: 0 }} 
+            end={{ x: 1, y: 0 }}
+            style={{ marginHorizontal: 20, marginTop: 15, padding: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}
+          >
+            <Text style={{ fontSize: 18 }}>🔔</Text>
+            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13, letterSpacing: 1 }}>EM ATENDIMENTO NO BALCÃO</Text>
+          </LinearGradient>
+        )}
+
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
 
           {/* CARDS DE SALDO 2x2 */}
