@@ -1463,7 +1463,7 @@ export default function MerchantPanel() {
                               </View>
                               <View>
                                 <Text style={{ color: '#10b981', fontSize: 18, fontWeight: '900' }}>{Math.floor(cashbacks[clienteAtual.cliente_cpf]?.pontos || 0)}</Text>
-                                <Text style={{ color: '#10b98180', fontSize: 9, fontWeight: 'bold', marginTop: -2 }}>SPRINGS DISPONÍVEIS</Text>
+                                <Text style={{ color: '#10b98180', fontSize: 9, fontWeight: 'bold', marginTop: -2 }}>SALDO NESTA LOJA (SPG)</Text>
                               </View>
                             </View>
 
@@ -1473,7 +1473,7 @@ export default function MerchantPanel() {
                               </View>
                               <View>
                                 <Text style={{ color: '#facc15', fontSize: 18, fontWeight: '900' }}>R$ {(cashbacks[clienteAtual.cliente_cpf]?.total || 0).toFixed(2)}</Text>
-                                <Text style={{ color: '#facc1580', fontSize: 9, fontWeight: 'bold', marginTop: -2 }}>CASHBACK ACUMULADO</Text>
+                                <Text style={{ color: '#facc1580', fontSize: 9, fontWeight: 'bold', marginTop: -2 }}>CASHBACK DISPONÍVEL</Text>
                               </View>
                             </View>
                           </View>

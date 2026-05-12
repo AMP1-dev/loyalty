@@ -496,10 +496,26 @@ export default function Cliente() {
 
     // Combinar para o Extrato
     const comb = [
-      ...(trans || []).map(t => ({ ...t, tipo: 'ganho' })),
-      ...(res || []).map(r => ({ ...r, tipo: 'resgate', pontos_usados: r.pontos_usados }))
+      ...(trans || []).map(t => ({ ...t, tipo: 'ganho', loja_nome: mapLojas[t.loja_id] || 'Loja Parceira' })),
+      ...(res || []).map(r => ({ ...r, tipo: 'resgate', pontos_usados: r.pontos_usados, loja_nome: mapLojas[r.loja_id] || 'Loja Parceira' })),
+      ...(cash || []).map(c => ({ ...c, tipo: 'cashback_ganho', loja_nome: mapLojas[c.loja_id] || 'Loja Parceira' }))
     ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    setExtrato(comb);
+
+    // Agrupar cashbacks ganhos com as transações de mesma data/loja para não poluir o extrato
+    const extratoFinal: any[] = [];
+    comb.forEach(item => {
+      if (item.tipo === 'ganho') {
+        const cb = (cash || []).find(c => 
+          c.loja_id === item.loja_id && 
+          Math.abs(new Date(c.created_at).getTime() - new Date(item.created_at).getTime()) < 5000
+        );
+        extratoFinal.push({ ...item, cashback_valor: cb?.valor });
+      } else if (item.tipo === 'resgate') {
+        extratoFinal.push(item);
+      }
+    });
+
+    setExtrato(extratoFinal);
 
     const total = (trans || []).reduce((a, t) => a + (t.pontos_gerados || 0), 0) + (bonus || []).reduce((a, b) => a + (b.pontos || 0), 0);
     const usados = (res || []).reduce((a, r) => a + (r.pontos_usados || 0), 0);
@@ -518,7 +534,7 @@ export default function Cliente() {
       const c = (cash || []).filter(item => item.loja_id === k && !item.usado).reduce((a, item) => a + Number(item.valor), 0);
 
       if (s > 0 || c > 0) {
-        saldos.push({ id: k, nome: mapLojas[k], pontos: s, cashback: c });
+        saldos.push({ id: k, nome: mapLojas[k], pontos: s, cashback: c, saldo_total: s });
       }
     });
     setSaldoPorLoja(saldos);
@@ -566,13 +582,13 @@ export default function Cliente() {
 
   // 2. ATUALIZAR SELEÇÃO DE PONTOS
   const atualizarSelecao = (lojaId: string, novoValor: number) => {
-    const saldoLoja = saldosPorLoja.find(s => s.id === lojaId)?.saldo_total || 0;
+    const saldoLoja = saldoPorLoja.find(s => s.id === lojaId)?.saldo_total || 0;
     const valorLimitado = Math.min(Math.max(0, novoValor), saldoLoja);
     setSelecaoPontos((prev: any) => ({ ...prev, [lojaId]: valorLimitado }));
     const novasSelecoes = { ...selecaoPontos, [lojaId]: valorLimitado };
     const novasLojas = Object.keys(novasSelecoes).filter(id => novasSelecoes[id] > 0);
     setLojasSelecionadas(novasLojas);
-    const total = Object.values(novasSelecoes).reduce((sum: number, val: any) => sum + val, 0);
+    const total = Object.values(novasSelecoes).reduce((sum: number, val: any) => sum + Number(val), 0);
     setTotalSelecionado(total);
   };
 
@@ -835,8 +851,8 @@ export default function Cliente() {
             <TouchableOpacity onPress={toggleTheme} style={[styles.miniBtn, { backgroundColor: c.card, marginRight: 10 }]}>
               <Text style={{ fontSize: 18 }}>{isDark ? '☀️' : '🌙'}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setMostrarExtrato(true)} style={[styles.miniBtn, { backgroundColor: c.card, flexDirection: 'row', paddingHorizontal: 12 }]}>
-              <Text style={{ fontSize: 14, marginRight: 5 }}>📋</Text>
+            <TouchableOpacity onPress={() => setMostrarExtrato(true)} style={[styles.miniBtn, { backgroundColor: c.card, flexDirection: 'row', paddingHorizontal: 12, borderColor: '#F59E0B', borderWidth: 1.5 }]}>
+              <Text style={{ fontSize: 14, marginRight: 5 }}>👁️</Text>
               <Text style={{ fontSize: 10, fontWeight: '900', color: '#F59E0B' }}>EXTRATO</Text>
             </TouchableOpacity>
           </View>
@@ -852,9 +868,6 @@ export default function Cliente() {
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Text style={{ fontSize: 24, marginRight: 8 }}>✨</Text>
                 <Text style={{ fontSize: 28, fontWeight: '900', color: c.neonVerde }}>{saldo}</Text>
-                <TouchableOpacity onPress={() => setMostraIntercambio(true)} style={{ marginLeft: 10 }}>
-                  <Text style={{ fontSize: 18 }}>👁️</Text>
-                </TouchableOpacity>
               </View>
             </View>
 
@@ -1071,8 +1084,8 @@ export default function Cliente() {
             </View>
             <Text style={{ color: c.subtexto, fontSize: 12, marginBottom: 15 }}>Selecione quanto você quer trazer de cada loja:</Text>
             <ScrollView nestedScrollEnabled style={{ marginBottom: 20, maxHeight: 400 }}>
-              {carregandoSaldos ? <ActivityIndicator color={c.neonVerde} size="large" style={{ marginVertical: 20 }} /> : saldosPorLoja.length === 0 ? <Text style={{ color: c.subtexto, textAlign: 'center', marginVertical: 20 }}>Você não tem pontos em outras lojas.</Text> : (
-                saldosPorLoja.map((loja) => (
+              {saldoPorLoja.filter(s => s.id !== loja_id).length === 0 ? <Text style={{ color: c.subtexto, textAlign: 'center', marginVertical: 20 }}>Você não tem pontos em outras lojas.</Text> : (
+                saldoPorLoja.filter(s => s.id !== loja_id).map((loja) => (
                   <View key={loja.id} style={{ marginBottom: 12 }}>
                     <TouchableOpacity onPress={() => setAccordionAberto(accordionAberto === loja.id ? null : loja.id)} style={{ backgroundColor: c.bg, borderRadius: 12, padding: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderWidth: 1, borderColor: lojasSelecionadas.includes(loja.id) ? c.neonVerde : c.borda }}>
                       <View><Text style={{ color: c.texto, fontWeight: '700', fontSize: 14 }}>{loja.nome}</Text><Text style={{ color: c.neonVerde, fontWeight: '900', fontSize: 16, marginTop: 4 }}>{loja.saldo_total} SPG</Text></View>
@@ -1234,10 +1247,11 @@ export default function Cliente() {
                       </View>
 
                       <View style={{ flex: 1 }}>
-                        <Text style={{ color: c.texto, fontWeight: '900', fontSize: 15 }}>{isResgate ? (t.premio_nome || 'Resgate Efetuado') : 'Compra Realizada'}</Text>
+                        <Text style={{ color: c.texto, fontWeight: '900', fontSize: 15 }}>{isResgate ? (t.premio_nome || 'Resgate Efetuado') : t.loja_nome}</Text>
                         <Text style={{ color: c.subtexto, fontSize: 11, fontWeight: '700', marginTop: 2 }}>
-                          {t.loja_nome || 'A M P'} • {new Date(t.created_at).toLocaleDateString('pt-BR')} {new Date(t.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(t.created_at).toLocaleDateString('pt-BR')} {new Date(t.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           {!isResgate && t.valor ? ` • R$ ${Number(t.valor).toFixed(2)}` : ''}
+                          {t.cashback_valor ? <Text style={{ color: c.neonAmarelo }}> • + R$ {Number(t.cashback_valor).toFixed(2)} CB</Text> : ''}
                         </Text>
                       </View>
 
