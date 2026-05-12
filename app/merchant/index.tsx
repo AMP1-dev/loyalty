@@ -343,9 +343,9 @@ export default function MerchantPanel() {
     ]);
 
     // Cálculo de Springs: Ganhos em transações - Usados em resgates
-    const totalGerado = (trans || []).reduce((s, t) => s + (t.pontos_gerados || 0), 0);
-    const totalUsado = (resg || []).reduce((s, r) => s + (r.pontos_usados || 0), 0);
-    const saldoFinal = totalGerado - totalUsado;
+    const totalGerado = (trans || []).reduce((s, t) => s + (Number(t.pontos_gerados) || 0), 0);
+    const totalUsado = (resg || []).reduce((s, r) => s + (Number(r.pontos_usados) || 0), 0);
+    const saldoFinal = Math.max(0, totalGerado - totalUsado);
 
     // Cálculo de Cashback: Apenas os que não foram usados ainda
     const cashbackFinal = (cash || []).reduce((s, c) => s + (Number(c.valor) || 0), 0);
@@ -1446,9 +1446,37 @@ export default function MerchantPanel() {
                   <View style={[styles.card, { flex: 1, backgroundColor: '#020617', padding: 20, minHeight: 130, justifyContent: 'center', borderColor: '#10b981', borderWidth: 2 }]}>
                      {clienteAtual ? (
                        <>
-                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}><Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>ATENDENDO AGORA:</Text><TouchableOpacity onPress={() => removerDaFila(clienteAtual.id)} style={{ backgroundColor: '#ef444430', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#ef4444' }}><Text style={{ color: '#ef4444', fontSize: 10, fontWeight: 'bold' }}>✕ REMOVER</Text></TouchableOpacity></View>
-                         <Text style={{ color: '#fff', fontSize: 48, fontWeight: '900', letterSpacing: -1 }}>{formatarTelefone(clienteAtual.cliente_cpf)}</Text>
-                         <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}><Text style={{ color: '#10b981', fontSize: 12, fontWeight: 'bold' }}>✨ {Math.floor(cashbacks[clienteAtual.cliente_cpf]?.pontos || 0)} SPG</Text><Text style={{ color: '#facc15', fontSize: 12, fontWeight: 'bold' }}>💰 R$ {(cashbacks[clienteAtual.cliente_cpf]?.total || 0).toFixed(2)} CB</Text></View>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                            <View>
+                              <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', letterSpacing: 1 }}>ATENDENDO AGORA:</Text>
+                              <Text style={{ color: '#fff', fontSize: 42, fontWeight: '900', letterSpacing: -1.5, marginTop: -5 }}>{formatarTelefone(clienteAtual.cliente_cpf)}</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => removerDaFila(clienteAtual.id)} style={{ backgroundColor: '#ef444420', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#ef444440' }}>
+                              <Text style={{ color: '#ef4444', fontSize: 11, fontWeight: '900' }}>REMOVER</Text>
+                            </TouchableOpacity>
+                          </View>
+
+                          <View style={{ flexDirection: 'row', gap: 12 }}>
+                            <View style={{ flex: 1, backgroundColor: '#10b98115', padding: 12, borderRadius: 16, borderWidth: 1, borderColor: '#10b98130', flexDirection: 'row', alignItems: 'center' }}>
+                              <View style={{ backgroundColor: '#10b98120', width: 32, height: 32, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
+                                <Text style={{ fontSize: 16 }}>✨</Text>
+                              </View>
+                              <View>
+                                <Text style={{ color: '#10b981', fontSize: 18, fontWeight: '900' }}>{Math.floor(cashbacks[clienteAtual.cliente_cpf]?.pontos || 0)}</Text>
+                                <Text style={{ color: '#10b98180', fontSize: 9, fontWeight: 'bold', marginTop: -2 }}>SPRINGS DISPONÍVEIS</Text>
+                              </View>
+                            </View>
+
+                            <View style={{ flex: 1, backgroundColor: '#facc1515', padding: 12, borderRadius: 16, borderWidth: 1, borderColor: '#facc1530', flexDirection: 'row', alignItems: 'center' }}>
+                              <View style={{ backgroundColor: '#facc1520', width: 32, height: 32, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
+                                <Text style={{ fontSize: 16 }}>💰</Text>
+                              </View>
+                              <View>
+                                <Text style={{ color: '#facc15', fontSize: 18, fontWeight: '900' }}>R$ {(cashbacks[clienteAtual.cliente_cpf]?.total || 0).toFixed(2)}</Text>
+                                <Text style={{ color: '#facc1580', fontSize: 9, fontWeight: 'bold', marginTop: -2 }}>CASHBACK ACUMULADO</Text>
+                              </View>
+                            </View>
+                          </View>
                        </>
                      ) : (<Text style={{ color: '#64748b', fontSize: 24, textAlign: 'center', fontWeight: 'bold' }}>AGUARDANDO FILA...</Text>)}
                   </View>

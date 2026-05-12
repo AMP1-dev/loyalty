@@ -504,7 +504,7 @@ export default function Cliente() {
     const total = (trans || []).reduce((a, t) => a + (t.pontos_gerados || 0), 0) + (bonus || []).reduce((a, b) => a + (b.pontos || 0), 0);
     const usados = (res || []).reduce((a, r) => a + (r.pontos_usados || 0), 0);
     setSaldo(total - usados);
-    
+
     const cashbackDisponivel = (cash || []).filter(c => !c.usado).reduce((a, c) => a + Number(c.valor), 0);
     setCashback(cashbackDisponivel);
 
@@ -513,10 +513,10 @@ export default function Cliente() {
       const pTrans = (trans || []).filter(t => t.loja_id === k).reduce((a, t) => a + (t.pontos_gerados || 0), 0);
       const pBonus = (bonus || []).filter(b => b.loja_id === k).reduce((a, b) => a + (b.pontos || 0), 0);
       const pUsados = (res || []).filter(r => r.loja_id === k).reduce((a, r) => a + (r.pontos_usados || 0), 0);
-      
+
       const s = (pTrans + pBonus) - pUsados;
       const c = (cash || []).filter(item => item.loja_id === k && !item.usado).reduce((a, item) => a + Number(item.valor), 0);
-      
+
       if (s > 0 || c > 0) {
         saldos.push({ id: k, nome: mapLojas[k], pontos: s, cashback: c });
       }
@@ -812,7 +812,7 @@ export default function Cliente() {
           <PulsingAI color={c.neonVerde} />
         </View>
         <Text style={{ marginTop: 20, color: c.texto, fontWeight: '900', fontSize: 18 }}>Aguardando liberação...</Text>
-        <Text style={{ marginTop: 10, color: c.subtexto, fontSize: 13, textAlign: 'center', paddingHorizontal: 40, lineHeight: 20 }}>O atendente já foi notificado e logo irá liberar seu acesso. ⏳</Text>
+        <Text style={{ marginTop: 10, color: c.subtexto, fontSize: 13, textAlign: 'center', paddingHorizontal: 40, lineHeight: 20 }}>Acessando ⏳</Text>
 
         <TouchableOpacity
           onPress={() => { setStatus('idle'); salvarStorage('cliente_cpf', ''); }}
