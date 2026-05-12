@@ -411,7 +411,7 @@ export default function Cliente() {
 
   useEffect(() => {
     const initApp = async () => {
-      const APP_VERSION = 'v5.8.0-exchange';
+      const APP_VERSION = 'v5.8.1-exchange';
       const savedVersion = await carregarStorage('@app_version');
       if (savedVersion !== APP_VERSION) {
         if (typeof window !== 'undefined') localStorage.clear();
