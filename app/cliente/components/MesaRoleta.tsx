@@ -71,7 +71,7 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
 
           const colors = isDark 
             ? ['#1e293b', '#334155', '#1e293b', '#475569']
-            : ['#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0'];
+            : ['#fff7ed', '#f8fafc', '#d1fae5'];
           const sliceColor = colors[i % colors.length];
 
           const d = `M ${CENTER} ${CENTER} L ${start.x} ${start.y} A ${RADIUS} ${RADIUS} 0 0 0 ${end.x} ${end.y} Z`;
@@ -89,7 +89,7 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
                 fontWeight="900" 
                 textAnchor="middle" 
                 fill={isDark ? "#f8fafc" : "#1e293b"}
-                transform={`rotate(${midAngle} ${textPos.x} ${textPos.y})`}
+                transform={`rotate(${midAngle + 90} ${textPos.x} ${textPos.y})`}
               >
                 {p.nome.substring(0, 20).split('\n').map((linha: string, index: number) => (
                   <TSpan key={index} x={textPos.x} dy={index === 0 ? 0 : 12}>
