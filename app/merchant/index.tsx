@@ -12,7 +12,7 @@ import {
   buscarCaixaAtivaCliente
 } from '@/lib/exchange';
 
-const APP_VERSION = "v5.8.3-exchange";
+const APP_VERSION = "v5.8.4-exchange";
 const { width } = Dimensions.get('window');
 const itemWidth = width > 600 ? (600 - 60) / 3 : (width - 60) / 2;
 
@@ -271,7 +271,8 @@ export default function MerchantPanel() {
 
   const contatosFiltrados = contatosMesa.filter(c => {
     const matchTelefone = c.cliente_cpf.includes(buscarTelefone.replace(/\D/g, ''));
-    const matchStatus = filtroStatus === '' || c.status === filtroStatus;
+    // Se nenhum filtro de status estiver selecionado, não mostra quem já converteu (venda realizada)
+    const matchStatus = filtroStatus === '' ? c.status !== 'converteu' : c.status === filtroStatus;
     const matchNps = filtroNps === 0 || c.nota_nps === filtroNps;
     let matchData = true;
     if (filtroData === 'ultimos-7d') {
