@@ -154,9 +154,9 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
           const textPos = polarToCartesian(CENTER, CENTER, RADIUS * 0.65, midAngle);
           const iconPos = polarToCartesian(CENTER, CENTER, RADIUS * 0.82, midAngle);
 
-          const colors = isDark 
+          const colors = isDark
             ? ['#1e293b', '#334155', '#1e293b', '#475569']
-            : ['#fff7ed', '#f8fafc', '#d1fae5'];
+            : ['#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0'];
           const sliceColor = colors[i % colors.length];
 
           const d = `M ${CENTER} ${CENTER} L ${start.x} ${start.y} A ${RADIUS} ${RADIUS} 0 0 0 ${end.x} ${end.y} Z`;
@@ -405,7 +405,7 @@ export default function Cliente() {
         return;
       }
 
-      const APP_VERSION = "v5.8.5-exchange";
+      const APP_VERSION = "v5.8.4-exchange";
       const savedVersion = await carregarStorage('@app_version');
       if (savedVersion !== APP_VERSION) {
         if (typeof window !== 'undefined') localStorage.clear();

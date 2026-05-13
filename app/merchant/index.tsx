@@ -12,7 +12,7 @@ import {
   buscarCaixaAtivaCliente
 } from '@/lib/exchange';
 
-const APP_VERSION = "v5.8.4-exchange";
+const APP_VERSION = "v5.8.5-exchange";
 const { width } = Dimensions.get('window');
 const itemWidth = width > 600 ? (600 - 60) / 3 : (width - 60) / 2;
 
@@ -406,6 +406,7 @@ export default function MerchantPanel() {
     const { error } = await supabase.from('roleta_mesa_participacoes').update({ premio_resgatado: true }).eq('id', idPremio);
     if (error) { mostrarToast('Erro ao resgatar prêmio.', 'erro'); return; }
     mostrarToast('✅ Prêmio da Mesa Resgatado!', 'sucesso');
+    
     buscarFila();
     buscarAvaliacoesERoleta();
   };
@@ -774,14 +775,14 @@ export default function MerchantPanel() {
       // Atualizar status no Remarketing se existir (considerando variações de prefixo 55)
       const cpfsParaUpdate = [item.cliente_cpf, item.cliente_cpf.startsWith('55') ? item.cliente_cpf.substring(2) : '55' + item.cliente_cpf];
       const { data: remarketUpdate } = await supabase.from('contatos_mesa_remarketing')
-        .update({ status: 'converteu', data_conversao: new Date().toISOString() })
+        .update({ status: 'converteu' })
         .in('cliente_cpf', cpfsParaUpdate)
         .eq('loja_id', lojaId)
         .select();
 
       if (remarketUpdate && remarketUpdate.length > 0) {
         setContatosMesa(prev => prev.map(c => 
-          cpfsParaUpdate.includes(c.cliente_cpf) ? { ...c, status: 'converteu', data_conversao: new Date().toISOString() } : c
+          cpfsParaUpdate.includes(c.cliente_cpf) ? { ...c, status: 'converteu' } : c
         ));
       }
 
@@ -807,6 +808,7 @@ export default function MerchantPanel() {
     const { error } = await supabase.from('brindes_pendentes').update({ resgatado: true }).eq('id', idBrinde);
     if (error) { mostrarToast('Erro ao entregar brinde.', 'erro'); return; }
     mostrarToast('🎁 Brinde entregue!', 'sucesso');
+    
     buscarFinanceiroDetalhado(cpf);
     buscarStats();
   };
@@ -825,14 +827,14 @@ export default function MerchantPanel() {
       // Atualizar status no Remarketing se existir
       const cpfsParaManual = [cpfTarget, cpfTarget.startsWith('55') ? cpfTarget.substring(2) : '55' + cpfTarget];
       const { data: remUpdate } = await supabase.from('contatos_mesa_remarketing')
-        .update({ status: 'converteu', data_conversao: new Date().toISOString() })
+        .update({ status: 'converteu' })
         .in('cliente_cpf', cpfsParaManual)
         .eq('loja_id', lojaId)
         .select();
 
       if (remUpdate && remUpdate.length > 0) {
         setContatosMesa(prev => prev.map(c => 
-          cpfsParaManual.includes(c.cliente_cpf) ? { ...c, status: 'converteu', data_conversao: new Date().toISOString() } : c
+          cpfsParaManual.includes(c.cliente_cpf) ? { ...c, status: 'converteu' } : c
         ));
       }
 

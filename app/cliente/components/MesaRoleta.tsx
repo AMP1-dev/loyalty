@@ -11,7 +11,7 @@ import Svg, { Circle, Defs, G, Path, RadialGradient, Stop, Text as SvgText } fro
 import { supabase } from '../../../lib/supabase';
 import OfertaGoogle from './OfertaGoogle';
 
-const APP_VERSION = "v5.8.4-exchange";
+const APP_VERSION = "v5.8.5-exchange";
 
 // ─── DDDs válidos brasileiros ──────────────────────────────────────────────────
 const DDD_VALIDOS = [
