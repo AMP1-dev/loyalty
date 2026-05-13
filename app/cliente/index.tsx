@@ -201,7 +201,7 @@ function RoletaCTA({ onPress, isDark, c, premiosRoleta }: any) {
   const glowAnim = useRef(new Animated.Value(0)).current;
 
   const WHEEL_SIZE = 310;
-  const prizesDisplay = (premiosRoleta && premiosRoleta.length > 0) ? premiosRoleta : [
+  const prizesDisplay = [
     { nome: '10 SPRINGS', tipo: 'pontos' },
     { nome: 'R$ 2,00 CB', tipo: 'cashback' },
     { nome: 'CAFÉ GRÁTIS', tipo: 'brinde' },
