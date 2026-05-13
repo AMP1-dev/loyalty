@@ -89,7 +89,7 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
                 fontWeight="900" 
                 textAnchor="middle" 
                 fill={isDark ? "#f8fafc" : "#1e293b"}
-                transform={`rotate(${midAngle + 90} ${textPos.x} ${textPos.y})`}
+                transform={`rotate(${midAngle} ${textPos.x} ${textPos.y})`}
               >
                 {p.nome.length > 12 ? p.nome.substring(0, 10) + '..' : p.nome.toUpperCase()}
               </SvgText>
@@ -356,13 +356,14 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
     return premios[0];
   };
 
-  const salvarParticipacaoMesa = async (telefone: string, premio: any) => {
+  const salvarParticipacaoMesa = async (telefoneOriginal: string, premio: any) => {
     try {
-      await salvarStorage(`ja_jogou_${loja_id}_${telefone}`, new Date().toISOString());
+      const telLimpo = telefoneOriginal.replace(/\D/g, '');
+      await salvarStorage(`ja_jogou_${loja_id}_${telLimpo}`, new Date().toISOString());
       const lid_final = uuidLojaReal || String(loja_id);
       await supabase.from('roleta_mesa_participacoes').insert({
         loja_id: lid_final,
-        cliente_cpf: telefone,
+        cliente_cpf: telLimpo,
         premio_id: premio.id,
         premio_nome: premio.nome,
         premio_valor: premio.valor,
@@ -370,7 +371,7 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
         oferta_google_dobro: notaNps === 5,
         premio_resgatado: false,
       });
-      await sincronizarComRemarketig(telefone, premio);
+      await sincronizarComRemarketig(telLimpo, premio);
     } catch (error) {
       console.error(error);
     }
