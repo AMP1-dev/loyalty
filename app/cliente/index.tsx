@@ -154,7 +154,7 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
           const textPos = polarToCartesian(CENTER, CENTER, RADIUS * 0.65, midAngle);
           const iconPos = polarToCartesian(CENTER, CENTER, RADIUS * 0.82, midAngle);
 
-          const colors = isDark 
+          const colors = isDark
             ? ['#1e293b', '#334155', '#1e293b', '#475569']
             : ['#fff7ed', '#f8fafc', '#d1fae5'];
           const sliceColor = colors[i % colors.length];
@@ -166,7 +166,7 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
               <Path d={d} fill={sliceColor} stroke={isDark ? "#334155" : "#cbd5e1"} strokeWidth="1" />
 
               {/* Ícone na borda */}
-              <SvgText x={iconPos.x} y={iconPos.y + 4} fontSize="12" textAnchor="middle" transform={`rotate(${midAngle} ${iconPos.x} ${iconPos.y})`}>
+              <SvgText x={iconPos.x} y={iconPos.y + 4} fontSize="15" textAnchor="middle" transform={`rotate(${midAngle} ${iconPos.x} ${iconPos.y})`}>
                 {getIconePremio(p.tipo)}
               </SvgText>
 
@@ -174,7 +174,7 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
               <SvgText
                 x={textPos.x}
                 y={textPos.y}
-                fontSize="10"
+                fontSize="12"
                 fontWeight="900"
                 textAnchor="middle"
                 fill={isDark ? "#f8fafc" : "#1e293b"}
@@ -206,14 +206,14 @@ function RoletaCTA({ onPress, isDark, c, premiosRoleta }: any) {
 
   const WHEEL_SIZE = 310;
   const prizesDisplay = [
-    { nome: '✨ 10 SPG', tipo: 'pontos' },
-    { nome: '🪙 R$ 2,00 CB', tipo: 'cashback' },
-    { nome: '☕ CAFÉ GRÁTIS', tipo: 'brinde' },
-    { nome: '💵 R$ 5,00 CB', tipo: 'cashback' },
-    { nome: '⭐ 5 SPG', tipo: 'pontos' },
-    { nome: '🎁 BRINDE SURPRESA', tipo: 'brinde' },
-    { nome: '🌟 15 SPG', tipo: 'pontos' },
-    { nome: '🪙 R$ 1,00 CB', tipo: 'cashback' },
+    { nome: '✨ 10\nSPG', tipo: 'pontos' },
+    { nome: '🪙 R$\n2,00 CB', tipo: 'cashback' },
+    { nome: '☕ CAFÉ\nGRÁTIS', tipo: 'brinde' },
+    { nome: '💵 R$\n5,00 CB', tipo: 'cashback' },
+    { nome: '⭐ 5\nSPG', tipo: 'pontos' },
+    { nome: '🎁 SURPRESA', tipo: 'brinde' },
+    { nome: '🌟 15\nSPG', tipo: 'pontos' },
+    { nome: '🪙 R$\n1,00 CB', tipo: 'cashback' },
   ];
 
   useEffect(() => {
