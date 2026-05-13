@@ -1789,7 +1789,16 @@ export default function MerchantPanel() {
             <View style={{ backgroundColor: '#1e293b', borderRadius: 20, padding: 24, width: '85%', maxWidth: 400, borderWidth: 1, borderColor: '#334155' }}>
               <Text style={{ fontSize: 18, fontWeight: '900', color: '#10b981', marginBottom: 20, textAlign: 'center' }}>🔑 VALIDAR TOKEN</Text>
               <Text style={{ color: '#94a3b8', fontSize: 12, marginBottom: 16, textAlign: 'center' }}>Digite os 6 dígitos que o cliente passou:</Text>
-              <TextInput placeholder="000000" placeholderTextColor="#94a3b8" value={tokenParaValidar.toUpperCase()} onChangeText={(t) => setTokenParaValidar(t.replace(/[^A-Z0-9]/g, '').slice(0, 6))} maxLength={6} style={{ backgroundColor: '#0f172a', borderWidth: 2, borderColor: '#10b981', color: '#fff', padding: 16, fontSize: 28, fontWeight: 'bold', textAlign: 'center', borderRadius: 12, marginBottom: 20, letterSpacing: 4 }} />
+              <TextInput 
+                placeholder="000000" 
+                placeholderTextColor="#94a3b8" 
+                value={tokenParaValidar.toUpperCase()} 
+                onChangeText={(t) => setTokenParaValidar(t.replace(/[^A-Z0-9]/g, '').slice(0, 6))} 
+                maxLength={6} 
+                keyboardType="default"
+                autoCapitalize="characters"
+                style={{ backgroundColor: '#0f172a', borderWidth: 2, borderColor: '#10b981', color: '#fff', padding: 16, fontSize: 28, fontWeight: 'bold', textAlign: 'center', borderRadius: 12, marginBottom: 20, letterSpacing: 4 }} 
+              />
               <TouchableOpacity onPress={validarTokenExchange} disabled={tokenParaValidar.length !== 6 || carregandoValidacao} style={{ backgroundColor: tokenParaValidar.length === 6 ? '#10b981' : '#334155', padding: 14, borderRadius: 12, alignItems: 'center', marginBottom: 12 }}>{carregandoValidacao ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#0f172a', fontWeight: '900', fontSize: 14 }}>✓ VALIDAR</Text>}</TouchableOpacity>
               <TouchableOpacity onPress={() => { setMostrarValidarToken(false); setTokenParaValidar(''); }} disabled={carregandoValidacao}><Text style={{ color: '#ef4444', textAlign: 'center', fontWeight: 'bold' }}>CANCELAR</Text></TouchableOpacity>
             </View>
