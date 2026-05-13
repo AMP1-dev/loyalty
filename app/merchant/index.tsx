@@ -296,6 +296,12 @@ export default function MerchantPanel() {
     return d;
   };
 
+  const normalizarCPF = (t: string) => {
+    let clean = t.replace(/\D/g, '');
+    if (clean.length === 13 && clean.startsWith('55')) return clean.substring(2);
+    return clean;
+  };
+
   const formatarTelefone = (t: string) => {
     const clean = t.replace(/\D/g, '');
     if (clean.length === 11) return `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
@@ -359,11 +365,12 @@ export default function MerchantPanel() {
     if (!lojaId) return;
 
     // Busca direta e correta baseada na estrutura real das tabelas
+    const cpfsParaBusca = [cpf, cpf.startsWith('55') ? cpf.substring(2) : '55' + cpf];
     const [{ data: trans }, { data: resg }, { data: cash }, { data: bonus }] = await Promise.all([
-      supabase.from('transacoes').select('pontos_gerados').eq('cliente_cpf', cpf).eq('loja_id', lojaId),
-      supabase.from('resgates').select('pontos_usados').eq('cliente_cpf', cpf).eq('loja_id', lojaId),
-      supabase.from('cashbacks').select('valor').eq('cliente_cpf', cpf).eq('loja_id', lojaId).eq('usado', false),
-      supabase.from('bonus_pendentes').select('pontos').eq('cliente_cpf', cpf).eq('loja_id', lojaId).gt('data_expiracao', new Date().toISOString()).eq('usado', false)
+      supabase.from('transacoes').select('pontos_gerados').in('cliente_cpf', cpfsParaBusca).eq('loja_id', lojaId),
+      supabase.from('resgates').select('pontos_usados').in('cliente_cpf', cpfsParaBusca).eq('loja_id', lojaId),
+      supabase.from('cashbacks').select('valor').in('cliente_cpf', cpfsParaBusca).eq('loja_id', lojaId).eq('usado', false),
+      supabase.from('bonus_pendentes').select('pontos').in('cliente_cpf', cpfsParaBusca).eq('loja_id', lojaId).gt('data_expiracao', new Date().toISOString()).eq('usado', false)
     ]);
 
     // Cálculo de Springs: Ganhos em transações - Usados em resgates
@@ -477,7 +484,8 @@ export default function MerchantPanel() {
 
       const ultimoPorCliente = new Map();
       vendas.forEach((v: any) => {
-        if (!ultimoPorCliente.has(v.cliente_cpf)) ultimoPorCliente.set(v.cliente_cpf, v);
+        const cpfNorm = normalizarCPF(v.cliente_cpf);
+        if (!ultimoPorCliente.has(cpfNorm)) ultimoPorCliente.set(cpfNorm, v);
       });
 
       const crmLista = Array.from(ultimoPorCliente.values()).map((v: any) => {
@@ -763,16 +771,17 @@ export default function MerchantPanel() {
     if (sucesso) {
       await supabase.from('checkins').update({ status: 'atendido' }).eq('id', id);
       
-      // Atualizar status no Remarketing se existir
+      // Atualizar status no Remarketing se existir (considerando variações de prefixo 55)
+      const cpfsParaUpdate = [item.cliente_cpf, item.cliente_cpf.startsWith('55') ? item.cliente_cpf.substring(2) : '55' + item.cliente_cpf];
       const { data: remarketUpdate } = await supabase.from('contatos_mesa_remarketing')
         .update({ status: 'converteu', data_conversao: new Date().toISOString() })
-        .eq('cliente_cpf', item.cliente_cpf)
+        .in('cliente_cpf', cpfsParaUpdate)
         .eq('loja_id', lojaId)
         .select();
 
       if (remarketUpdate && remarketUpdate.length > 0) {
         setContatosMesa(prev => prev.map(c => 
-          c.cliente_cpf === item.cliente_cpf ? { ...c, status: 'converteu', data_conversao: new Date().toISOString() } : c
+          cpfsParaUpdate.includes(c.cliente_cpf) ? { ...c, status: 'converteu', data_conversao: new Date().toISOString() } : c
         ));
       }
 
@@ -814,15 +823,16 @@ export default function MerchantPanel() {
       await supabase.from('checkins').delete().eq('cliente_cpf', cpfTarget).eq('loja_id', lojaId);
       
       // Atualizar status no Remarketing se existir
+      const cpfsParaManual = [cpfTarget, cpfTarget.startsWith('55') ? cpfTarget.substring(2) : '55' + cpfTarget];
       const { data: remUpdate } = await supabase.from('contatos_mesa_remarketing')
         .update({ status: 'converteu', data_conversao: new Date().toISOString() })
-        .eq('cliente_cpf', cpfTarget)
+        .in('cliente_cpf', cpfsParaManual)
         .eq('loja_id', lojaId)
         .select();
 
       if (remUpdate && remUpdate.length > 0) {
         setContatosMesa(prev => prev.map(c => 
-          c.cliente_cpf === cpfTarget ? { ...c, status: 'converteu', data_conversao: new Date().toISOString() } : c
+          cpfsParaManual.includes(c.cliente_cpf) ? { ...c, status: 'converteu', data_conversao: new Date().toISOString() } : c
         ));
       }
 
