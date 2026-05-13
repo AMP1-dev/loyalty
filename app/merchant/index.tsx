@@ -141,7 +141,10 @@ export default function MerchantPanel() {
   const adicionarPremiomesa = async (id: string) => {
     if (!novoPremiomesa.nome || novoPremiomesa.probabilidade <= 0) { mostrarToast('Preencha os dados do prêmio.', 'erro'); return; }
     const { error } = await supabase.from('roleta_mesa_premios').insert([{ ...novoPremiomesa, loja_id: id }]);
-    if (!error) { mostrarToast('Prêmio adicionado!', 'sucesso'); setNovoPremiomesa({ nome: '', tipo: 'desconto', valor: 0, probabilidade: 0 }); buscarPremiosMesa(); }
+    if (error) { console.error('Erro ao add prêmio:', error); mostrarToast(`Erro: ${error.message}`, 'erro'); return; }
+    mostrarToast('Prêmio adicionado!', 'sucesso'); 
+    setNovoPremiomesa({ nome: '', tipo: 'desconto', valor: 0, probabilidade: 0 }); 
+    buscarPremiosMesa();
   };
 
   const deletarPremiomesa = async (id: string, loja: string) => {
