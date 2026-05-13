@@ -19,7 +19,7 @@ import {
   Text, TextInput, TouchableOpacity, useColorScheme,
   View
 } from 'react-native';
-import Svg, { Circle, Defs, G, Path, RadialGradient, Stop, LinearGradient as SvgLinearGradient, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Defs, G, Path, RadialGradient, Stop, LinearGradient as SvgLinearGradient, Text as SvgText, TSpan } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
 import MesaRoleta from './components/MesaRoleta';
 
@@ -173,14 +173,18 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
               {/* Texto Radial (Perpendicular ao centro) */}
               <SvgText
                 x={textPos.x}
-                y={textPos.y + 4}
+                y={textPos.y}
                 fontSize="10"
                 fontWeight="900"
                 textAnchor="middle"
                 fill={isDark ? "#f8fafc" : "#1e293b"}
                 transform={`rotate(${midAngle + 90} ${textPos.x} ${textPos.y})`}
               >
-                {p.nome.length > 12 ? p.nome.substring(0, 10) + '..' : p.nome.toUpperCase()}
+                {p.nome.substring(0, 20).split('\n').map((linha: string, index: number) => (
+                  <TSpan key={index} x={textPos.x} dy={index === 0 ? 0 : 12}>
+                    {linha.toUpperCase()}
+                  </TSpan>
+                ))}
               </SvgText>
             </G>
           );
