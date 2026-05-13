@@ -120,6 +120,41 @@ export default function MerchantPanel() {
   const [caixasAnteriores, setCaixasAnteriores] = useState<any[]>([]);
 
 
+  // ════════════════════════════════════════════════════════════════════
+  // INATIVIDADE E AUTO-LOGOUT (4 HORAS)
+  // ════════════════════════════════════════════════════════════════════
+  useEffect(() => {
+    let checkInactivity: NodeJS.Timeout;
+    let lastActivity = Date.now();
+
+    const resetTimer = () => { lastActivity = Date.now(); };
+
+    if (Platform.OS === 'web') {
+      window.addEventListener('mousemove', resetTimer);
+      window.addEventListener('keydown', resetTimer);
+      window.addEventListener('touchstart', resetTimer);
+      window.addEventListener('click', resetTimer);
+
+      const INACTIVITY_LIMIT = 4 * 60 * 60 * 1000; // 4 horas
+      checkInactivity = setInterval(() => {
+        if (Date.now() - lastActivity > INACTIVITY_LIMIT) {
+          localStorage.clear();
+          router.replace('/login');
+        }
+      }, 60000); // Checa a cada 1 minuto
+    }
+
+    return () => {
+      if (checkInactivity) clearInterval(checkInactivity);
+      if (Platform.OS === 'web') {
+        window.removeEventListener('mousemove', resetTimer);
+        window.removeEventListener('keydown', resetTimer);
+        window.removeEventListener('touchstart', resetTimer);
+        window.removeEventListener('click', resetTimer);
+      }
+    };
+  }, [router]);
+
   // --- FUNÇÕES MESA & REMARKETING ---
   const buscarParticipacoesMesa = async () => {
     if (!lojaId) return;
