@@ -166,7 +166,7 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
               <Path d={d} fill={sliceColor} stroke={isDark ? "#334155" : "#cbd5e1"} strokeWidth="1" />
 
               {/* Ícone na borda */}
-              <SvgText x={iconPos.x} y={iconPos.y + 4} fontSize="15" textAnchor="middle" transform={`rotate(${midAngle} ${iconPos.x} ${iconPos.y})`}>
+              <SvgText x={iconPos.x} y={iconPos.y + 4} fontSize="17" textAnchor="middle" transform={`rotate(${midAngle} ${iconPos.x} ${iconPos.y})`}>
                 {getIconePremio(p.tipo)}
               </SvgText>
 
@@ -206,14 +206,14 @@ function RoletaCTA({ onPress, isDark, c, premiosRoleta }: any) {
 
   const WHEEL_SIZE = 310;
   const prizesDisplay = [
-    { nome: '✨ 10\nSPG', tipo: 'pontos' },
-    { nome: '🪙 R$\n2,00 CB', tipo: 'cashback' },
-    { nome: '☕ CAFÉ\nGRÁTIS', tipo: 'brinde' },
-    { nome: '💵 R$\n5,00 CB', tipo: 'cashback' },
-    { nome: '⭐ 5\nSPG', tipo: 'pontos' },
-    { nome: '🎁 SURPRESA', tipo: 'brinde' },
-    { nome: '🌟 15\nSPG', tipo: 'pontos' },
-    { nome: '🪙 R$\n1,00 CB', tipo: 'cashback' },
+    { nome: '✨\n10 SPG', tipo: 'pontos' },
+    { nome: '🪙\nR$ 2,00 CB', tipo: 'cashback' },
+    { nome: '☕\nCAFÉ GRÁTIS', tipo: 'brinde' },
+    { nome: '💵\nR$ 5,00 CB', tipo: 'cashback' },
+    { nome: '⭐\n5 SPG', tipo: 'pontos' },
+    { nome: '🎁\nSURPRESA', tipo: 'brinde' },
+    { nome: '🌟\n15 SPG', tipo: 'pontos' },
+    { nome: '🪙\nR$ 1,00 CB', tipo: 'cashback' },
   ];
 
   useEffect(() => {

@@ -1523,10 +1523,15 @@ export default function MerchantPanel() {
         </View>
       )}
 
+      <Modal visible={toast.visible} transparent animationType="none">
+        <View style={{ flex: 1 }} pointerEvents="none">
+          <Animated.View style={[styles.toastContainer, { transform: [{ translateY: toastAnim as any }], backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444' }]}>
+            <Text style={{ fontSize: 24, marginRight: 12 }}>{toast.tipo === 'sucesso' ? '✅' : '⚠️'}</Text><Text style={styles.toastText}>{toast.message}</Text>
+          </Animated.View>
+        </View>
+      </Modal>
+
       <ScrollView ref={mainScrollRef} style={styles.container}>
-        <Animated.View style={[styles.toastContainer, { transform: [{ translateY: toastAnim as any }], backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444' }]}>
-          <Text style={{ fontSize: 24, marginRight: 12 }}>{toast.tipo === 'sucesso' ? '✅' : '⚠️'}</Text><Text style={styles.toastText}>{toast.message}</Text>
-        </Animated.View>
 
         <View style={styles.wrapper}>
           <View style={[styles.header, { alignItems: 'center' }]}>
