@@ -275,7 +275,7 @@ function RoletaCTA({ onPress, isDark, c, premiosRoleta }: any) {
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function Cliente() {
   const params = useLocalSearchParams();
-  const loja_id_param = params?.loja_id;
+  const loja_id = Array.isArray(params?.loja_id) ? params?.loja_id[0] : params?.loja_id;
   const mesa_param = params?.mesa === 'true';
 
   const [modoMesaAtivo, setModoMesaAtivo] = useState(mesa_param);
@@ -821,12 +821,14 @@ export default function Cliente() {
 
   const girarRoleta = () => {
     if (rodando) return; setRodando(true);
-    const total = premiosRoleta.reduce((a, p) => a + p.probabilidade, 0);
+    const premiosAtuais = premiosRoleta.length > 0 ? premiosRoleta : [{ nome: 'Tente Novamente', tipo: 'nada', probabilidade: 100 }];
+    const total = premiosAtuais.reduce((a, p) => a + (p.probabilidade || 1), 0);
     let rand = Math.random() * total;
-    let win = premiosRoleta[0];
-    for (const p of premiosRoleta) { if (rand < p.probabilidade) { win = p; break; } rand -= p.probabilidade; }
-    const sliceAngle = 360 / premiosRoleta.length;
-    const target = 3600 + (360 - (premiosRoleta.indexOf(win) * sliceAngle + (sliceAngle / 2)));
+    let win = premiosAtuais[0];
+    for (const p of premiosAtuais) { if (rand < (p.probabilidade || 1)) { win = p; break; } rand -= (p.probabilidade || 1); }
+    if (!win) win = premiosAtuais[0];
+    const sliceAngle = 360 / premiosAtuais.length;
+    const target = 3600 + (360 - (premiosAtuais.indexOf(win) * sliceAngle + (sliceAngle / 2)));
     setRoletaTargetDeg(target);
     Animated.timing(rotateAnim, {
       toValue: target,
@@ -836,9 +838,9 @@ export default function Cliente() {
     }).start(async () => {
       setPremioGanho(win); setRodando(false); setEtapaRoleta('resultado');
       const clean = cpf.replace(/\D/g, '');
-      if (win.tipo === 'pontos') await supabase.from('bonus_pendentes').insert([{ cliente_cpf: clean, loja_id: String(loja_id), pontos: win.valor }]);
-      else if (win.tipo === 'cashback') await supabase.from('cashbacks').insert([{ cliente_cpf: clean, loja_id: String(loja_id), valor: win.valor }]);
-      else if (win.tipo === 'brinde') await supabase.from('brindes_pendentes').insert([{ cliente_cpf: clean, loja_id: String(loja_id), nome_brinde: win.nome }]);
+      if (win?.tipo === 'pontos') await supabase.from('bonus_pendentes').insert([{ cliente_cpf: clean, loja_id: String(loja_id), pontos: win.valor }]);
+      else if (win?.tipo === 'cashback') await supabase.from('cashbacks').insert([{ cliente_cpf: clean, loja_id: String(loja_id), valor: win.valor }]);
+      else if (win?.tipo === 'brinde') await supabase.from('brindes_pendentes').insert([{ cliente_cpf: clean, loja_id: String(loja_id), nome_brinde: win.nome }]);
       carregarDados(clean);
     });
   };
