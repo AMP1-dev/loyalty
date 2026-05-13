@@ -390,7 +390,19 @@ export default function Cliente() {
 
   useEffect(() => {
     const initApp = async () => {
-      const APP_VERSION = "v5.8.3-exchange";
+      // 1. LIMPEZA DE CACHE MANUAL (Via URL ?clear=true)
+      if (params?.clear === 'true') {
+        if (Platform.OS === 'web') {
+          localStorage.clear();
+        } else {
+          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          await AsyncStorage.clear();
+        }
+        router.replace('/cliente');
+        return;
+      }
+
+      const APP_VERSION = "v5.8.4-exchange";
       const savedVersion = await carregarStorage('@app_version');
       if (savedVersion !== APP_VERSION) {
         if (typeof window !== 'undefined') localStorage.clear();
