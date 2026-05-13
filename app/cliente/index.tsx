@@ -275,12 +275,15 @@ function RoletaCTA({ onPress, isDark, c, premiosRoleta }: any) {
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function Cliente() {
   const params = useLocalSearchParams();
-  const loja_id = params?.loja_id;
+  const loja_id_param = params?.loja_id;
+  const mesa_param = params?.mesa === 'true';
 
-  // 🔴 CORRIGIDO: Só mostra MesaRoleta quando EXPLICITAMENTE é mesa
-  if (params?.mesa === 'true' || (typeof window !== 'undefined' && window.location.pathname.includes('/mesa'))) {
-    return <MesaRoleta />;
-  }
+  const [modoMesaAtivo, setModoMesaAtivo] = useState(mesa_param);
+  
+  // 🔴 SINCRONIZA PARAMETRO MESA
+  useEffect(() => {
+    if (mesa_param) setModoMesaAtivo(true);
+  }, [mesa_param]);
 
   const [cpf, setCpf] = useState('');
   const [status, setStatus] = useState<'idle' | 'aguardando' | 'atendido' | 'finalizado'>('idle');
@@ -1333,6 +1336,20 @@ export default function Cliente() {
               </View>
             )}
           </View>
+        </View>
+      </Modal>
+
+
+      {/* 🎡 MESA ROLETA MODAL (QUANDO SCANNEIA QR MESA) */}
+      <Modal visible={modoMesaAtivo} animationType="slide">
+        <View style={{ flex: 1, backgroundColor: c.bg }}>
+           <MesaRoleta />
+           <TouchableOpacity 
+             onPress={() => setModoMesaAtivo(false)} 
+             style={{ position: 'absolute', top: 50, right: 20, zIndex: 1000000, backgroundColor: 'rgba(0,0,0,0.5)', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' }}
+           >
+             <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold' }}>✕</Text>
+           </TouchableOpacity>
         </View>
       </Modal>
 
