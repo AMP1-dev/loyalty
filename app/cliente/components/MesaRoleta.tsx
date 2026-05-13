@@ -214,13 +214,7 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
       const { data: premios } = await supabase.from('roleta_mesa_premios').select('*').eq('loja_id', lid_final).eq('ativo', true);
 
       if (premios && premios.length > 0) {
-        let listaBonita = [...premios];
-        if (listaBonita.length > 0 && listaBonita.length < 6) {
-          while (listaBonita.length < 6) {
-            listaBonita = [...listaBonita, ...premios];
-          }
-        }
-        setPremiosRoletaMesa(listaBonita);
+        setPremiosRoletaMesa(premios);
       } else {
         setPremiosRoletaMesa([
           { id: 'd1', nome: 'GANHOU 10\nSPRINGS', tipo: 'pontos', probabilidade: 50 },
