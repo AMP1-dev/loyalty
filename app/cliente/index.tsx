@@ -7,7 +7,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import bcrypt from 'bcryptjs';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -195,7 +195,7 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
 }
 
 // ─── Componente CTA da Roleta ─────────────────────────────────────────────────
-function RoletaCTA({ onPress, isDark, c }: any) {
+function RoletaCTA({ onPress, isDark, c, premiosRoleta }: any) {
   const idleAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
@@ -1095,7 +1095,12 @@ export default function Cliente() {
           {/* ROLETA (AGORA ABAIXO DOS BRINDES DA LOJA) */}
           {loja_id && (
             <View style={{ marginVertical: 40 }}>
-              <RoletaCTA onPress={abrirRoleta} isDark={isDark} c={c} />
+              <RoletaCTA 
+          onPress={abrirRoleta} 
+          isDark={isDark} 
+          c={c} 
+          premiosRoleta={premiosRoleta} 
+        />
             </View>
           )}
 
