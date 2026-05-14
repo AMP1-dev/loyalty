@@ -12,10 +12,12 @@ export const calcularSaldoCliente = async (
   cpf: string,
   lojaId: string
 ): Promise<number> => {
+  const cpfsParaBusca = [cpf, cpf.startsWith('55') ? cpf.substring(2) : '55' + cpf];
+  
   const { data: transacoes, error } = await supabase
     .from('transacoes')
     .select('pontos_gerados, pontos_usados')
-    .eq('cliente_cpf', cpf)
+    .in('cliente_cpf', cpfsParaBusca)
     .eq('loja_id', lojaId);
 
   if (error) {
