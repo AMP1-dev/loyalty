@@ -541,7 +541,8 @@ export default function Cliente() {
     });
     setSaldoPorLoja(saldos);
 
-    const { data: tk } = await supabase.from('intercambio_tokens').select('*').eq('cliente_cpf', cpfBusca).eq('status', 'pendente').maybeSingle();
+    const { data: tkList } = await supabase.from('intercambio_tokens').select('*').eq('cliente_cpf', cpfBusca).eq('status', 'pendente').order('criado_em', { ascending: false }).limit(1);
+    const tk = tkList && tkList.length > 0 ? tkList[0] : null;
     setTokenAtivo(tk);
 
     const { data: rec } = await supabase.from('recompensas').select('*').eq('ativo', true).order('custo_pontos');

@@ -384,10 +384,11 @@ export default function MerchantPanel() {
     if (ckData && ckData.length > 0) {
       const cpfs = ckData.map(c => c.cliente_cpf);
       const { data: tkData } = await supabase.from('intercambio_tokens')
-        .select('cliente_cpf, token, total_pontos_a_transferir')
+        .select('cliente_cpf, token, total_pontos_a_transferir, criado_em')
         .in('cliente_cpf', cpfs)
         .eq('status', 'pendente')
-        .gt('expira_em', new Date().toISOString());
+        .gt('expira_em', new Date().toISOString())
+        .order('criado_em', { ascending: false });
       
       const filaComTokens = ckData.map(c => {
         const tokenInfo = tkData?.find(t => t.cliente_cpf === c.cliente_cpf);
