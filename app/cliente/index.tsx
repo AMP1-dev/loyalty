@@ -607,6 +607,12 @@ export default function Cliente() {
     if (tentativas >= 10) { mostrarToast('Erro ao gerar token. Tente novamente.', 'erro'); return; }
 
     try {
+      // CANCELA TOKENS ANTIGOS PENDENTES DO CLIENTE (para garantir apenas 1 válido por vez)
+      await supabase.from('intercambio_tokens')
+        .update({ status: 'cancelado' })
+        .eq('cliente_cpf', clean)
+        .eq('status', 'pendente');
+
       const { data: tk, error: tokenError } = await supabase.from('intercambio_tokens').insert([{
         token, cliente_cpf: clean, total_pontos_original: totalSelecionado, total_pontos_a_transferir: totalSelecionado, status: 'pendente',
         criado_em: new Date().toISOString(), expira_em: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
