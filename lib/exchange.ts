@@ -14,21 +14,19 @@ export const calcularSaldoCliente = async (
 ): Promise<number> => {
   const cpfsParaBusca = [cpf, cpf.startsWith('55') ? cpf.substring(2) : '55' + cpf];
   
-  const { data: transacoes, error } = await supabase
-    .from('transacoes')
-    .select('pontos_gerados, pontos_usados')
-    .in('cliente_cpf', cpfsParaBusca)
-    .eq('loja_id', lojaId);
+  const [{ data: trans }, { data: bonus }, { data: resgates }] = await Promise.all([
+    supabase.from('transacoes').select('pontos_gerados, pontos_usados').in('cliente_cpf', cpfsParaBusca).eq('loja_id', lojaId),
+    supabase.from('bonus_historico').select('pontos').in('cliente_cpf', cpfsParaBusca).eq('loja_id', lojaId),
+    supabase.from('resgates').select('pontos_usados').in('cliente_cpf', cpfsParaBusca).eq('loja_id', lojaId)
+  ]);
 
-  if (error) {
-    console.error('Erro ao calcular saldo:', error);
-    return 0;
-  }
+  const pTrans = (trans || []).reduce((a, t) => a + (t.pontos_gerados || 0), 0);
+  const pBonus = (bonus || []).reduce((a, b) => a + (b.pontos || 0), 0);
+  const pUsadosTrans = (trans || []).reduce((a, t) => a + (t.pontos_usados || 0), 0);
+  const pUsadosRes = (resgates || []).reduce((a, r) => a + (r.pontos_usados || 0), 0);
 
-  const gerados = transacoes?.reduce((sum, t) => sum + (t.pontos_gerados || 0), 0) || 0;
-  const usados = transacoes?.reduce((sum, t) => sum + (t.pontos_usados || 0), 0) || 0;
-
-  return Math.max(0, gerados - usados);
+  const saldoFinal = (pTrans + pBonus) - (pUsadosTrans + pUsadosRes);
+  return Math.max(0, saldoFinal);
 };
 
 /**
