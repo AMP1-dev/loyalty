@@ -161,6 +161,7 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
 
   const [toast, setToast] = useState({ visivel: false, mensagem: '', tipo: 'erro' as 'sucesso' | 'erro' });
   const toastAnim = useRef(new Animated.Value(-100)).current;
+  const [roletaTargetDeg, setRoletaTargetDeg] = useState(0);
 
   const mostrarToast = (mensagem: string, tipo: 'sucesso' | 'erro' = 'erro') => {
     setToast({ visivel: true, mensagem, tipo });
@@ -324,7 +325,8 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
       const sliceDeg = 360 / premiosRoletaMesa.length;
       const midSliceDeg = targetIndex * sliceDeg + sliceDeg / 2;
       const finalOffset = (360 - (midSliceDeg % 360)) % 360;
-      const targetDeg = 8 * 360 + finalOffset;
+      const targetDeg = roletaTargetDeg + (8 * 360) + finalOffset - (roletaTargetDeg % 360);
+      setRoletaTargetDeg(targetDeg);
 
       Animated.timing(rotateAnim, {
         toValue: targetDeg,

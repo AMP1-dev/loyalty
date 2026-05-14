@@ -206,14 +206,14 @@ function RoletaCTA({ onPress, isDark, c, premiosRoleta }: any) {
 
   const WHEEL_SIZE = 310;
   const prizesDisplay = [
-    { nome: '✨\n10 SPG', tipo: 'pontos' },
-    { nome: '🪙\nR$ 2,00 CB', tipo: 'cashback' },
-    { nome: '☕\nCAFÉ GRÁTIS', tipo: 'brinde' },
-    { nome: '💵\nR$ 5,00 CB', tipo: 'cashback' },
-    { nome: '⭐\n5 SPG', tipo: 'pontos' },
-    { nome: '🎁\nSURPRESA', tipo: 'brinde' },
-    { nome: '🌟\n15 SPG', tipo: 'pontos' },
-    { nome: '🪙\nR$ 1,00 CB', tipo: 'cashback' },
+    { nome: '✨\n100 spg', tipo: 'pontos' },
+    { nome: '🪙\nR$ 200,00 CB', tipo: 'cashback' },
+    { nome: '☕\nCafé Grátis', tipo: 'brinde' },
+    { nome: '💵\nR$ 500,00 CB', tipo: 'cashback' },
+    { nome: '⭐\n500 spg', tipo: 'pontos' },
+    { nome: '🎁\nSurpresa', tipo: 'brinde' },
+    { nome: '🌟\n150 spg', tipo: 'pontos' },
+    { nome: '🪙\nR$ 100,00 CB', tipo: 'cashback' },
   ];
 
   useEffect(() => {
@@ -832,7 +832,8 @@ export default function Cliente() {
     for (const p of premiosAtuais) { if (rand < (p.probabilidade || 1)) { win = p; break; } rand -= (p.probabilidade || 1); }
     if (!win) win = premiosAtuais[0];
     const sliceAngle = 360 / premiosAtuais.length;
-    const target = 3600 + (360 - (premiosAtuais.indexOf(win) * sliceAngle + (sliceAngle / 2)));
+    const offset = 360 - (premiosAtuais.indexOf(win) * sliceAngle + (sliceAngle / 2));
+    const target = roletaTargetDeg + 3600 + offset - (roletaTargetDeg % 360);
     setRoletaTargetDeg(target);
     Animated.timing(rotateAnim, {
       toValue: target,
