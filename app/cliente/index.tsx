@@ -551,7 +551,6 @@ export default function Cliente() {
 
     if (lid && tk && tk.status === 'pendente') {
       setMostraIntercambio(true);
-      mostrarToast('🔄 Você tem pontos em outras lojas! Clique em REDE para importar.', 'sucesso');
     }
   };
 
