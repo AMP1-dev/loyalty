@@ -997,7 +997,7 @@ export default function MerchantPanel() {
       }]).select().single();
       if (caixaError) throw caixaError;
       for (const item of tokenData.intercambio_itens) { 
-        const { error: tErr } = await supabase.from('transacoes').insert([{ cliente_cpf: tokenData.cliente_cpf, loja_id: item.loja_origem_id, pontos_usados: item.pontos_selecionados, pontos_gerados: 0, descricao: `[RESERVA EXCHANGE] Token: ${tokenParaValidar}` }]); 
+        const { error: tErr } = await supabase.from('resgates').insert([{ cliente_cpf: tokenData.cliente_cpf, loja_id: item.loja_origem_id, pontos_usados: item.pontos_selecionados }]); 
         if (tErr) throw tErr;
       }
       
@@ -1016,7 +1016,7 @@ export default function MerchantPanel() {
       const activeCaixa = await buscarCaixaAtivaCliente(clean);
       let usouCaixa = false;
       if (activeCaixa && activeCaixa.pontos_disponiveis >= brinde.custo_pontos) {
-        await supabase.from('resgates').insert([{ cliente_cpf: clean, loja_id: lojaId, recompensa_id: brinde.id, pontos_usados: brinde.custo_pontos, valor_cashback: 0, descricao: `Resgate via EXCHANGE` }]);
+        await supabase.from('resgates').insert([{ cliente_cpf: clean, loja_id: lojaId, recompensa_id: brinde.id, pontos_usados: brinde.custo_pontos }]);
         const novoSaldo = activeCaixa.pontos_disponiveis - brinde.custo_pontos;
         await supabase.from('intercambio_caixa').update({ pontos_disponiveis: novoSaldo, status: novoSaldo > 0 ? 'parcialmente_usado' : 'vazio', updated_at: new Date().toISOString() }).eq('id', activeCaixa.id);
         const { data: itens } = await supabase.from('intercambio_itens').select('*').eq('token_id', activeCaixa.token_id);
