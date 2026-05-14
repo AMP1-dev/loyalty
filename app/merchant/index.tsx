@@ -996,10 +996,18 @@ export default function MerchantPanel() {
         expira_em: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), merchant_validou_em: new Date().toISOString(), merchant_validou_usuario: operadorLogado
       }]).select().single();
       if (caixaError) throw caixaError;
-      for (const item of tokenData.intercambio_itens) { await supabase.from('transacoes').insert([{ cliente_cpf: tokenData.cliente_cpf, loja_id: item.loja_origem_id, pontos_usados: item.pontos_selecionados, pontos_gerados: 0, descricao: `[RESERVA EXCHANGE] Token: ${tokenParaValidar}` }]); }
+      for (const item of tokenData.intercambio_itens) { 
+        const { error: tErr } = await supabase.from('transacoes').insert([{ cliente_cpf: tokenData.cliente_cpf, loja_id: item.loja_origem_id, pontos_usados: item.pontos_selecionados, pontos_gerados: 0, descricao: `[RESERVA EXCHANGE] Token: ${tokenParaValidar}` }]); 
+        if (tErr) throw tErr;
+      }
+      
+      // Atualizar status do token
+      const { error: tkErr } = await supabase.from('intercambio_tokens').update({ status: 'concluido' }).eq('id', tokenData.id);
+      if (tkErr) throw tkErr;
+      
       setCaixaAtiva(caixa); mostrarToast(`✅ Token validado!\n${pontos_liquido} SPG na caixa\nTaxa: ${taxa_pontos} SPG`, 'sucesso');
       setTokenParaValidar(''); setMostrarValidarToken(false);
-    } catch (error) { console.error('Erro ao validar token:', error); mostrarToast('Erro ao validar token.', 'erro'); } finally { setCarregandoValidacao(false); }
+    } catch (error: any) { console.error('Erro ao validar token:', error); mostrarToast(`Erro ao validar token: ${error.message || JSON.stringify(error)}`, 'erro'); } finally { setCarregandoValidacao(false); }
   };
 
   const resgatarBrinde = async (brinde: any, clienteCpf: string) => {
