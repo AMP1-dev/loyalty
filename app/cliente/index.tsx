@@ -170,21 +170,28 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
                 {getIconePremio(p.tipo)}
               </SvgText>
 
-              {/* Texto Radial (Perpendicular ao centro) */}
               <SvgText
                 x={textPos.x}
                 y={textPos.y}
-                fontSize="12"
+                fontSize="11"
                 fontWeight="900"
                 textAnchor="middle"
                 fill={isDark ? "#f8fafc" : "#1e293b"}
                 transform={`rotate(${midAngle + 90} ${textPos.x} ${textPos.y})`}
               >
-                {p.nome.substring(0, 20).split('\n').map((linha: string, index: number) => (
-                  <TSpan key={index} x={textPos.x} dy={index === 0 ? 0 : 12}>
-                    {linha.toUpperCase()}
-                  </TSpan>
-                ))}
+                {(() => {
+                  let linhas = p.nome.split('\n');
+                  if (linhas.length === 1 && p.nome.length > 9 && p.nome.includes(' ')) {
+                    const palavras = p.nome.split(' ');
+                    const meio = Math.ceil(palavras.length / 2);
+                    linhas = [palavras.slice(0, meio).join(' '), palavras.slice(meio).join(' ')];
+                  }
+                  return linhas.map((linha: string, index: number) => (
+                    <TSpan key={index} x={textPos.x} dy={index === 0 ? 0 : 13}>
+                      {linha.substring(0, 15).toUpperCase()}
+                    </TSpan>
+                  ));
+                })()}
               </SvgText>
             </G>
           );

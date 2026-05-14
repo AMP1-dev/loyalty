@@ -966,8 +966,7 @@ export default function MerchantPanel() {
       bairro: config.bairro, cidade: config.cidade, estado: config.estado, cep: config.cep,
       roleta_ativa: config.roleta_ativa, 
       roleta_intervalo_dias: config.roleta_intervalo_dias !== "" ? Number(config.roleta_intervalo_dias) : 1,
-      link_google_meu_negocio: config.link_google_meu_negocio || null,
-      intercambio_taxa: Number(config.intercambio_taxa) || 0.1
+      link_google_meu_negocio: config.link_google_meu_negocio || null
     }, { onConflict: 'loja_id' });
 
     if (config.senha && config.senha.trim() !== '') await supabase.from('lojas').update({ senha: config.senha }).eq('id', lojaId);
