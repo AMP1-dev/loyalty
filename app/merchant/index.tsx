@@ -1851,10 +1851,10 @@ export default function MerchantPanel() {
               <Text style={{ fontSize: 18, fontWeight: '900', color: '#10b981', marginBottom: 20, textAlign: 'center' }}>🔑 VALIDAR TOKEN</Text>
               <Text style={{ color: '#94a3b8', fontSize: 12, marginBottom: 16, textAlign: 'center' }}>Digite os 6 dígitos que o cliente passou:</Text>
               <TextInput 
-                placeholder="000000" 
+                placeholder="A1B2C3" 
                 placeholderTextColor="#94a3b8" 
-                value={tokenParaValidar.toUpperCase()} 
-                onChangeText={(t) => setTokenParaValidar(t.replace(/[^A-Z0-9]/g, '').slice(0, 6))} 
+                value={tokenParaValidar} 
+                onChangeText={(t) => setTokenParaValidar(t.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))} 
                 maxLength={6} 
                 keyboardType="default"
                 autoCapitalize="characters"
