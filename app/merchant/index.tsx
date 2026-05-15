@@ -201,18 +201,18 @@ export default function MerchantPanel() {
 
   const buscarPerguntasNpsMesa = async () => {
     if (!lojaId) return;
-    const { data, error } = await supabase.from('perguntas_nps').select('*').eq('loja_id', lojaId).order('ordem', { ascending: true });
+    const { data, error } = await supabase.from('perguntas_nps').select('*').eq('loja_id', lojaId).order('created_at', { ascending: true });
     if (!error && data) setPerguntasNpsMesa(data);
   };
 
   const adicionarPerguntaNps = async (id: string) => {
     if (!novaPergunta) return;
-    const { error } = await supabase.from('perguntas_nps').insert([{ loja_id: id, pergunta: novaPergunta, tipo: novaPeruntaTipo, ordem: perguntasNpsMesa.length + 1, ativa: true }]);
+    const { error } = await supabase.from('perguntas_nps').insert([{ loja_id: id, pergunta: novaPergunta, tipo: novaPeruntaTipo, ativo: true }]);
     if (!error) { mostrarToast('Pergunta adicionada!', 'sucesso'); setNovaPergunta(''); buscarPerguntasNpsMesa(); }
   };
 
   const togglePerguntaNps = async (id: string, status: boolean, loja: string) => {
-    await supabase.from('perguntas_nps').update({ ativa: !status }).eq('id', id);
+    await supabase.from('perguntas_nps').update({ ativo: !status }).eq('id', id);
     buscarPerguntasNpsMesa();
   };
 
@@ -227,7 +227,7 @@ export default function MerchantPanel() {
   };
 
   const reordenarPerguntas = async (id: string, novaOrdem: number, loja: string) => {
-    await supabase.from('perguntas_nps').update({ ordem: novaOrdem }).eq('id', id);
+    // Ordem column doesn't exist, ignoring reorder for now
     buscarPerguntasNpsMesa();
   };
 

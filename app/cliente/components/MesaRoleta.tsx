@@ -161,6 +161,7 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
   const [telefone, setTelefone] = useState('');
   const [notaNps, setNotaNps] = useState(0);
   const [perguntaCustom, setPerguntaCustom] = useState('Como foi sua experiência?');
+  const [perguntaIdCustom, setPerguntaIdCustom] = useState<string | null>(null);
   const [premiosRoletaMesa, setPremiosRoletaMesa] = useState<any[]>([]);
   const [premioGanho, setPremioGanho] = useState<any>(null);
   const [rodando, setRodando] = useState(false);
@@ -241,10 +242,11 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
         ]);
       }
 
-      const { data: perguntas } = await supabase.from('perguntas_nps').select('*').eq('loja_id', lid_final).eq('ativa', true).order('ordem', { ascending: true });
+      const { data: perguntas } = await supabase.from('perguntas_nps').select('*').eq('loja_id', lid_final).eq('ativo', true).order('created_at', { ascending: true });
       if (perguntas && perguntas.length > 0) {
         const perguntaSorteada = perguntas[Math.floor(Math.random() * perguntas.length)];
         setPerguntaCustom(perguntaSorteada.pergunta);
+        setPerguntaIdCustom(perguntaSorteada.id);
       }
       setCarregando(false);
     } catch (error) {
@@ -406,6 +408,9 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
         if (premio.tipo === 'brinde') tags.push('brinde');
         await supabase.from('contatos_mesa_remarketing').insert({ loja_id: lid_final, cliente_cpf: telefone, premio_ganho: premio.nome, nota_nps: notaNps, status: 'nao_contatado', data_participacao: new Date().toISOString(), tags: tags, marketing_consentido: true });
       }
+
+      // Salvar na tabela de NPS para o Dashboard
+      await supabase.from('respostas_nps').insert({ loja_id: lid_final, cliente_cpf: telefone, resposta: String(notaNps), pergunta_id: perguntaIdCustom });
     } catch (error) {
       console.error(error);
     }
