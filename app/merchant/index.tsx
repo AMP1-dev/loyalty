@@ -12,7 +12,7 @@ import {
   buscarCaixaAtivaCliente
 } from '@/lib/exchange';
 
-const APP_VERSION = "v5.8.5-exchange";
+const APP_VERSION = "v5.8.6-exchange";
 const { width } = Dimensions.get('window');
 const itemWidth = width > 600 ? (600 - 60) / 3 : (width - 60) / 2;
 
@@ -208,7 +208,8 @@ export default function MerchantPanel() {
   const adicionarPerguntaNps = async (id: string) => {
     if (!novaPergunta) return;
     const { error } = await supabase.from('perguntas_nps').insert([{ loja_id: id, pergunta: novaPergunta, tipo: novaPeruntaTipo, ativo: true }]);
-    if (!error) { mostrarToast('Pergunta adicionada!', 'sucesso'); setNovaPergunta(''); buscarPerguntasNpsMesa(); }
+    if (error) { mostrarToast(`Erro ao adicionar: ${error.message}`, 'erro'); console.error(error); }
+    else { mostrarToast('Pergunta adicionada!', 'sucesso'); setNovaPergunta(''); buscarPerguntasNpsMesa(); }
   };
 
   const togglePerguntaNps = async (id: string, status: boolean, loja: string) => {
@@ -1230,10 +1231,10 @@ export default function MerchantPanel() {
 
                           <Text style={{ fontSize: 12, fontWeight: '700', color: '#F8FAFC', marginBottom: 10 }}>📋 Perguntas Criadas ({perguntasNpsMesa.length})</Text>
                           {perguntasNpsMesa.map((pergunta, idx) => (
-                            <View key={pergunta.id} style={{ backgroundColor: pergunta.ativa ? '#1e293b' : '#0f172a', borderRadius: 10, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: pergunta.ativa ? '#334155' : '#1e293b', opacity: pergunta.ativa ? 1 : 0.6 }}>
+                            <View key={pergunta.id} style={{ backgroundColor: pergunta.ativo ? '#1e293b' : '#0f172a', borderRadius: 10, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: pergunta.ativo ? '#334155' : '#1e293b', opacity: pergunta.ativo ? 1 : 0.6 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                                <Text style={{ fontSize: 12, fontWeight: '700', color: pergunta.ativa ? '#F8FAFC' : '#94A3B8', flex: 1 }}>#{idx + 1} {pergunta.pergunta}</Text>
-                                <TouchableOpacity onPress={() => togglePerguntaNps(pergunta.id, pergunta.ativa, lojaId || '')} style={{ width: 40, height: 24, borderRadius: 12, backgroundColor: pergunta.ativa ? '#10b981' : '#cbd5e1', justifyContent: 'center', alignItems: pergunta.ativa ? 'flex-end' : 'flex-start', paddingHorizontal: 2 }}>
+                                <Text style={{ fontSize: 12, fontWeight: '700', color: pergunta.ativo ? '#F8FAFC' : '#94A3B8', flex: 1 }}>#{idx + 1} {pergunta.pergunta}</Text>
+                                <TouchableOpacity onPress={() => togglePerguntaNps(pergunta.id, pergunta.ativo, lojaId || '')} style={{ width: 40, height: 24, borderRadius: 12, backgroundColor: pergunta.ativo ? '#10b981' : '#cbd5e1', justifyContent: 'center', alignItems: pergunta.ativo ? 'flex-end' : 'flex-start', paddingHorizontal: 2 }}>
                                   <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff' }} />
                                 </TouchableOpacity>
                               </View>

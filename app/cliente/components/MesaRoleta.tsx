@@ -11,7 +11,7 @@ import Svg, { Circle, Defs, G, Path, RadialGradient, Stop, Text as SvgText, TSpa
 import { supabase } from '../../../lib/supabase';
 import OfertaGoogle from './OfertaGoogle';
 
-const APP_VERSION = "v5.8.5-exchange";
+const APP_VERSION = "v5.8.6-exchange";
 
 // ─── DDDs válidos brasileiros ──────────────────────────────────────────────────
 const DDD_VALIDOS = [
@@ -72,8 +72,8 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
 
           const start = polarToCartesian(CENTER, CENTER, RADIUS, endAngle);
           const end = polarToCartesian(CENTER, CENTER, RADIUS, startAngle);
-          const textPos = polarToCartesian(CENTER, CENTER, RADIUS * 0.65, midAngle);
-          const iconPos = polarToCartesian(CENTER, CENTER, RADIUS * 0.82, midAngle);
+          const textPos = polarToCartesian(CENTER, CENTER, RADIUS * 0.55, midAngle);
+          const iconPos = polarToCartesian(CENTER, CENTER, RADIUS * 0.88, midAngle);
 
           const colors = isDark 
             ? ['#1e293b', '#334155', '#1e293b', '#475569']
@@ -87,13 +87,14 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
           return (
             <G key={i}>
               <Path d={d} fill={sliceColor} stroke={isDark ? "#334155" : "#cbd5e1"} strokeWidth="1" />
-              <SvgText x={iconPos.x} y={iconPos.y + 4} fontSize="14" textAnchor="middle" transform={`rotate(${midAngle} ${iconPos.x} ${iconPos.y})`}>
+              <SvgText x={iconPos.x} y={iconPos.y + 4} fontSize="16" textAnchor="middle" transform={`rotate(${midAngle} ${iconPos.x} ${iconPos.y})`}>
                 {iconType}
               </SvgText>
               <SvgText 
                 x={textPos.x} 
                 y={textPos.y} 
-                fontSize={p.nome.length > 10 ? "11" : "13"} 
+                fontSize={p.nome.length > 10 ? "10" : "12"} 
+                fontFamily="sans-serif"
                 fontWeight="900" 
                 textAnchor="middle" 
                 fill={isDark ? "#f8fafc" : "#1e293b"}
@@ -107,7 +108,7 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
                     linhas = [palavras.slice(0, meio).join(' '), palavras.slice(meio).join(' ')];
                   }
                   return linhas.map((linha: string, index: number) => (
-                    <TSpan key={index} x={textPos.x} dy={index === 0 ? 0 : 13}>
+                    <TSpan key={index} x={textPos.x} dy={index === 0 ? 0 : 12}>
                       {linha.substring(0, 15).toUpperCase()}
                     </TSpan>
                   ));
