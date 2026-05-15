@@ -38,11 +38,17 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
     return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
   };
 
-  const getIconePremio = (tipo: string) => {
-    if (tipo === 'cashback') return '✨';
-    if (tipo === 'pontos') return '✨';
-    if (tipo === 'nada') return '✨';
-    if (tipo === 'bonus') return '✨';
+  const getIconePremio = (p: any) => {
+    const nome = (p.nome || '').toLowerCase();
+    if (nome.includes('chocolate') || nome.includes('bombom')) return '🍫';
+    if (nome.includes('refrigerante') || nome.includes('refri') || nome.includes('coca')) return '🥤';
+    if (nome.includes('chá') || nome.includes('cha') || nome.includes('café') || nome.includes('cafe')) return '☕';
+    if (nome.includes('desconto') || nome.includes('%')) return '🏷️';
+    if (nome.includes('brinde') || nome.includes('presente')) return '🎁';
+    if (p.tipo === 'cashback') return '💰';
+    if (p.tipo === 'pontos') return '✨';
+    if (p.tipo === 'nada') return '😢';
+    if (p.tipo === 'bonus') return '🎉';
     return '✨';
   };
 
@@ -76,26 +82,36 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
 
           const d = `M ${CENTER} ${CENTER} L ${start.x} ${start.y} A ${RADIUS} ${RADIUS} 0 0 0 ${end.x} ${end.y} Z`;
 
+          const iconType = getIconePremio(p);
+          
           return (
             <G key={i}>
               <Path d={d} fill={sliceColor} stroke={isDark ? "#334155" : "#cbd5e1"} strokeWidth="1" />
-              <SvgText x={iconPos.x} y={iconPos.y + 4} fontSize="12" textAnchor="middle" transform={`rotate(${midAngle} ${iconPos.x} ${iconPos.y})`}>
-                {getIconePremio(p.tipo)}
+              <SvgText x={iconPos.x} y={iconPos.y + 4} fontSize="14" textAnchor="middle" transform={`rotate(${midAngle} ${iconPos.x} ${iconPos.y})`}>
+                {iconType}
               </SvgText>
               <SvgText 
                 x={textPos.x} 
                 y={textPos.y} 
-                fontSize="10" 
+                fontSize={p.nome.length > 10 ? "11" : "13"} 
                 fontWeight="900" 
                 textAnchor="middle" 
                 fill={isDark ? "#f8fafc" : "#1e293b"}
                 transform={`rotate(${midAngle + 90} ${textPos.x} ${textPos.y})`}
               >
-                {p.nome.substring(0, 20).split('\n').map((linha: string, index: number) => (
-                  <TSpan key={index} x={textPos.x} dy={index === 0 ? 0 : 12}>
-                    {linha.toUpperCase()}
-                  </TSpan>
-                ))}
+                {(() => {
+                  let linhas = p.nome.split('\n');
+                  if (linhas.length === 1 && p.nome.length > 9 && p.nome.includes(' ')) {
+                    const palavras = p.nome.split(' ');
+                    const meio = Math.ceil(palavras.length / 2);
+                    linhas = [palavras.slice(0, meio).join(' '), palavras.slice(meio).join(' ')];
+                  }
+                  return linhas.map((linha: string, index: number) => (
+                    <TSpan key={index} x={textPos.x} dy={index === 0 ? 0 : 13}>
+                      {linha.substring(0, 15).toUpperCase()}
+                    </TSpan>
+                  ));
+                })()}
               </SvgText>
             </G>
           );
@@ -409,7 +425,7 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: c.bg }}>
+    <LinearGradient colors={isDark ? ['#020617', '#1e293b'] : ['#f8fafc', '#e2e8f0']} style={{ flex: 1 }}>
       <Animated.View style={{ position: 'absolute', top: 20, left: 20, right: 20, zIndex: 100000, transform: [{ translateY: toastAnim as any }], backgroundColor: toast.tipo === 'sucesso' ? '#10b981' : '#ef4444', padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', elevation: 5 }}>
         <Text style={{ fontSize: 20, marginRight: 10 }}>{toast.tipo === 'sucesso' ? '✅' : '⚠️'}</Text>
         <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14, flex: 1 }}>{toast.mensagem}</Text>
@@ -429,7 +445,7 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
       ) : (
         <>
           {etapa === 'telefone' && (
-            <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={{ padding: 25, paddingTop: 60 }}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 25, paddingTop: 60 }}>
               <View style={{ alignItems: 'center', marginBottom: 20 }}><Text style={{ fontSize: 36, marginBottom: 10 }}>✨ ✨ ✨</Text></View>
               <View style={{ alignItems: 'center', marginBottom: 40 }}>
                 <Text style={{ fontSize: 48, fontWeight: '900', color: c.roxo }}>PALM</Text>
@@ -469,6 +485,7 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
               <Text style={{ fontSize: 24, fontWeight: '900', color: c.roxo, marginBottom: 20 }}>{rodando ? '🎡 GIRANDO...' : 'BOA SORTE!'}</Text>
               <Animated.View style={{ padding: 12, borderRadius: (Math.min(width * 0.85, 400) + 24) / 2, backgroundColor: 'transparent', elevation: 25, transform: [{ scale: scaleAnim }] }}>
+                <View style={{ position: 'absolute', top: -5, alignSelf: 'center', width: 0, height: 0, backgroundColor: 'transparent', borderStyle: 'solid', borderLeftWidth: 15, borderRightWidth: 15, borderBottomWidth: 25, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderBottomColor: c.neonVerde, transform: [{ rotate: '180deg' }], zIndex: 100 }} />
                 <Animated.View style={{ width: Math.min(width * 0.85, 400), height: Math.min(width * 0.85, 400), transform: [{ rotate: rotateAnim.interpolate({ inputRange: [0, 36000], outputRange: ['0deg', '36000deg'] }) }] }}>
                   <Animated.View style={{ width: '100%', height: '100%', transform: [{ rotate: idleAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }}>
                     <WheelSVG prizes={premiosRoletaMesa} size={Math.min(width * 0.85, 400)} isDark={isDark} />
@@ -505,7 +522,7 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
         </>
       )}
       <Text style={{ position: 'absolute', bottom: 10, right: 10, color: c.subtexto, fontSize: 10, fontWeight: 'bold' }}>{APP_VERSION}</Text>
-    </View>
+    </LinearGradient>
   );
 }
 
