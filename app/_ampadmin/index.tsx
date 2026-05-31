@@ -15,7 +15,20 @@ export default function SuperAdmin() {
   const[lojaExpandida, setLojaExpandida] = useState<string | null>(null);
 
   // 🔥 ESTADOS DO MODAL DE EDIÇÃO / CRIAÇÃO DE LOJA
-  const [modalLoja, setModalLoja] = useState<{ visivel: boolean, id: string | null, nome: string, cnpj: string, telefone: string, limite_usuarios: string } | null>(null);
+  const [modalLoja, setModalLoja] = useState<{
+    visivel: boolean;
+    id: string | null;
+    nome: string;
+    cnpj: string;
+    telefone: string;
+    limite_usuarios: string;
+    endereco?: string;
+    numero?: string;
+    bairro?: string;
+    cidade?: string;
+    estado?: string;
+    cep?: string;
+  } | null>(null);
   const [loadingCnpj, setLoadingCnpj] = useState(false);
 
   const[toast, setToast] = useState({ visible: false, message: '', tipo: 'sucesso' });
@@ -74,16 +87,27 @@ export default function SuperAdmin() {
     
     // Busca Lojas e Telefones
     const { data: lojasData } = await supabase.from('lojas').select('*').order('created_at', { ascending: false });
-    const { data: configsData } = await supabase.from('configuracoes_loja').select('loja_id, telefone');
+    const { data: configsData } = await supabase.from('configuracoes_loja').select('loja_id, telefone, endereco, numero, bairro, cidade, estado, cep');
 
-    const telefonesMap: any = {};
-    (configsData ||[]).forEach(c => telefonesMap[c.loja_id] = c.telefone);
+    const configsMap: any = {};
+    (configsData || []).forEach(c => {
+      configsMap[c.loja_id] = c;
+    });
     
     if (lojasData) {
-      const lojasComTelefone = lojasData.map(l => ({ ...l, telefone: telefonesMap[l.id] || '' }));
-      setLojas(lojasComTelefone);
+      const lojasComConfig = lojasData.map(l => ({
+        ...l,
+        telefone: configsMap[l.id]?.telefone || '',
+        endereco: configsMap[l.id]?.endereco || '',
+        numero: configsMap[l.id]?.numero || '',
+        bairro: configsMap[l.id]?.bairro || '',
+        cidade: configsMap[l.id]?.cidade || '',
+        estado: configsMap[l.id]?.estado || '',
+        cep: configsMap[l.id]?.cep || ''
+      }));
+      setLojas(lojasComConfig);
       const taxasTemp: any = {};
-      lojasComTelefone.forEach(l => taxasTemp[l.id] = String(l.taxa_comissao || 0));
+      lojasComConfig.forEach(l => taxasTemp[l.id] = String(l.taxa_comissao || 0));
       setTaxasEditaveis(taxasTemp);
     }
 
@@ -118,7 +142,13 @@ export default function SuperAdmin() {
         setModalLoja(prev => ({
           ...prev!,
           nome: data.nome_fantasia || data.razao_social || prev!.nome,
-          telefone: data.ddd_telefone_1 || prev!.telefone
+          telefone: data.ddd_telefone_1 || prev!.telefone,
+          endereco: data.logradouro || prev!.endereco || '',
+          numero: data.numero || prev!.numero || '',
+          bairro: data.bairro || prev!.bairro || '',
+          cidade: data.municipio || prev!.cidade || '',
+          estado: data.uf || prev!.estado || '',
+          cep: data.cep || prev!.cep || ''
         }));
         mostrarToast('✅ Dados importados da Receita!', 'sucesso');
       }
@@ -143,7 +173,15 @@ export default function SuperAdmin() {
         cnpj: cnpjLimpo,
         limite_usuarios: Number(modalLoja.limite_usuarios) || 1
       }).eq('id', modalLoja.id);
-      await supabase.from('configuracoes_loja').update({ telefone: modalLoja.telefone }).eq('loja_id', modalLoja.id);
+      await supabase.from('configuracoes_loja').update({ 
+        telefone: modalLoja.telefone,
+        endereco: modalLoja.endereco || null,
+        numero: modalLoja.numero || null,
+        bairro: modalLoja.bairro || null,
+        cidade: modalLoja.cidade || null,
+        estado: modalLoja.estado || null,
+        cep: modalLoja.cep || null
+      }).eq('loja_id', modalLoja.id);
       mostrarToast('Loja atualizada com sucesso!', 'sucesso');
     } else {
       // CRIAR NOVA LOJA
@@ -158,7 +196,16 @@ export default function SuperAdmin() {
       if (error) { mostrarToast(error.message, 'erro'); return; }
       
       await supabase.from('configuracoes_loja').insert([{ 
-        loja_id: novaLoja.id, nome_loja: modalLoja.nome, telefone: modalLoja.telefone, reais_por_ponto: 1 
+        loja_id: novaLoja.id, 
+        nome_loja: modalLoja.nome, 
+        telefone: modalLoja.telefone, 
+        reais_por_ponto: 1,
+        endereco: modalLoja.endereco || null,
+        numero: modalLoja.numero || null,
+        bairro: modalLoja.bairro || null,
+        cidade: modalLoja.cidade || null,
+        estado: modalLoja.estado || null,
+        cep: modalLoja.cep || null
       }]);
       mostrarToast('Loja criada com sucesso! A senha padrão é 1234.', 'sucesso');
     }
@@ -174,7 +221,13 @@ export default function SuperAdmin() {
       nome: loja.nome, 
       cnpj: loja.cnpj || '', 
       telefone: loja.telefone || '',
-      limite_usuarios: String(loja.limite_usuarios || 1)
+      limite_usuarios: String(loja.limite_usuarios || 1),
+      endereco: loja.endereco || '',
+      numero: loja.numero || '',
+      bairro: loja.bairro || '',
+      cidade: loja.cidade || '',
+      estado: loja.estado || '',
+      cep: loja.cep || ''
     });
   };
 
@@ -246,6 +299,21 @@ export default function SuperAdmin() {
                 <TextInput style={[styles.input, { marginBottom: 0, borderColor: '#facc15' }]} placeholder="Ex: 2" placeholderTextColor="#64748b" value={modalLoja.limite_usuarios} onChangeText={(t) => setModalLoja({...modalLoja, limite_usuarios: t})} keyboardType="numeric" />
               </View>
             </View>
+
+            {modalLoja.endereco ? (
+              <View style={{ marginBottom: 15, padding: 12, backgroundColor: '#1e293b', borderRadius: 12, borderWidth: 1, borderColor: '#334155' }}>
+                <Text style={{ color: '#38bdf8', fontSize: 10, fontWeight: 'bold', marginBottom: 4 }}>📍 ENDEREÇO IMPORTADO DA RECEITA:</Text>
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '500' }}>
+                  {modalLoja.endereco}, {modalLoja.numero || 'S/N'}
+                </Text>
+                <Text style={{ color: '#94a3b8', fontSize: 11 }}>
+                  {modalLoja.bairro} - {modalLoja.cidade}/{modalLoja.estado}
+                </Text>
+                <Text style={{ color: '#94a3b8', fontSize: 11 }}>
+                  CEP: {modalLoja.cep}
+                </Text>
+              </View>
+            ) : null}
 
             <View style={{flexDirection: 'row', gap: 10, marginTop: 10}}>
               <TouchableOpacity style={[styles.button, { flex: 1, backgroundColor: '#10b981' }]} onPress={salvarLojaAdmin}>

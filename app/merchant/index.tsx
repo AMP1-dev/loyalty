@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
 import QRCode from 'react-native-qrcode-svg';
 import Svg, { Polyline } from 'react-native-svg';
+import bcrypt from 'bcryptjs';
 import {
   calcularSaldoCliente,
   buscarTokenCompleto,
@@ -12,7 +13,7 @@ import {
   buscarCaixaAtivaCliente
 } from '@/lib/exchange';
 
-const APP_VERSION = "v5.8.6-exchange";
+const APP_VERSION = "v5.8.9-exchange";
 const { width } = Dimensions.get('window');
 const itemWidth = width > 600 ? (600 - 60) / 3 : (width - 60) / 2;
 
@@ -49,6 +50,7 @@ export default function MerchantPanel() {
   const [mostrarConfig, setMostrarConfig] = useState(false);
   const [config, setConfig] = useState<any>({ nome_loja: '', cor_primaria: '#10b981', cashback_percent: '10', cashback_expiracao_dias: '30', reais_por_ponto: '1', pontos_expiracao_dias: '365', pontos_sobre_valor_bruto: true, usar_cashback_total: false, limite_resgates_diario_cliente: '', tempo_bloqueio_minutos: '', bonus_retorno_pontos: '50', bonus_retorno_validade_dias: '3', senha: '', link_google_meu_negocio: '', intercambio_taxa: '0.1' });
   const [loadingSalvar, setLoadingSalvar] = useState(false);
+  const [carregandoFoto, setCarregandoFoto] = useState(false);
   const [toast, setToast] = useState({ message: '', tipo: 'sucesso', visible: false });
   const toastAnim = useRef(new Animated.Value(-100)).current;
   const qrRef = useRef<any>(null);
@@ -81,7 +83,8 @@ export default function MerchantPanel() {
   const [qrMesaAtivo, setQrMesaAtivo] = useState(false);
   const [perguntasNpsMesa, setPerguntasNpsMesa] = useState<any[]>([]);
   const [novaPergunta, setNovaPergunta] = useState('');
-  const [novaPeruntaTipo, setNovaPerguntaTipo] = useState('geral');
+  const [novaPerguntaTipo, setNovaPerguntaTipo] = useState('estrelas');
+  const [novaPerguntaCategoria, setNovaPerguntaCategoria] = useState('geral');
   const [editandoPergunta, setEditandoPergunta] = useState<string | null>(null);
   const [linkGoogleMeuNegocio, setLinkGoogleMeuNegocio] = useState('');
   const [bonusMultiplicador, setBonusMultiplicador] = useState(2.0);
@@ -207,7 +210,13 @@ export default function MerchantPanel() {
 
   const adicionarPerguntaNps = async (id: string) => {
     if (!novaPergunta) return;
-    const { error } = await supabase.from('perguntas_nps').insert([{ loja_id: id, pergunta: novaPergunta, tipo: novaPeruntaTipo, ativo: true }]);
+    const { error } = await supabase.from('perguntas_nps').insert([{ 
+      loja_id: id, 
+      pergunta: novaPergunta, 
+      tipo: novaPerguntaTipo, 
+      categoria: novaPerguntaCategoria, 
+      ativo: true 
+    }]);
     if (error) { mostrarToast(`Erro ao adicionar: ${error.message}`, 'erro'); console.error(error); }
     else { mostrarToast('Pergunta adicionada!', 'sucesso'); setNovaPergunta(''); buscarPerguntasNpsMesa(); }
   };
@@ -243,8 +252,24 @@ export default function MerchantPanel() {
   };
 
   const salvarConfigQrMesa = async (id: string) => {
-    const { error } = await supabase.from('config_mesa').upsert({ loja_id: id, ativo: qrMesaAtivo, link_google: linkGoogleMeuNegocio, bonus_multiplicador: bonusMultiplicador }, { onConflict: 'loja_id' });
-    if (!error) mostrarToast('Configurações da Mesa salvas!', 'sucesso');
+    if (!id) { mostrarToast('Erro: Loja não identificada.', 'erro'); return; }
+    setLoadingSalvar(true);
+    try {
+      const { error } = await supabase.from('config_mesa').upsert({ 
+        loja_id: id, 
+        ativo: qrMesaAtivo, 
+        link_google: linkGoogleMeuNegocio, 
+        bonus_multiplicador: bonusMultiplicador 
+      }, { onConflict: 'loja_id' });
+      
+      if (error) throw error;
+      mostrarToast('Configurações da Mesa salvas!', 'sucesso');
+    } catch (error: any) {
+      console.error('Erro ao salvar config mesa:', error);
+      mostrarToast(`Erro ao salvar mesa: ${error.message}`, 'erro');
+    } finally {
+      setLoadingSalvar(false);
+    }
   };
 
   const fazerDownloadQrMesa = (loja: string, nome: string) => {
@@ -368,7 +393,12 @@ export default function MerchantPanel() {
       }
       
       const id = localStorage.getItem('@loja_id_merchant');
-      if (!id) { router.replace('/login'); return; }
+      if (!id) {
+        setTimeout(() => {
+          router.replace('/login');
+        }, 100);
+        return;
+      }
       setLojaId(id);
       const op = localStorage.getItem('@operador_nome') || 'Master';
       setOperadorLogado(op);
@@ -805,6 +835,22 @@ export default function MerchantPanel() {
     return true;
   };
 
+  const resetarPinLojista = async (cpf: string) => {
+    if (!window.confirm(`Deseja realmente resetar o PIN do cliente ${formatarTelefone(cpf)} para "0000"?`)) return;
+    try {
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash('0000', salt);
+      const { error } = await supabase.from('clientes').update({ pin_hash: hash }).eq('cpf', cpf);
+      if (error) {
+        mostrarToast('Erro ao resetar o PIN: ' + error.message, 'erro');
+      } else {
+        mostrarToast('PIN resetado com sucesso para "0000"! Informar ao cliente.', 'sucesso');
+      }
+    } catch (e: any) {
+      mostrarToast('Erro inesperado: ' + e.message, 'erro');
+    }
+  };
+
   const atender = async (id: string) => {
     const item = fila.find((f) => f.id === id);
     if (!item) return;
@@ -956,7 +1002,7 @@ export default function MerchantPanel() {
   const salvarConfig = async () => {
     setLoadingSalvar(true);
     const { error } = await supabase.from('configuracoes_loja').upsert({
-      loja_id: lojaId, nome_loja: config.nome_loja, cor_primaria: config.cor_primaria,
+      loja_id: lojaId, nome_loja: config.nome_loja, nome_fantasia: config.nome_fantasia || null, cor_primaria: config.cor_primaria,
       cashback_percent: Number(config.cashback_percent) || 0, cashback_expiracao_dias: Number(config.cashback_expiracao_dias) || 30,
       cashback_limite_uso_percent: Number(config.cashback_limite_uso_percent) || 100, reais_por_ponto: Number(config.reais_por_ponto) || 1,
       pontos_expiracao_dias: Number(config.pontos_expiracao_dias) || 365, pontos_sobre_valor_bruto: config.pontos_sobre_valor_bruto,
@@ -971,6 +1017,10 @@ export default function MerchantPanel() {
     }, { onConflict: 'loja_id' });
 
     if (config.senha && config.senha.trim() !== '') await supabase.from('lojas').update({ senha: config.senha }).eq('id', lojaId);
+    
+    // Salvar também as configurações do QR Mesa
+    if (lojaId) await salvarConfigQrMesa(lojaId);
+    
     setLoadingSalvar(false);
     if (error) { mostrarToast(`Erro ao salvar: ${error.message}`, 'erro'); return; }
     mostrarToast('⚙️ Configurações salvas com sucesso!', 'sucesso');
@@ -1052,6 +1102,46 @@ export default function MerchantPanel() {
     setForm({ nome: r.nome || '', pontos: r.custo_pontos !== null ? String(r.custo_pontos) : '', imagem: r.imagem || '', limiteCliente: r.limite_por_cliente !== null ? String(r.limite_por_cliente) : '', limiteDia: r.limite_quantidade !== null ? String(r.limite_quantidade) : '', limiteTotal: r.limite_total !== null ? String(r.limite_total) : '' });
   };
 
+  const selecionarEEnviarFoto = async () => {
+    if (Platform.OS !== 'web') {
+      mostrarToast('Upload de fotos suportado apenas na versão web.', 'erro');
+      return;
+    }
+    
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e: any) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      
+      setCarregandoFoto(true);
+      try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${lojaId}/${Date.now()}.${fileExt}`;
+        
+        const { error } = await supabase.storage
+          .from('recompensas')
+          .upload(fileName, file, { cacheControl: '3600', upsert: true });
+          
+        if (error) throw error;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('recompensas')
+          .getPublicUrl(fileName);
+          
+        setForm((prev: any) => ({ ...prev, imagem: publicUrl }));
+        mostrarToast('📷 Foto enviada com sucesso!', 'sucesso');
+      } catch (err: any) {
+        console.error('Erro no upload:', err);
+        mostrarToast('Erro ao enviar foto: ' + err.message, 'erro');
+      } finally {
+        setCarregandoFoto(false);
+      }
+    };
+    input.click();
+  };
+
   const salvarEdicao = async () => {
     if (!editandoRewardId) return; setFormError('');
     if (!form.nome || form.nome.trim() === '') { setFormError("O Nome do prêmio é obrigatório."); return; }
@@ -1084,6 +1174,9 @@ export default function MerchantPanel() {
               
               <Text style={styles.label}>NOME DA LOJA:</Text>
               <TextInput value={config.nome_loja} onChangeText={(t) => setConfig({ ...config, nome_loja: t })} style={styles.input} />
+              
+              <Text style={styles.label}>NOME FANTASIA / APELIDO (Exibido no App):</Text>
+              <TextInput value={config.nome_fantasia || ''} onChangeText={(t) => setConfig({ ...config, nome_fantasia: t })} placeholder="Ex: Doce Sonho (Opcional)" placeholderTextColor="#475569" style={styles.input} />
               <Text style={[styles.label, { color: '#facc15', marginTop: 10 }]}>📍 LOCALIZAÇÃO E CONTATO:</Text>
               <TextInput value={config.telefone} onChangeText={(t) => setConfig({ ...config, telefone: t })} placeholder="WhatsApp da Loja" placeholderTextColor="#475569" style={styles.input} />
               <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
@@ -1216,11 +1309,23 @@ export default function MerchantPanel() {
                           <View style={{ backgroundColor: '#0f172a', padding: 14, borderRadius: 12, marginBottom: 16, borderWidth: 1, borderColor: '#334155' }}>
                             <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginBottom: 8 }}>➕ Adicionar Nova Pergunta</Text>
                             <TextInput placeholder="Ex: Como foi o atendimento?" placeholderTextColor="#94A3B8" value={novaPergunta} onChangeText={setNovaPergunta} multiline style={{ borderWidth: 1, borderColor: '#334155', borderRadius: 8, padding: 10, color: '#F8FAFC', minHeight: 50, marginBottom: 10, fontSize: 12 }} />
-                            <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600', marginBottom: 8 }}>Tipo:</Text>
+                            <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600', marginBottom: 8 }}>Tipo (Categoria):</Text>
                             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-                              {['geral', 'atendimento', 'comida', 'ambiente', 'experiencia'].map((tipo) => (
-                                <TouchableOpacity key={tipo} onPress={() => setNovaPerguntaTipo(tipo)} style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, borderWidth: 1, borderColor: novaPeruntaTipo === tipo ? '#8B5CF6' : '#334155', backgroundColor: novaPeruntaTipo === tipo ? '#8B5CF620' : 'transparent' }}>
-                                  <Text style={{ fontSize: 10, color: novaPeruntaTipo === tipo ? '#8B5CF6' : '#94A3B8', fontWeight: '600' }}>{tipo}</Text>
+                              {['geral', 'atendimento', 'comida', 'ambiente', 'experiencia'].map((cat) => (
+                                <TouchableOpacity key={cat} onPress={() => setNovaPerguntaCategoria(cat)} style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, borderWidth: 1, borderColor: novaPerguntaCategoria === cat ? '#8B5CF6' : '#334155', backgroundColor: novaPerguntaCategoria === cat ? '#8B5CF620' : 'transparent' }}>
+                                  <Text style={{ fontSize: 10, color: novaPerguntaCategoria === cat ? '#8B5CF6' : '#94A3B8', fontWeight: '600', textTransform: 'uppercase' }}>{cat}</Text>
+                                </TouchableOpacity>
+                              ))}
+                            </View>
+
+                            <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600', marginBottom: 8 }}>Formato da Resposta (Positivo/Negativo ou Estrelas):</Text>
+                            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                              {[
+                                { id: 'estrelas', label: '⭐ Estrelas (1 a 5)' },
+                                { id: 'joia', label: '👍 Positivo / Negativo' }
+                              ].map((f) => (
+                                <TouchableOpacity key={f.id} onPress={() => setNovaPerguntaTipo(f.id)} style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, borderWidth: 1, borderColor: novaPerguntaTipo === f.id ? '#10b981' : '#334155', backgroundColor: novaPerguntaTipo === f.id ? '#10b98120' : 'transparent' }}>
+                                  <Text style={{ fontSize: 10, color: novaPerguntaTipo === f.id ? '#10b981' : '#94A3B8', fontWeight: '600', textTransform: 'uppercase' }}>{f.label}</Text>
                                 </TouchableOpacity>
                               ))}
                             </View>
@@ -1239,7 +1344,8 @@ export default function MerchantPanel() {
                                 </TouchableOpacity>
                               </View>
                               <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 10 }}>
-                                <View style={{ backgroundColor: '#8B5CF630', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 4 }}><Text style={{ fontSize: 10, color: '#8B5CF6', fontWeight: '600' }}>{pergunta.tipo}</Text></View>
+                                <View style={{ backgroundColor: '#8B5CF630', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 4 }}><Text style={{ fontSize: 10, color: '#8B5CF6', fontWeight: '600', textTransform: 'uppercase' }}>📂 {pergunta.categoria || 'GERAL'}</Text></View>
+                                <View style={{ backgroundColor: '#10b98130', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 4 }}><Text style={{ fontSize: 10, color: '#10b981', fontWeight: '600', textTransform: 'uppercase' }}>🎮 {pergunta.tipo === 'joia' ? '👍 POSITIVO / NEGATIVO' : '⭐ ESTRELAS'}</Text></View>
                                 <Text style={{ fontSize: 10, color: '#94A3B8' }}>Ordem: {pergunta.ordem}</Text>
                               </View>
                               <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -1272,7 +1378,9 @@ export default function MerchantPanel() {
                       </View>
                       <View style={{ gap: 10 }}>
                         <TouchableOpacity onPress={() => fazerDownloadQrMesa(lojaId || '', config?.nome_loja || 'loja')} style={{ backgroundColor: '#8B5CF6', borderRadius: 8, paddingVertical: 12, alignItems: 'center' }}><Text style={{ color: '#fff', fontWeight: '700' }}>📥 BAIXAR QR MESA</Text></TouchableOpacity>
-                        <TouchableOpacity onPress={() => salvarConfigQrMesa(lojaId || '')} style={{ backgroundColor: '#10b981', borderRadius: 8, paddingVertical: 12, alignItems: 'center' }}><Text style={{ color: '#fff', fontWeight: '700' }}>💾 SALVAR CONFIGURAÇÕES</Text></TouchableOpacity>
+                        <TouchableOpacity onPress={() => salvarConfigQrMesa(lojaId || '')} style={{ backgroundColor: '#10b981', borderRadius: 8, paddingVertical: 12, alignItems: 'center', opacity: loadingSalvar ? 0.6 : 1 }} disabled={loadingSalvar}>
+                          <Text style={{ color: '#fff', fontWeight: '700' }}>{loadingSalvar ? 'PROCESSANDO...' : '💾 SALVAR CONFIGURAÇÕES'}</Text>
+                        </TouchableOpacity>
                       </View>
                     </>
                   )}
@@ -1549,7 +1657,7 @@ export default function MerchantPanel() {
         <View style={styles.wrapper}>
           <View style={[styles.header, { alignItems: 'center' }]}>
             <Text style={[styles.logo, { textAlign: 'left', marginBottom: 0, fontSize: 24 }]}>PALM SPRINGS</Text>
-            <View style={{ flex: 1, alignItems: 'center' }}><Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>{config.nome_loja?.toUpperCase() || 'LOJA PARCEIRA'}</Text></View>
+            <View style={{ flex: 1, alignItems: 'flex-start', marginLeft: 20 }}><Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>{(config.nome_fantasia || config.nome_loja)?.toUpperCase() || 'LOJA PARCEIRA'}</Text></View>
             <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center' }}>
                <TouchableOpacity onPress={() => { buscarFila(); buscarStats(); buscarAvaliacoesERoleta(); mostrarToast('Dados Sincronizados!', 'sucesso'); }} style={{ backgroundColor: '#1e293b', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#334155' }}><Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold' }}>🔄 SINCRONIZAR</Text></TouchableOpacity>
                <TouchableOpacity onPress={() => { setMostrarMesa(true); setMostrarConfig(false); setMostrarRemarketing(false); }}><Text style={[styles.headerButton, { color: mostrarMesa ? '#8B5CF6' : '#94A3B8' }]}>📱 Mesa</Text></TouchableOpacity>
@@ -1592,6 +1700,9 @@ export default function MerchantPanel() {
                                   </View>
                                 </TouchableOpacity>
                               )}
+                              <TouchableOpacity onPress={() => resetarPinLojista(clienteAtual.cliente_cpf)} style={{ backgroundColor: '#facc1520', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#facc1540' }}>
+                                <Text style={{ color: '#facc15', fontSize: 11, fontWeight: '900' }}>RESETAR PIN</Text>
+                              </TouchableOpacity>
                               <TouchableOpacity onPress={() => removerDaFila(clienteAtual.id)} style={{ backgroundColor: '#ef444420', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: '#ef444440' }}>
                                 <Text style={{ color: '#ef4444', fontSize: 11, fontWeight: '900' }}>REMOVER</Text>
                               </TouchableOpacity>
@@ -1813,11 +1924,39 @@ export default function MerchantPanel() {
           {mostrarCatalogo && (
             <View>
               <TouchableOpacity style={[styles.buttonCenter, { marginBottom: 20 }]} onPress={() => { setEditandoRewardId('novo'); setForm({ nome: '', pontos: '', imagem: '', limiteCliente: '', limiteDia: '', limiteTotal: '' }); }}><Text style={styles.buttonText}>+ NOVO PRÊMIO</Text></TouchableOpacity>
-              {editandoRewardId === 'novo' && (
+              {editandoRewardId !== null && (
                 <View style={[styles.editBox, { marginBottom: 20 }]}>
-                  {[{ key: 'nome', label: 'Nome do Prêmio' }, { key: 'pontos', label: 'Custo em Springs' }, { key: 'imagem', label: 'Link da foto (Opcional)' }].map(({ key, label }) => (
-                    <TextInput key={key} value={form[key] || ''} onChangeText={(t) => setForm({ ...form, [key]: t })} placeholder={label} placeholderTextColor="#94A3B8" style={styles.input} keyboardType={key === 'pontos' ? 'numeric' : 'default'} />
-                  ))}
+                  <TextInput value={form.nome || ''} onChangeText={(t) => setForm({ ...form, nome: t })} placeholder="Nome do Prêmio" placeholderTextColor="#94A3B8" style={styles.input} />
+                  <TextInput value={form.pontos || ''} onChangeText={(t) => setForm({ ...form, pontos: t })} placeholder="Custo em Springs" placeholderTextColor="#94A3B8" style={styles.input} keyboardType="numeric" />
+                  
+                  <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 12 }}>
+                    <TextInput 
+                      value={form.imagem || ''} 
+                      onChangeText={(t) => setForm({ ...form, imagem: t })} 
+                      placeholder="Link da foto (Opcional)" 
+                      placeholderTextColor="#94A3B8" 
+                      style={[styles.input, { flex: 1, marginBottom: 0 }]} 
+                    />
+                    <TouchableOpacity 
+                      onPress={selecionarEEnviarFoto}
+                      disabled={carregandoFoto}
+                      style={{ 
+                        backgroundColor: '#3b82f6', 
+                        height: 48, 
+                        borderRadius: 10, 
+                        paddingHorizontal: 15, 
+                        justifyContent: 'center', 
+                        alignItems: 'center',
+                        opacity: carregandoFoto ? 0.7 : 1
+                      }}
+                    >
+                      {carregandoFoto ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>📤 ENVIAR FOTO</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
                   <TouchableOpacity style={styles.button} onPress={salvarEdicao}><Text style={styles.buttonText}>SALVAR</Text></TouchableOpacity>
                 </View>
               )}

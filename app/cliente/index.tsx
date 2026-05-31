@@ -24,6 +24,8 @@ import { supabase } from '../../lib/supabase';
 import MesaRoleta from './components/MesaRoleta';
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
+const APP_VERSION = "v5.8.9-exchange";
+
 const salvarStorage = async (key: string, value: string) => {
   if (typeof window !== 'undefined') localStorage.setItem(key, value);
   else await AsyncStorage.setItem(key, value);
@@ -173,7 +175,7 @@ function WheelSVG({ prizes, size, isDark }: { prizes: any[]; size: number; isDar
               <SvgText
                 x={textPos.x}
                 y={textPos.y}
-                fontSize={p.nome.length > 10 ? "10" : "12"}
+                fontSize={p.nome.length > 10 ? "8" : "10"}
                 fontFamily="sans-serif"
                 fontWeight="900"
                 textAnchor="middle"
@@ -324,6 +326,7 @@ export default function Cliente() {
   const [pinDigitado, setPinDigitado] = useState(['', '', '', '']);
   const [pinModoValidar, setPinModoValidar] = useState(true);
   const [ehPrimeiroCadastro, setEhPrimeiroCadastro] = useState(false);
+  const [validadandoPinCheckout, setValidandoPinCheckout] = useState(false);
   const pinInputRefs = useRef<(TextInput | null)[]>([]);
   const [mostrarRoletaModal, setMostrarRoletaModal] = useState(false);
   const [etapaRoleta, setEtapaRoleta] = useState<'nps' | 'girando' | 'resultado'>('nps');
@@ -404,67 +407,91 @@ export default function Cliente() {
   };
 
   useEffect(() => {
+    // Reset state on store change to avoid carrying over old store states
+    setUuidLojaReal(null);
+    setConfigLoja(null);
+    setPremiosRoleta([]);
+    setRecompensas([]);
+    setRecompensasRede([]);
+    setSaldoLocal(0);
+    setSaldo(0);
+    setSaldoPorLoja([]);
+    setValidandoPinCheckout(false);
+    setMostrarPinModal(false);
+    setStatus('idle');
+
     const initApp = async () => {
-      // 1. LIMPEZA DE CACHE MANUAL (Via URL ?clear=true)
-      if (params?.clear === 'true') {
-        if (Platform.OS === 'web') {
-          localStorage.clear();
+      try {
+        // 1. LIMPEZA DE CACHE MANUAL (Via URL ?clear=true)
+        if (params?.clear === 'true') {
+          if (Platform.OS === 'web') {
+            localStorage.clear();
+          } else {
+            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+            await AsyncStorage.clear();
+          }
+          const forwardParams = { ...params };
+          delete forwardParams.clear;
+          setTimeout(() => {
+            router.replace({ pathname: '/cliente', params: forwardParams });
+          }, 100);
+          return;
+        }
+
+        const savedVersion = await carregarStorage('@app_version');
+        if (savedVersion !== APP_VERSION) {
+          if (typeof window !== 'undefined') localStorage.clear();
+          await salvarStorage('@app_version', APP_VERSION);
+        }
+        const saved = await carregarStorage('cliente_cpf');
+
+        // RESOLVER UUID DA LOJA SE FOR SLUG
+        let lid_final = String(loja_id);
+        const isUUID = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+
+        // Atalho fixo para a loja principal para evitar falhas de busca por nome
+        if (loja_id === 'amp') {
+          lid_final = 'b3f20184-d9e6-47d5-bc7f-3e484d3fe265';
+          setUuidLojaReal(lid_final);
+          lidRef.current = lid_final;
+        } else if (loja_id && !isUUID(String(loja_id))) {
+          const cleanSlug = String(loja_id).replace(/[^a-zA-Z0-9]/g, '%');
+          const { data: lData } = await supabase.from('lojas').select('id').ilike('nome', `%${cleanSlug}%`).maybeSingle();
+          if (lData) {
+            lid_final = lData.id;
+            setUuidLojaReal(lData.id);
+            lidRef.current = lData.id;
+          }
+        } else if (loja_id) {
+          setUuidLojaReal(String(loja_id));
+          lidRef.current = String(loja_id);
+        }
+
+        if (saved) {
+          setCpf(saved);
+          if (loja_id) {
+            // Pre-fetch prêmios para a roleta do CTA ficar com dados REAIS
+            const { data: pRol } = await supabase.from('roleta_premios').select('*').eq('loja_id', lid_final);
+            if (pRol && pRol.length > 0) setPremiosRoleta(pRol);
+
+            const { error: upsertErr } = await supabase.from('checkins').upsert(
+              { cliente_cpf: saved, loja_id: lid_final, status: 'aguardando' },
+              { onConflict: 'cliente_cpf,loja_id' }
+            );
+            if (upsertErr) throw upsertErr;
+            setStatus('aguardando');
+          } else {
+            await carregarDados(saved, lid_final);
+            setStatus('finalizado');
+          }
         } else {
-          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-          await AsyncStorage.clear();
+          // Carrega o catálogo da loja mesmo se não estiver logado
+          await carregarDados(null, lid_final);
         }
-        router.replace('/cliente');
-        return;
-      }
-
-      const APP_VERSION = "v5.8.6-exchange";
-      const savedVersion = await carregarStorage('@app_version');
-      if (savedVersion !== APP_VERSION) {
-        if (typeof window !== 'undefined') localStorage.clear();
-        await salvarStorage('@app_version', APP_VERSION);
-      }
-      const saved = await carregarStorage('cliente_cpf');
-
-      // RESOLVER UUID DA LOJA SE FOR SLUG
-      let lid_final = String(loja_id);
-      const isUUID = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
-
-      // Atalho fixo para a loja principal para evitar falhas de busca por nome
-      if (loja_id === 'amp') {
-        lid_final = 'b3f20184-d9e6-47d5-bc7f-3e484d3fe265';
-        setUuidLojaReal(lid_final);
-        lidRef.current = lid_final;
-      } else if (loja_id && !isUUID(String(loja_id))) {
-        const { data: lData } = await supabase.from('lojas').select('id').ilike('nome', `%${loja_id}%`).maybeSingle();
-        if (lData) {
-          lid_final = lData.id;
-          setUuidLojaReal(lData.id);
-          lidRef.current = lData.id;
-        }
-      } else if (loja_id) {
-        setUuidLojaReal(String(loja_id));
-        lidRef.current = String(loja_id);
-      }
-
-      if (saved) {
-        setCpf(saved);
-        if (loja_id) {
-          // Pre-fetch prêmios para a roleta do CTA ficar com dados REAIS
-          const { data: pRol } = await supabase.from('roleta_premios').select('*').eq('loja_id', lid_final);
-          if (pRol && pRol.length > 0) setPremiosRoleta(pRol);
-
-          await supabase.from('checkins').upsert(
-            { cliente_cpf: saved, loja_id: lid_final, status: 'aguardando' },
-            { onConflict: 'cliente_cpf,loja_id' }
-          );
-          setStatus('aguardando');
-        } else {
-          await carregarDados(saved, lid_final);
-          setStatus('finalizado');
-        }
-      } else {
-        // Carrega o catálogo da loja mesmo se não estiver logado
-        await carregarDados(null, lid_final);
+      } catch (err) {
+        console.error('Erro na inicialização do app:', err);
+        mostrarToast('Erro ao carregar loja. Redirecionando... ❌', 'erro');
+        setStatus('idle');
       }
     };
     initApp();
@@ -481,8 +508,19 @@ export default function Cliente() {
       // Se o registro sumiu (foi atendido/removido) ou o status mudou, libera o cliente
       if (!data || data.status !== 'aguardando') {
         clearInterval(interval);
-        await carregarDados(clean, lidRef.current || String(loja_id));
-        setStatus('finalizado');
+        
+        // Pede a validação do PIN antes de liberar a tela
+        const { data: exCli } = await supabase.from('clientes').select('pin_hash').eq('cpf', clean).maybeSingle();
+        if (!exCli?.pin_hash) {
+          setEhPrimeiroCadastro(true);
+          setPinModoValidar(false);
+        } else {
+          setEhPrimeiroCadastro(false);
+          setPinModoValidar(true);
+        }
+        setValidandoPinCheckout(true);
+        setPinDigitado(['', '', '', '']);
+        setMostrarPinModal(true);
       }
     }, 3000);
     return () => clearInterval(interval);
@@ -494,7 +532,11 @@ export default function Cliente() {
     const mapLojas: any = {}; lojas?.forEach(l => mapLojas[l.id] = l.nome);
     const lid = lojaIdEfetivo || String(loja_id);
 
-    if (lid && lid !== 'undefined') { setNomeLojaAtual(mapLojas[lid] || 'Loja Parceira'); setConfigLoja(configs?.find(cf => cf.loja_id === lid)); }
+    if (lid && lid !== 'undefined') {
+      const cf = configs?.find(cf => cf.loja_id === lid);
+      setNomeLojaAtual(cf?.nome_fantasia || mapLojas[lid] || 'Loja Parceira');
+      setConfigLoja(cf);
+    }
     else setNomeLojaAtual('Minha Carteira PALM');
 
     const [{ data: trans }, { data: res }, { data: cash }, { data: bonus }] = await Promise.all([
@@ -548,6 +590,8 @@ export default function Cliente() {
       }
     });
     setSaldoPorLoja(saldos);
+    const localStoreObj = saldos.find(s => s.id === lid);
+    setSaldoLocal(localStoreObj ? localStoreObj.pontos : 0);
 
     const { data: tkList } = await supabase.from('intercambio_tokens').select('*').eq('cliente_cpf', cpfBusca).eq('status', 'pendente').order('criado_em', { ascending: false }).limit(1);
     const tk = tkList && tkList.length > 0 ? tkList[0] : null;
@@ -651,8 +695,8 @@ export default function Cliente() {
     if (!loja_id || !cpf) return;
     const clean = cpf.replace(/\D/g, '');
 
-    if (saldo < item.custo_pontos) {
-      mostrarToast('Saldo insuficiente de Springs.', 'erro');
+    if (saldoLocal < item.custo_pontos) {
+      mostrarToast('Saldo insuficiente nesta loja.', 'erro');
       return;
     }
 
@@ -788,16 +832,33 @@ export default function Cliente() {
     const clean = cpf.replace(/\D/g, '');
     const { data } = await supabase.from('clientes').select('pin_hash').eq('cpf', clean).single();
     if (data && await bcrypt.compare(pin, data.pin_hash)) {
-      setMostrarPinModal(false);
       setPinDigitado(['', '', '', '']);
-      await salvarStorage('cliente_cpf', clean);
-      if (loja_id) {
-        await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]);
-        setStatus('aguardando');
+      
+      // Se o PIN digitado for "0000" (PIN temporário de reset)
+      if (pin === '0000') {
+        mostrarToast('PIN temporário! Defina sua nova senha. 🔑', 'sucesso');
+        setEhPrimeiroCadastro(true);
+        setPinModoValidar(false);
+        setCarregando(false);
+        return;
       }
-      else {
-        await carregarDados(clean);
+
+      setMostrarPinModal(false);
+      await salvarStorage('cliente_cpf', clean);
+
+      if (validadandoPinCheckout) {
+        setValidandoPinCheckout(false);
+        await carregarDados(clean, lidRef.current || String(loja_id));
         setStatus('finalizado');
+      } else {
+        if (loja_id) {
+          await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]);
+          setStatus('aguardando');
+        }
+        else {
+          await carregarDados(clean);
+          setStatus('finalizado');
+        }
       }
     } else {
       mostrarToast('PIN incorreto', 'erro');
@@ -808,6 +869,14 @@ export default function Cliente() {
 
   const criarNovoPin = async () => {
     const pin = pinDigitado.join(''); if (pin.length < 4) return;
+    
+    // Bloqueio de senhas fracas/padrão
+    if (pin === '0000' || pin === '1234') {
+      mostrarToast('Por segurança, crie uma senha diferente de 0000 ou 1234. 🔒', 'erro');
+      setPinDigitado(['', '', '', '']);
+      return;
+    }
+
     setCarregando(true);
     const hash = await bcrypt.hash(pin, 10);
     const clean = cpf.replace(/\D/g, '');
@@ -815,26 +884,77 @@ export default function Cliente() {
     setMostrarPinModal(false);
     setPinDigitado(['', '', '', '']);
     await salvarStorage('cliente_cpf', clean);
-    if (loja_id) {
-      await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]);
-      setStatus('aguardando');
-    }
-    else {
-      await carregarDados(clean);
+
+    if (validadandoPinCheckout) {
+      setValidandoPinCheckout(false);
+      await carregarDados(clean, lidRef.current || String(loja_id));
       setStatus('finalizado');
+    } else {
+      if (loja_id) {
+        await supabase.from('checkins').insert([{ cliente_cpf: clean, loja_id: String(loja_id), status: 'aguardando' }]);
+        setStatus('aguardando');
+      }
+      else {
+        await carregarDados(clean);
+        setStatus('finalizado');
+      }
     }
     setCarregando(false);
   };
 
   const abrirRoleta = async () => {
-    const lid = loja_id || configLoja?.loja_id;
-    const [{ data: pNps }, { data: pRol }] = await Promise.all([
-      supabase.from('perguntas_nps').select('*').eq('loja_id', lid),
-      supabase.from('roleta_premios').select('*').eq('loja_id', lid)
-    ]);
-    setPerguntasNps(pNps || [{ id: 'd', pergunta: 'Nota para a loja?', tipo: 'estrelas' }]);
-    setPremiosRoleta(pRol || []);
-    setEtapaRoleta('nps'); setMostrarRoletaModal(true);
+    const lid = uuidLojaReal || loja_id || configLoja?.loja_id;
+    setCarregando(true);
+    try {
+      // 1. Buscar configuração mais recente da loja
+      const { data: config } = await supabase.from('configuracoes_loja').select('roleta_ativa, roleta_intervalo_dias').eq('loja_id', lid).maybeSingle();
+      
+      if (config && config.roleta_ativa === false) {
+        mostrarToast('A roleta da sorte está desativada para esta loja. 🎡', 'erro');
+        setCarregando(false);
+        return;
+      }
+
+      // 2. Verificar se já jogou conforme o intervalo configurado
+      const clean = cpf.replace(/\D/g, '');
+      const jaJogouKey = `ja_jogou_roleta_carteira_${lid}_${clean}`;
+      const jaJogouLocal = await carregarStorage(jaJogouKey);
+      
+      const diasIntervalo = (config && config.roleta_intervalo_dias !== undefined && config.roleta_intervalo_dias !== null) 
+        ? Number(config.roleta_intervalo_dias) 
+        : 1; // Padrão: 1 dia (24 horas)
+      
+      if (jaJogouLocal) {
+        const dataLocal = new Date(jaJogouLocal);
+        const agora = new Date();
+        const diffMs = agora.getTime() - dataLocal.getTime();
+        const diffHoras = diffMs / (1000 * 60 * 60);
+        const horasBloqueio = diasIntervalo * 24;
+        
+        if (diffHoras < horasBloqueio) {
+          if (diasIntervalo === 1) {
+            mostrarToast('Aguardamos você novamente amanhã para jogar com a gente ;)', 'erro');
+          } else {
+            mostrarToast(`Você já jogou recentemente! A roleta estará disponível após ${diasIntervalo} dias.`, 'erro');
+          }
+          setCarregando(false);
+          return;
+        }
+      }
+
+      const [{ data: pNps }, { data: pRol }] = await Promise.all([
+        supabase.from('perguntas_nps').select('*').eq('loja_id', lid),
+        supabase.from('roleta_premios').select('*').eq('loja_id', lid)
+      ]);
+      setPerguntasNps(pNps || [{ id: 'd', pergunta: 'Nota para a loja?', tipo: 'estrelas' }]);
+      setPremiosRoleta(pRol || []);
+      setEtapaRoleta('nps'); 
+      setMostrarRoletaModal(true);
+    } catch (e) {
+      console.error('Erro ao abrir roleta:', e);
+      mostrarToast('Ocorreu um erro ao carregar a roleta. ❌', 'erro');
+    }
+    setCarregando(false);
   };
 
   const girarRoleta = () => {
@@ -857,9 +977,15 @@ export default function Cliente() {
     }).start(async () => {
       setPremioGanho(win); setRodando(false); setEtapaRoleta('resultado');
       const clean = cpf.replace(/\D/g, '');
-      if (win?.tipo === 'pontos') await supabase.from('bonus_pendentes').insert([{ cliente_cpf: clean, loja_id: String(loja_id), pontos: win.valor }]);
-      else if (win?.tipo === 'cashback') await supabase.from('cashbacks').insert([{ cliente_cpf: clean, loja_id: String(loja_id), valor: win.valor }]);
-      else if (win?.tipo === 'brinde') await supabase.from('brindes_pendentes').insert([{ cliente_cpf: clean, loja_id: String(loja_id), nome_brinde: win.nome }]);
+      const lid = uuidLojaReal || loja_id || configLoja?.loja_id;
+      if (win?.tipo === 'pontos') await supabase.from('bonus_pendentes').insert([{ cliente_cpf: clean, loja_id: String(lid), pontos: win.valor }]);
+      else if (win?.tipo === 'cashback') await supabase.from('cashbacks').insert([{ cliente_cpf: clean, loja_id: String(lid), valor: win.valor }]);
+      else if (win?.tipo === 'brinde') await supabase.from('brindes_pendentes').insert([{ cliente_cpf: clean, loja_id: String(lid), nome_brinde: win.nome }]);
+      
+      const jaJogouKey = `ja_jogou_roleta_carteira_${lid}_${clean}`;
+      const dataAtualIso = new Date().toISOString();
+      await salvarStorage(jaJogouKey, dataAtualIso);
+      
       carregarDados(clean);
     });
   };
@@ -912,7 +1038,7 @@ export default function Cliente() {
           </Text>
         )}
 
-        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 40 }}>v5.8.3-exchange</Text>
+        <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 40 }}>{APP_VERSION}</Text>
       </ScrollView>
     );
   } else if (status === 'aguardando') {
@@ -1102,10 +1228,11 @@ export default function Cliente() {
 
                         <TouchableOpacity
                           onPress={() => resgatarBrinde(item)}
-                          style={[styles.btnResgateOverlay, { backgroundColor: saldo >= item.custo_pontos ? c.neonVerde : '#ffffff30' }]}
+                          disabled={saldoLocal < item.custo_pontos || carregando}
+                          style={[styles.btnResgateOverlay, { backgroundColor: saldoLocal >= item.custo_pontos ? c.neonVerde : '#ffffff30' }]}
                         >
-                          <Text style={{ color: saldo >= item.custo_pontos ? '#fff' : '#ccc', fontWeight: '900', fontSize: 13 }}>
-                            {saldo >= item.custo_pontos ? 'RESGATAR AGORA' : 'SEM SALDO'}
+                          <Text style={{ color: saldoLocal >= item.custo_pontos ? '#fff' : '#ccc', fontWeight: '900', fontSize: 13 }}>
+                            {saldoLocal >= item.custo_pontos ? 'RESGATAR AGORA' : 'SEM SALDO'}
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -1214,7 +1341,7 @@ export default function Cliente() {
             <Text style={{ color: '#ef4444', fontWeight: '900', fontSize: 12, letterSpacing: 1 }}>🚪 SAIR DA CONTA</Text>
           </TouchableOpacity>
 
-          <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 20 }}>Versão 5.8.4-exchange</Text>
+          <Text style={{ textAlign: 'center', color: c.subtexto, fontSize: 10, marginTop: 20 }}>Versão {APP_VERSION}</Text>
         </ScrollView>
       </View>
     );
@@ -1377,7 +1504,11 @@ export default function Cliente() {
       <Modal visible={mostrarPinModal} transparent animationType="fade">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' }}>
           <View style={{ backgroundColor: c.card, padding: 30, borderRadius: 24, width: 300 }}>
-            <Text style={{ color: c.texto, fontSize: 20, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 }}>{pinModoValidar ? 'Digite seu PIN' : 'Crie seu PIN'}</Text>
+            <Text style={{ color: c.texto, fontSize: 18, fontWeight: 'bold', textAlign: 'center', marginBottom: 20 }}>
+              {pinModoValidar 
+                ? (validadandoPinCheckout ? 'Atendimento Iniciado!\nDigite seu PIN 🔑' : 'Digite seu PIN') 
+                : 'Crie seu PIN'}
+            </Text>
             <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 30 }}>
               {[0, 1, 2, 3].map(i => (
                 <TextInput
