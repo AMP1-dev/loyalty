@@ -978,7 +978,7 @@ export default function Cliente() {
       setPremioGanho(win); setRodando(false); setEtapaRoleta('resultado');
       const clean = cpf.replace(/\D/g, '');
       const lid = uuidLojaReal || loja_id || configLoja?.loja_id;
-      if (win?.tipo === 'pontos') await supabase.from('bonus_pendentes').insert([{ cliente_cpf: clean, loja_id: String(lid), pontos: win.valor }]);
+      if (win?.tipo === 'pontos') await supabase.from('transacoes').insert([{ cliente_cpf: clean, loja_id: String(lid), valor: 0, pontos_gerados: win.valor, cashback_gerado: 0, premio_nome: win.nome, tipo_origem: 'roleta' }]);
       else if (win?.tipo === 'cashback') await supabase.from('cashbacks').insert([{ cliente_cpf: clean, loja_id: String(lid), valor: win.valor }]);
       else if (win?.tipo === 'brinde') await supabase.from('brindes_pendentes').insert([{ cliente_cpf: clean, loja_id: String(lid), nome_brinde: win.nome }]);
       

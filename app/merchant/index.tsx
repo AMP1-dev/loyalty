@@ -1829,8 +1829,8 @@ export default function MerchantPanel() {
                   return (
                     <View key={c.id} style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
                       {temBonus > 0 && (<View style={{ flex: 1, minWidth: 250, flexDirection: 'row', alignItems: 'center', backgroundColor: '#facc1515', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#facc1530' }}><Switch value={usarBonus[c.id] !== false} onValueChange={(v) => setUsarBonus((prev: any) => ({ ...prev, [c.id]: v }))} /><Text style={{ color: '#facc15', marginLeft: 12, fontWeight: 'bold', fontSize: 16 }}>🎁 BÔNUS: +{temBonus} SPG</Text></View>)}
-                      {brindes.map((b: any) => (<View key={b.id} style={{ flex: 1, minWidth: 250, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ec489915', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#ec489930' }}><Text style={{ color: '#ec4899', fontWeight: 'bold', fontSize: 15 }}>🏆 Brinde: {b.nome_brinde}</Text><TouchableOpacity onPress={() => entregarBrinde(b.id, c.cliente_cpf)} style={{ backgroundColor: '#ec4899', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>ENTREGAR</Text></TouchableOpacity></View>))}
-                      {(premiosMesaPendentes[c.cliente_cpf] || []).map((p: any) => (<View key={p.id} style={{ flex: 1, minWidth: 250, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#8b5cf615', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#8b5cf630' }}><Text style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: 15 }}>🎡 MESA: {p.premio_nome}</Text><TouchableOpacity onPress={() => resgatarPremioMesa(p.id, c.cliente_cpf)} style={{ backgroundColor: '#8b5cf6', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>RESGATAR</Text></TouchableOpacity></View>))}
+                      {brindes.map((b: any) => (<View key={b.id} style={{ flex: 1, minWidth: 250, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ec489915', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#ec489930' }}><Text style={{ color: '#ec4899', fontWeight: 'bold', fontSize: 15 }}>🏆 Brinde: {b.nome_brinde}</Text><TouchableOpacity onPress={() => entregarBrinde(b.id, c.cliente_cpf)} style={{ backgroundColor: '#ec4899', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 10 }}>ENTREGAR</Text></TouchableOpacity></View>))}
+                      {(premiosMesaPendentes[c.cliente_cpf] || []).map((p: any) => (<View key={p.id} style={{ flex: 1, minWidth: 250, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#8b5cf615', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#8b5cf630' }}><Text style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: 15 }}>🎡 MESA: {p.premio_nome}</Text><TouchableOpacity onPress={() => resgatarPremioMesa(p.id, c.cliente_cpf)} style={{ backgroundColor: '#8b5cf6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 10 }}>RESGATAR</Text></TouchableOpacity></View>))}
                       
                       {/* CATÁLOGO DE PONTOS */}
                       {rewards.map((r: any) => {
@@ -1844,9 +1844,9 @@ export default function MerchantPanel() {
                             <TouchableOpacity 
                               disabled={saldoTotal < r.custo_pontos}
                               onPress={() => resgatarBrinde(r, c.cliente_cpf)} 
-                              style={{ backgroundColor: saldoTotal >= r.custo_pontos ? '#10b981' : '#334155', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 10 }}
+                              style={{ backgroundColor: saldoTotal >= r.custo_pontos ? '#10b981' : '#334155', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}
                             >
-                              <Text style={{ color: saldoTotal >= r.custo_pontos ? '#0f172a' : '#94a3b8', fontWeight: 'bold', fontSize: 12 }}>RESGATAR</Text>
+                              <Text style={{ color: saldoTotal >= r.custo_pontos ? '#0f172a' : '#94a3b8', fontWeight: 'bold', fontSize: 10 }}>RESGATAR</Text>
                             </TouchableOpacity>
                           </View>
                         );

@@ -560,7 +560,18 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
       }
 
       // --- CRÉDITO AUTOMÁTICO NA CARTEIRA ---
-      if (premio?.tipo === 'pontos' || premio?.tipo === 'bonus') {
+      if (premio?.tipo === 'pontos') {
+        const { error: insErr } = await supabase.from('transacoes').insert([{
+          cliente_cpf: telLimpo,
+          loja_id: lid_final,
+          valor: 0,
+          pontos_gerados: valor,
+          cashback_gerado: 0,
+          premio_nome: premio.nome,
+          tipo_origem: 'roleta_mesa'
+        }]);
+        if (insErr) console.error('Erro ao creditar pontos na carteira:', insErr);
+      } else if (premio?.tipo === 'bonus') {
         const expDate = new Date();
         expDate.setFullYear(expDate.getFullYear() + 1);
         const { error: insErr } = await supabase.from('bonus_pendentes').insert([{
@@ -570,7 +581,7 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
           usado: false,
           data_expiracao: expDate.toISOString()
         }]);
-        if (insErr) console.error('Erro ao creditar pontos/bonus na carteira:', insErr);
+        if (insErr) console.error('Erro ao creditar bonus na carteira:', insErr);
       } else if (premio?.tipo === 'cashback') {
         const { error: insErr } = await supabase.from('cashbacks').insert([{
           cliente_cpf: telLimpo,
