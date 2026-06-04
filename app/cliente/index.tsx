@@ -998,6 +998,30 @@ export default function Cliente() {
     setCpf(f);
   };
 
+  const sairDaConta = async () => {
+    await salvarStorage('cliente_cpf', '');
+    
+    // Limpar estados da memória RAM para não vazar dados do cliente anterior
+    setCpf('');
+    setSaldo(0);
+    setCashback(0);
+    setSaldoLocal(0);
+    setCashbackLocal(0);
+    setSaldoPorLoja([]);
+    setRecompensas([]);
+    setRecompensasRede([]);
+    setExtrato([]);
+    setTokenAtivo(null);
+    setCaixaAtiva(null);
+    setPinDigitado(['', '', '', '']);
+    setValidandoPinCheckout(false);
+    setEhPrimeiroCadastro(false);
+    setMostrarPinModal(false);
+    
+    setStatus('idle');
+    mostrarToast('Sessão encerrada com segurança! 👋', 'sucesso');
+  };
+
   let content;
   if (status === 'idle') {
     content = (
@@ -1335,7 +1359,7 @@ export default function Cliente() {
 
           {/* BOTÃO SAIR */}
           <TouchableOpacity
-            onPress={() => { setStatus('idle'); salvarStorage('cliente_cpf', ''); }}
+            onPress={sairDaConta}
             style={{ marginHorizontal: 20, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#ef444450', alignItems: 'center' }}
           >
             <Text style={{ color: '#ef4444', fontWeight: '900', fontSize: 12, letterSpacing: 1 }}>🚪 SAIR DA CONTA</Text>
