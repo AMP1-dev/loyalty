@@ -984,9 +984,6 @@ export default function Cliente() {
       if (win?.tipo === 'pontos') await supabase.from('transacoes').insert([{ cliente_cpf: clean, loja_id: String(lid), valor: 0, pontos_gerados: win.valor, cashback_gerado: 0, premio_nome: win.nome, tipo_origem: 'roleta' }]);
       else if (win?.tipo === 'cashback') await supabase.from('cashbacks').insert([{ cliente_cpf: clean, loja_id: String(lid), valor: win.valor }]);
       else if (win?.tipo === 'brinde') await supabase.from('brindes_pendentes').insert([{ cliente_cpf: clean, loja_id: String(lid), nome_brinde: win.nome }]);
-      else if (win?.tipo === 'nada' || (win?.nome || '').toLowerCase().includes('tente')) {
-        await supabase.from('transacoes').insert([{ cliente_cpf: clean, loja_id: String(lid), valor: 0, pontos_gerados: 2, cashback_gerado: 0, premio_nome: 'Prêmio de Consolação (2 SPG)', tipo_origem: 'roleta' }]);
-      }
       
       const jaJogouKey = `ja_jogou_roleta_carteira_${lid}_${clean}`;
       const dataAtualIso = new Date().toISOString();
@@ -998,6 +995,15 @@ export default function Cliente() {
 
   const creditarPremioEmDobroRoletaApp = async (premio: any, telLimpo: string, lojaId: string) => {
     try {
+      const isNada = premio?.tipo === 'nada' || (premio?.nome || '').toLowerCase().includes('tente') || (premio?.nome || '').toLowerCase().includes('não ganhou') || (premio?.nome || '').toLowerCase().includes('nao ganhou');
+      
+      if (isNada) {
+        await supabase.from('transacoes').insert([{
+          cliente_cpf: telLimpo, loja_id: lojaId, valor: 0, pontos_gerados: 2, cashback_gerado: 0, premio_nome: 'Prêmio de Consolação (Google App)', tipo_origem: 'roleta'
+        }]);
+        return;
+      }
+
       const multiplicador = configLoja?.bonus_5_estrelas_multiplicador || 2.0;
       let valor = Number(premio?.valor);
       if (isNaN(valor) || !valor) {
@@ -1523,7 +1529,7 @@ export default function Cliente() {
               </View>
             )}
             {etapaRoleta === 'resultado' && (
-              respostasNps?.nota === 5 && premioGanho && premioGanho.tipo !== 'nada' && premioGanho.tipo !== 'outro' && !(premioGanho.nome || '').toLowerCase().includes('tente') ? (
+              respostasNps?.nota === 5 && premioGanho && premioGanho.tipo !== 'outro' ? (
                 <OfertaGoogle
                   premio={premioGanho}
                   lojaId={String(uuidLojaReal || loja_id || configLoja?.loja_id)}
@@ -1554,7 +1560,7 @@ export default function Cliente() {
                         </Text>
 
                         <Text style={{ color: c.subtexto, fontSize: 12, textAlign: 'center', marginTop: 15, opacity: 0.8 }}>
-                          {isNada ? 'Mas você ganhou 2 SPG de consolação! Tente novamente na sua próxima compra. ✨' : 'O prêmio já foi adicionado à sua conta e pode ser resgatado no balcão.'}
+                          {isNada ? 'Mas não desista! Tente novamente na sua próxima compra. ✨' : 'O prêmio já foi adicionado à sua conta e pode ser resgatado no balcão.'}
                         </Text>
                       </>
                     );

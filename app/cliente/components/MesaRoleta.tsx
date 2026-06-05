@@ -598,17 +598,6 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
           resgatado: false
         }]);
         if (insErr) console.error('Erro ao registrar brinde pendente na carteira:', insErr);
-      } else if (isPremioPerda(premio) || premio?.tipo === 'nada') {
-        const { error: insErr } = await supabase.from('transacoes').insert([{
-          cliente_cpf: telLimpo,
-          loja_id: lid_final,
-          valor: 0,
-          pontos_gerados: 2,
-          cashback_gerado: 0,
-          premio_nome: 'Prêmio de Consolação (2 SPG)',
-          tipo_origem: 'roleta_mesa'
-        }]);
-        if (insErr) console.error('Erro ao creditar consolação na carteira:', insErr);
       }
 
       await sincronizarComRemarketig(telLimpo, premio);
@@ -619,6 +608,14 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
 
   const creditarPremioEmDobro = async (premio: any, telLimpo: string, lojaId: string) => {
     try {
+      const isNada = isPremioPerda(premio) || premio?.tipo === 'nada';
+      if (isNada) {
+        await supabase.from('transacoes').insert([{
+          cliente_cpf: telLimpo, loja_id: lojaId, valor: 0, pontos_gerados: 2, cashback_gerado: 0, premio_nome: 'Prêmio de Consolação (Google Mesa)', tipo_origem: 'roleta_mesa'
+        }]);
+        return;
+      }
+
       const multiplicador = configLoja?.bonus_5_estrelas_multiplicador || 2.0;
       let valor = Number(premio?.valor);
       if (isNaN(valor) || !valor) {
@@ -663,7 +660,7 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
     }
   };
 
-  if (etapa === 'resultado' && notaNps === 5 && premioGanho && !isPremioPerda(premioGanho) && premioGanho.tipo !== 'outro') {
+  if (etapa === 'resultado' && notaNps === 5 && premioGanho && premioGanho.tipo !== 'outro') {
     return (
       <OfertaGoogle
         premio={premioGanho}

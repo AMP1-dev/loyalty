@@ -128,7 +128,11 @@ export default function OfertaGoogle({
     }
   };
 
-  const premioComDobro = {
+  const isNada = premio?.tipo === 'nada' || (premio?.nome || '').toLowerCase().includes('tente') || (premio?.nome || '').toLowerCase().includes('não ganhou') || (premio?.nome || '').toLowerCase().includes('nao ganhou');
+
+  const premioComDobro = isNada ? {
+    nome: '2 SPG (Consolação)'
+  } : {
     ...premio,
     valor: (premio.valor || 1) * multiplicador,
     nome: `${premio.nome} x${multiplicador}`,
@@ -184,7 +188,7 @@ export default function OfertaGoogle({
                 <Text style={{ fontSize: 48, marginBottom: 12 }}>✨</Text>
               )}
               <Text style={{ fontSize: 24, fontWeight: '900', color: c.neonOuro, textAlign: 'center' }}>
-                GANHE O DOBRO!
+                {isNada ? 'GANHE UM PRÊMIO!' : 'GANHE O DOBRO!'}
               </Text>
               <Text style={{ fontSize: 12, color: c.subtexto, textAlign: 'center', marginTop: 6 }}>
                 Ajude-nos a melhorar avaliando no Google
@@ -209,7 +213,7 @@ export default function OfertaGoogle({
                   SEM AVALIAÇÃO
                 </Text>
                 <Text style={{ fontSize: 18, fontWeight: '900', color: c.texto }}>
-                  {premio.nome}
+                  {isNada ? 'Nenhum Prêmio' : premio.nome}
                 </Text>
               </View>
 
@@ -247,7 +251,7 @@ export default function OfertaGoogle({
                   '1️⃣ Clique em "AVALIAR NO GOOGLE"',
                   '2️⃣ Deixe sua opinião (4-5 estrelas)',
                   '3️⃣ Volte aqui quando terminar',
-                  '4️⃣ Seu prêmio em dobro está pronto!',
+                  isNada ? '4️⃣ Seus pontos estão prontos!' : '4️⃣ Seu prêmio em dobro está pronto!',
                 ].map((step, i) => (
                   <Text key={i} style={{ fontSize: 11, color: c.subtexto }}>
                     {step}
