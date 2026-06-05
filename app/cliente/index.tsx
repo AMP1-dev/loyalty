@@ -22,6 +22,7 @@ import {
 import Svg, { Circle, Defs, G, Path, RadialGradient, Stop, LinearGradient as SvgLinearGradient, Text as SvgText, TSpan } from 'react-native-svg';
 import { supabase } from '../../lib/supabase';
 import MesaRoleta from './components/MesaRoleta';
+import OfertaGoogle from './components/OfertaGoogle';
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
 const APP_VERSION = "v5.8.9-exchange";
@@ -777,9 +778,10 @@ export default function Cliente() {
         // Fluxo Balcão: Check-in DIRETO (sem PIN) para aparecer no lojista
 
         // 1. Garantir que o cliente existe na tabela 'clientes' (Manual para evitar erro 42P10)
+        const lid_final = uuidLojaReal || String(loja_id);
         const { data: exCli } = await supabase.from('clientes').select('cpf').eq('cpf', clean).maybeSingle();
         if (!exCli) {
-          const { error: insCliErr } = await supabase.from('clientes').insert([{ cpf: clean }]);
+          const { error: insCliErr } = await supabase.from('clientes').insert([{ cpf: clean, loja_id_origem: lid_final }]);
           if (insCliErr && insCliErr.code !== '23505') { // 23505 = já existe (ignorar se outro processo criou)
             console.error('Erro ao criar cliente:', insCliErr);
             mostrarToast(`Erro ${insCliErr.code}: Falha ao registrar.`, 'erro');
@@ -789,7 +791,6 @@ export default function Cliente() {
         }
 
         // 2. Garantir entrada na fila
-        const lid_final = uuidLojaReal || String(loja_id);
         await supabase.from('checkins').delete().eq('cliente_cpf', clean).eq('loja_id', lid_final);
         const { error: insError } = await supabase.from('checkins').insert([{
           cliente_cpf: clean,
@@ -943,10 +944,12 @@ export default function Cliente() {
       }
 
       const [{ data: pNps }, { data: pRol }] = await Promise.all([
-        supabase.from('perguntas_nps').select('*').eq('loja_id', lid),
+        supabase.from('perguntas_nps').select('*').eq('loja_id', lid).eq('ativo', true),
         supabase.from('roleta_premios').select('*').eq('loja_id', lid)
       ]);
-      setPerguntasNps(pNps || [{ id: 'd', pergunta: 'Nota para a loja?', tipo: 'estrelas' }]);
+      const allPerguntas = pNps && pNps.length > 0 ? pNps : [{ id: 'd', pergunta: 'O que achou de nós?', tipo: 'estrelas' }];
+      const randQ = allPerguntas[Math.floor(Math.random() * allPerguntas.length)];
+      setPerguntasNps([randQ]);
       setPremiosRoleta(pRol || []);
       setEtapaRoleta('nps'); 
       setMostrarRoletaModal(true);
@@ -981,6 +984,9 @@ export default function Cliente() {
       if (win?.tipo === 'pontos') await supabase.from('transacoes').insert([{ cliente_cpf: clean, loja_id: String(lid), valor: 0, pontos_gerados: win.valor, cashback_gerado: 0, premio_nome: win.nome, tipo_origem: 'roleta' }]);
       else if (win?.tipo === 'cashback') await supabase.from('cashbacks').insert([{ cliente_cpf: clean, loja_id: String(lid), valor: win.valor }]);
       else if (win?.tipo === 'brinde') await supabase.from('brindes_pendentes').insert([{ cliente_cpf: clean, loja_id: String(lid), nome_brinde: win.nome }]);
+      else if (win?.tipo === 'nada' || (win?.nome || '').toLowerCase().includes('tente')) {
+        await supabase.from('transacoes').insert([{ cliente_cpf: clean, loja_id: String(lid), valor: 0, pontos_gerados: 2, cashback_gerado: 0, premio_nome: 'Prêmio de Consolação (2 SPG)', tipo_origem: 'roleta' }]);
+      }
       
       const jaJogouKey = `ja_jogou_roleta_carteira_${lid}_${clean}`;
       const dataAtualIso = new Date().toISOString();
@@ -988,6 +994,31 @@ export default function Cliente() {
       
       carregarDados(clean);
     });
+  };
+
+  const creditarPremioEmDobroRoletaApp = async (premio: any, telLimpo: string, lojaId: string) => {
+    try {
+      const multiplicador = configLoja?.bonus_5_estrelas_multiplicador || 2.0;
+      let valor = Number(premio?.valor);
+      if (isNaN(valor) || !valor) {
+        const match = String(premio?.nome || '').match(/\d+/);
+        valor = match ? Number(match[0]) : 10;
+      }
+      const valorExtra = valor * (multiplicador - 1);
+      if (valorExtra <= 0) return;
+
+      if (premio?.tipo === 'pontos') {
+        await supabase.from('transacoes').insert([{
+          cliente_cpf: telLimpo, loja_id: lojaId, valor: 0, pontos_gerados: valorExtra, cashback_gerado: 0, premio_nome: 'Google Dobro (App)', tipo_origem: 'roleta'
+        }]);
+      } else if (premio?.tipo === 'cashback') {
+        await supabase.from('cashbacks').insert([{
+          cliente_cpf: telLimpo, loja_id: lojaId, valor: valorExtra, usado: false
+        }]);
+      }
+    } catch (e) {
+      console.error('Erro crédito em dobro app:', e);
+    }
   };
 
   const formatarTelefone = (t: string) => {
@@ -1429,9 +1460,28 @@ export default function Cliente() {
           <View style={{ backgroundColor: c.card, borderRadius: 24, padding: 24, width: '100%', maxWidth: 400 }}>
             {etapaRoleta === 'nps' && (
               <View>
-                <Text style={{ color: c.texto, fontSize: 20, fontWeight: 'bold', textAlign: 'center' }}>O que achou de nós?</Text>
+                <Text style={{ color: c.texto, fontSize: 20, fontWeight: 'bold', textAlign: 'center' }}>
+                  {perguntasNps[0]?.pergunta || 'O que achou de nós?'}
+                </Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'center', marginVertical: 30 }}>
-                  {[1, 2, 3, 4, 5].map(i => <TouchableOpacity key={i} onPress={() => setEtapaRoleta('girando')}><Text style={{ fontSize: 40 }}>⭐</Text></TouchableOpacity>)}
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <TouchableOpacity key={i} onPress={async () => {
+                      const lid = uuidLojaReal || loja_id || configLoja?.loja_id;
+                      const clean = cpf.replace(/\D/g, '');
+                      setRespostasNps({ nota: i });
+                      if (lid && clean) {
+                        await supabase.from('respostas_nps').insert({ 
+                          loja_id: String(lid), 
+                          cliente_cpf: clean, 
+                          resposta: String(i), 
+                          pergunta_id: perguntasNps[0]?.id === 'd' ? null : perguntasNps[0]?.id 
+                        });
+                      }
+                      setEtapaRoleta('girando');
+                    }}>
+                      <Text style={{ fontSize: 40 }}>⭐</Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               </View>
             )}
@@ -1473,39 +1523,51 @@ export default function Cliente() {
               </View>
             )}
             {etapaRoleta === 'resultado' && (
-              <View style={{ alignItems: 'center', padding: 20 }}>
-                {(() => {
-                  const nome = (premioGanho?.nome || '').toLowerCase();
-                  const isNada = premioGanho?.tipo === 'nada' || nome.includes('tente') || nome.includes('não ganhou') || nome.includes('nao ganhou');
+              respostasNps?.nota === 5 && premioGanho && premioGanho.tipo !== 'nada' && premioGanho.tipo !== 'outro' && !(premioGanho.nome || '').toLowerCase().includes('tente') ? (
+                <OfertaGoogle
+                  premio={premioGanho}
+                  lojaId={String(uuidLojaReal || loja_id || configLoja?.loja_id)}
+                  clienteCpf={cpf.replace(/\D/g, '')}
+                  linkGoogle={configLoja?.link_google_meu_negocio}
+                  multiplicador={configLoja?.bonus_5_estrelas_multiplicador || 2.0}
+                  onClose={() => setMostrarRoletaModal(false)}
+                  onGoogleOpened={() => creditarPremioEmDobroRoletaApp(premioGanho, cpf.replace(/\D/g, ''), String(uuidLojaReal || loja_id || configLoja?.loja_id))}
+                />
+              ) : (
+                <View style={{ alignItems: 'center', padding: 20 }}>
+                  {(() => {
+                    const nome = (premioGanho?.nome || '').toLowerCase();
+                    const isNada = premioGanho?.tipo === 'nada' || nome.includes('tente') || nome.includes('não ganhou') || nome.includes('nao ganhou');
 
-                  return (
-                    <>
-                      <LinearGradient
-                        colors={isNada ? ['#475569', '#1e293b'] : ['#f59e0b', '#d97706']}
-                        style={{ width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', marginBottom: 20, elevation: 10 }}
-                      >
-                        <Text style={{ fontSize: 50 }}>{isNada ? '🎡' : '🎁'}</Text>
-                      </LinearGradient>
+                    return (
+                      <>
+                        <LinearGradient
+                          colors={isNada ? ['#475569', '#1e293b'] : ['#f59e0b', '#d97706']}
+                          style={{ width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', marginBottom: 20, elevation: 10 }}
+                        >
+                          <Text style={{ fontSize: 50 }}>{isNada ? '🎡' : '🎁'}</Text>
+                        </LinearGradient>
 
-                      <Text style={{ color: c.subtexto, fontSize: 14, fontWeight: '800', letterSpacing: 1 }}>{isNada ? 'QUASE LÁ!' : 'PARABÉNS!'}</Text>
-                      <Text style={{ color: c.texto, fontSize: 26, fontWeight: '900', textAlign: 'center', marginTop: 10, lineHeight: 32 }}>
-                        {isNada ? 'Não foi dessa vez...' : `Você ganhou:\n${premioGanho?.nome}`}
-                      </Text>
+                        <Text style={{ color: c.subtexto, fontSize: 14, fontWeight: '800', letterSpacing: 1 }}>{isNada ? 'QUASE LÁ!' : 'PARABÉNS!'}</Text>
+                        <Text style={{ color: c.texto, fontSize: 26, fontWeight: '900', textAlign: 'center', marginTop: 10, lineHeight: 32 }}>
+                          {isNada ? 'Não foi dessa vez...' : `Você ganhou:\n${premioGanho?.nome}`}
+                        </Text>
 
-                      <Text style={{ color: c.subtexto, fontSize: 12, textAlign: 'center', marginTop: 15, opacity: 0.8 }}>
-                        {isNada ? 'Mas não desista! Tente novamente na sua próxima compra. ✨' : 'O prêmio já foi adicionado à sua conta e pode ser resgatado no balcão.'}
-                      </Text>
-                    </>
-                  );
-                })()}
+                        <Text style={{ color: c.subtexto, fontSize: 12, textAlign: 'center', marginTop: 15, opacity: 0.8 }}>
+                          {isNada ? 'Mas você ganhou 2 SPG de consolação! Tente novamente na sua próxima compra. ✨' : 'O prêmio já foi adicionado à sua conta e pode ser resgatado no balcão.'}
+                        </Text>
+                      </>
+                    );
+                  })()}
 
-                <TouchableOpacity
-                  onPress={() => setMostrarRoletaModal(false)}
-                  style={{ marginTop: 40, backgroundColor: c.neonVerde, paddingHorizontal: 60, paddingVertical: 15, borderRadius: 20, elevation: 5 }}
-                >
-                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>FECHAR</Text>
-                </TouchableOpacity>
-              </View>
+                  <TouchableOpacity
+                    onPress={() => setMostrarRoletaModal(false)}
+                    style={{ marginTop: 40, backgroundColor: c.neonVerde, paddingHorizontal: 60, paddingVertical: 15, borderRadius: 20, elevation: 5 }}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>FECHAR</Text>
+                  </TouchableOpacity>
+                </View>
+              )
             )}
           </View>
         </View>
