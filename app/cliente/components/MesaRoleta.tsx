@@ -598,11 +598,47 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
           resgatado: false
         }]);
         if (insErr) console.error('Erro ao registrar brinde pendente na carteira:', insErr);
+      } else if (isPremioPerda(premio) || premio?.tipo === 'nada') {
+        const { error: insErr } = await supabase.from('transacoes').insert([{
+          cliente_cpf: telLimpo,
+          loja_id: lid_final,
+          valor: 0,
+          pontos_gerados: 2,
+          cashback_gerado: 0,
+          premio_nome: 'Prêmio de Consolação (2 SPG)',
+          tipo_origem: 'roleta_mesa'
+        }]);
+        if (insErr) console.error('Erro ao creditar consolação na carteira:', insErr);
       }
 
       await sincronizarComRemarketig(telLimpo, premio);
     } catch (error) {
       console.error('Erro no fluxo salvarParticipacaoMesa:', error);
+    }
+  };
+
+  const creditarPremioEmDobro = async (premio: any, telLimpo: string, lojaId: string) => {
+    try {
+      const multiplicador = configLoja?.bonus_5_estrelas_multiplicador || 2.0;
+      let valor = Number(premio?.valor);
+      if (isNaN(valor) || !valor) {
+        const match = String(premio?.nome || '').match(/\d+/);
+        valor = match ? Number(match[0]) : 10;
+      }
+      const valorExtra = valor * (multiplicador - 1);
+      if (valorExtra <= 0) return;
+
+      if (premio?.tipo === 'pontos') {
+        await supabase.from('transacoes').insert([{
+          cliente_cpf: telLimpo, loja_id: lojaId, valor: 0, pontos_gerados: valorExtra, cashback_gerado: 0, premio_nome: 'Google Dobro', tipo_origem: 'roleta_mesa'
+        }]);
+      } else if (premio?.tipo === 'cashback') {
+        await supabase.from('cashbacks').insert([{
+          cliente_cpf: telLimpo, loja_id: lojaId, valor: valorExtra, usado: false
+        }]);
+      }
+    } catch (e) {
+      console.error('Erro crédito em dobro:', e);
     }
   };
 
@@ -636,6 +672,7 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
         linkGoogle={configLoja?.link_google_meu_negocio}
         multiplicador={configLoja?.bonus_5_estrelas_multiplicador || 2.0}
         onClose={() => setEtapa('telefone')}
+        onGoogleOpened={() => creditarPremioEmDobro(premioGanho, telefone.replace(/\D/g, ''), uuidLojaReal || String(loja_id))}
       />
     );
   }

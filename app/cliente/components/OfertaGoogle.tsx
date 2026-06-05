@@ -14,6 +14,7 @@ interface OfertaGoogleProps {
   linkGoogle?: string;
   multiplicador: number;
   onClose: () => void;
+  onGoogleOpened?: () => void;
 }
 
 export default function OfertaGoogle({
@@ -23,6 +24,7 @@ export default function OfertaGoogle({
   linkGoogle,
   multiplicador = 2.0,
   onClose,
+  onGoogleOpened,
 }: OfertaGoogleProps) {
   const [foiAberto, setFoiAberto] = useState(false);
   const [countdownAbrir, setCountdownAbrir] = useState(5);
@@ -102,6 +104,7 @@ export default function OfertaGoogle({
         ? `${linkGoogle}&utm_source=mesa_${clienteCpf}`
         : `${linkGoogle}?utm_source=mesa_${clienteCpf}`;
 
+      if (onGoogleOpened) onGoogleOpened();
       await Linking.openURL(url);
     } catch (error) {
       console.error('Erro ao abrir Google:', error);
