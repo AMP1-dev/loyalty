@@ -964,9 +964,14 @@ export default function MerchantPanel() {
     if (!editandoRoletaId) return;
     if (!formRoleta.nome || !formRoleta.tipo || !formRoleta.probabilidade) { mostrarToast("Preencha Nome, Tipo e Probabilidade.", 'erro'); return; }
 
+    const tipoFatia = formRoleta.tipo.toLowerCase().trim();
+    if ((tipoFatia === 'pontos' || tipoFatia === 'cashback') && (!formRoleta.valor || Number(formRoleta.valor) <= 0)) {
+       mostrarToast("Para Pontos ou Cashback, informe um Valor numérico maior que zero.", 'erro'); return; 
+    }
+
     const payload = {
       loja_id: lojaId, nome: formRoleta.nome,
-      tipo: formRoleta.tipo.toLowerCase().trim(),
+      tipo: tipoFatia,
       valor: Number(formRoleta.valor) || 0,
       probabilidade: Number(formRoleta.probabilidade) || 10,
       ativo: true
@@ -1828,9 +1833,16 @@ export default function MerchantPanel() {
                 if (temBonus > 0 || brindes.length > 0 || premiosMesaPendentes[c.cliente_cpf]?.length > 0) {
                   return (
                     <View key={c.id} style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
-                      {temBonus > 0 && (<View style={{ flex: 1, minWidth: 250, flexDirection: 'row', alignItems: 'center', backgroundColor: '#facc1515', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#facc1530' }}><Switch value={usarBonus[c.id] !== false} onValueChange={(v) => setUsarBonus((prev: any) => ({ ...prev, [c.id]: v }))} /><Text style={{ color: '#facc15', marginLeft: 12, fontWeight: 'bold', fontSize: 16 }}>🎁 BÔNUS: +{temBonus} SPG</Text></View>)}
-                      {brindes.map((b: any) => (<View key={b.id} style={{ flex: 1, minWidth: 250, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ec489915', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#ec489930' }}><Text style={{ color: '#ec4899', fontWeight: 'bold', fontSize: 15 }}>🏆 Brinde: {b.nome_brinde}</Text><TouchableOpacity onPress={() => entregarBrinde(b.id, c.cliente_cpf)} style={{ backgroundColor: '#ec4899', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 10 }}>ENTREGAR</Text></TouchableOpacity></View>))}
-                      {(premiosMesaPendentes[c.cliente_cpf] || []).map((p: any) => (<View key={p.id} style={{ flex: 1, minWidth: 250, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#8b5cf615', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#8b5cf630' }}><Text style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: 15 }}>🎡 MESA: {p.premio_nome}</Text><TouchableOpacity onPress={() => resgatarPremioMesa(p.id, c.cliente_cpf)} style={{ backgroundColor: '#8b5cf6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 10 }}>RESGATAR</Text></TouchableOpacity></View>))}
+                      {temBonus > 0 || brindes.length > 0 || (premiosMesaPendentes[c.cliente_cpf] || []).length > 0 ? (
+                        <View style={{ width: '100%', marginBottom: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#334155' }}>
+                          <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold', marginBottom: 10 }}>🎁 Entregas Pendentes:</Text>
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+                            {temBonus > 0 && (<View style={{ width: 280, flexDirection: 'row', alignItems: 'center', backgroundColor: '#facc1515', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#facc1530' }}><Switch value={usarBonus[c.id] !== false} onValueChange={(v) => setUsarBonus((prev: any) => ({ ...prev, [c.id]: v }))} /><Text style={{ color: '#facc15', marginLeft: 12, fontWeight: 'bold', fontSize: 16 }}>🎁 BÔNUS: +{temBonus} SPG</Text></View>)}
+                            {brindes.map((b: any) => (<View key={b.id} style={{ width: 280, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ec489915', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#ec489930' }}><Text style={{ color: '#ec4899', fontWeight: 'bold', fontSize: 15, flex: 1 }}>🏆 Brinde: {b.nome_brinde}</Text><TouchableOpacity onPress={() => entregarBrinde(b.id, c.cliente_cpf)} style={{ backgroundColor: '#ec4899', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginLeft: 10 }}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 10 }}>ENTREGAR</Text></TouchableOpacity></View>))}
+                            {(premiosMesaPendentes[c.cliente_cpf] || []).map((p: any) => (<View key={p.id} style={{ width: 280, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#8b5cf615', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#8b5cf630' }}><Text style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: 15, flex: 1 }}>🎡 MESA: {p.premio_nome}</Text><TouchableOpacity onPress={() => resgatarPremioMesa(p.id, c.cliente_cpf)} style={{ backgroundColor: '#8b5cf6', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, marginLeft: 10 }}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 10 }}>RESGATAR</Text></TouchableOpacity></View>))}
+                          </ScrollView>
+                        </View>
+                      ) : null}
                       
                       {/* CATÁLOGO DE PONTOS */}
                       {rewards.map((r: any) => {
@@ -1978,13 +1990,22 @@ export default function MerchantPanel() {
               {editandoRoletaId === 'novo' && (
                 <View style={styles.editBox}>
                   <TextInput placeholder="Nome da Fatia" value={formRoleta.nome || ''} onChangeText={(t) => setFormRoleta({ ...formRoleta, nome: t })} style={styles.input} />
-                  <TextInput placeholder="Tipo (pontos, brinde)" value={formRoleta.tipo || ''} onChangeText={(t) => setFormRoleta({ ...formRoleta, tipo: t })} style={styles.input} />
+                  <TextInput placeholder="Tipo (pontos, cashback, brinde, nada)" value={formRoleta.tipo || ''} onChangeText={(t) => setFormRoleta({ ...formRoleta, tipo: t })} style={styles.input} />
                   <View style={{ flexDirection: 'row', gap: 10 }}><TextInput placeholder="Valor" value={formRoleta.valor || ''} onChangeText={(t) => setFormRoleta({ ...formRoleta, valor: t })} style={[styles.input, { flex: 1 }]} keyboardType="numeric" /><TextInput placeholder="Probabilidade (%)" value={formRoleta.probabilidade || ''} onChangeText={(t) => setFormRoleta({ ...formRoleta, probabilidade: t })} style={[styles.input, { flex: 1 }]} keyboardType="numeric" /></View>
                   <TouchableOpacity style={[styles.button, { backgroundColor: '#ec4899' }]} onPress={salvarRoleta}><Text style={styles.buttonText}>SALVAR</Text></TouchableOpacity>
                 </View>
               )}
               {premiosRoleta.map((p) => (
-                <View key={p.id} style={[styles.cardGrid, { width: '100%', flexDirection: 'row', justifyContent: 'space-between' }]}><View><Text style={{ color: '#fff' }}>{p.nome}</Text><Text style={{ color: '#ec4899' }}>{p.probabilidade}% de chance</Text></View><TouchableOpacity onPress={() => apagarRoleta(p.id)}><Text style={{ color: '#ef4444' }}>APAGAR</Text></TouchableOpacity></View>
+                <View key={p.id} style={[styles.cardGrid, { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+                  <View>
+                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>{p.nome}</Text>
+                    <Text style={{ color: '#94a3b8', fontSize: 12 }}>Tipo: {p.tipo?.toUpperCase() || 'N/A'} {p.valor > 0 ? `| Valor: ${p.valor}` : ''}</Text>
+                    <Text style={{ color: '#ec4899', fontSize: 12 }}>Probabilidade: {p.probabilidade}%</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => apagarRoleta(p.id)} style={{ padding: 10 }}>
+                    <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>APAGAR</Text>
+                  </TouchableOpacity>
+                </View>
               ))}
             </View>
           )}

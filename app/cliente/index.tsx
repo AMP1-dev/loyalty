@@ -324,6 +324,7 @@ export default function Cliente() {
   const [nomeLojaAtual, setNomeLojaAtual] = useState('');
 
   const [mostrarPinModal, setMostrarPinModal] = useState(false);
+  const [erroPin, setErroPin] = useState('');
   const [pinDigitado, setPinDigitado] = useState(['', '', '', '']);
   const [pinModoValidar, setPinModoValidar] = useState(true);
   const [ehPrimeiroCadastro, setEhPrimeiroCadastro] = useState(false);
@@ -862,7 +863,9 @@ export default function Cliente() {
         }
       }
     } else {
-      mostrarToast('PIN incorreto', 'erro');
+      // Se o PIN estiver errado, mostramos apenas a mensagem inline (erroPin) para não sobrepor o shadow
+      // mostrarToast('PIN incorreto', 'erro'); 
+      setErroPin('PIN incorreto. Tente novamente.');
       setPinDigitado(['', '', '', '']);
     }
     setCarregando(false);
@@ -873,7 +876,7 @@ export default function Cliente() {
     
     // Bloqueio de senhas fracas/padrão
     if (pin === '0000' || pin === '1234') {
-      mostrarToast('Por segurança, crie uma senha diferente de 0000 ou 1234. 🔒', 'erro');
+      setErroPin('Crie uma senha mais segura.');
       setPinDigitado(['', '', '', '']);
       return;
     }
@@ -1054,9 +1057,10 @@ export default function Cliente() {
     setValidandoPinCheckout(false);
     setEhPrimeiroCadastro(false);
     setMostrarPinModal(false);
-    
     setStatus('idle');
     mostrarToast('Sessão encerrada com segurança! 👋', 'sucesso');
+    // Força o redirecionamento para limpar a URL de qualquer loja_id e voltar ao estado puramente "app do cliente"
+    router.replace('/cliente');
   };
 
   let content;
@@ -1529,7 +1533,7 @@ export default function Cliente() {
               </View>
             )}
             {etapaRoleta === 'resultado' && (
-              respostasNps?.nota === 5 && premioGanho && premioGanho.tipo !== 'outro' ? (
+              respostasNps?.nota === 5 && premioGanho && premioGanho.tipo !== 'outro' && premioGanho.tipo !== 'nada' ? (
                 <OfertaGoogle
                   premio={premioGanho}
                   lojaId={String(uuidLojaReal || loja_id || configLoja?.loja_id)}
@@ -1601,6 +1605,7 @@ export default function Cliente() {
                 ? (validadandoPinCheckout ? 'Atendimento Iniciado!\nDigite seu PIN 🔑' : 'Digite seu PIN') 
                 : 'Crie seu PIN'}
             </Text>
+            {erroPin ? <Text style={{ color: '#ef4444', textAlign: 'center', marginBottom: 15, fontWeight: 'bold' }}>{erroPin}</Text> : null}
             <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 30 }}>
               {[0, 1, 2, 3].map(i => (
                 <TextInput
@@ -1610,6 +1615,7 @@ export default function Cliente() {
                   }}
                   value={pinDigitado[i]}
                   onChangeText={v => {
+                    setErroPin('');
                     const n = [...pinDigitado];
                     const cleanV = v.replace(/\D/g, '');
                     n[i] = cleanV;
