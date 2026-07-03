@@ -1,0 +1,58 @@
+commit a1bda55791a845f482ad65876c96f99fb175910e
+Author: Administrador <admin@localhost>
+Date:   Fri Apr 24 17:04:17 2026 -0300
+
+    Correções de layout e nome
+
+ .gitignore                                |    44 +
+ .idx/dev.nix                              |    47 +
+ .vscode/extensions.json                   |     1 +
+ .vscode/settings.json                     |     7 +
+ README.md                                 |    53 +
+ app.json                                  |    33 +
+ app/(public)/index.tsx                    |    21 +
+ app/(public)/join.tsx                     |   171 +
+ app/(public)/manifest.json                |    21 +
+ app/_ampadmin/index.tsx                   |   385 +
+ app/_layout.tsx                           |    22 +
+ app/assine.tsx                            |   152 +
+ app/cliente/index.tsx                     |   547 ++
+ app/final.tsx                             |   152 +
+ app/index.tsx                             |     5 +
+ app/login.tsx                             |   144 +
+ app/merchant/index.tsx                    |   829 ++
+ app/modal.tsx                             |    29 +
+ app/scanner.tsx                           |    27 +
+ assets/images/android-icon-background.png |   Bin 0 -> 17549 bytes
+ assets/images/android-icon-foreground.png |   Bin 0 -> 78796 bytes
+ assets/images/android-icon-monochrome.png |   Bin 0 -> 4140 bytes
+ assets/images/favicon.png                 |   Bin 0 -> 1129 bytes
+ assets/images/icon.png                    |   Bin 0 -> 393493 bytes
+ assets/images/partial-react-logo.png      |   Bin 0 -> 5075 bytes
+ assets/images/react-logo.png              |   Bin 0 -> 6341 bytes
+ assets/images/react-logo@2x.png           |   Bin 0 -> 14225 bytes
+ assets/images/react-logo@3x.png           |   Bin 0 -> 21252 bytes
+ assets/images/splash-icon.png             |   Bin 0 -> 17547 bytes
+ components/external-link.tsx              |    25 +
+ components/haptic-tab.tsx                 |    18 +
+ components/hello-wave.tsx                 |    19 +
+ components/parallax-scroll-view.tsx       |    79 +
+ components/themed-text.tsx                |    60 +
+ components/themed-view.tsx                |    14 +
+ components/ui/collapsible.tsx             |    45 +
+ components/ui/icon-symbol.ios.tsx         |    32 +
+ components/ui/icon-symbol.tsx             |    41 +
+ constants/theme.ts                        |    53 +
+ eslint.config.js                          |    10 +
+ hooks/use-color-scheme.ts                 |     1 +
+ hooks/use-color-scheme.web.ts             |    21 +
+ hooks/use-theme-color.ts                  |    21 +
+ hooks/useFilaRealtime.ts                  |    34 +
+ lib/supabase.ts                           |     6 +
+ package-lock.json                         | 13878 ++++++++++++++++++++++++++++
+ package.json                              |    54 +
+ scripts/reset-project.js                  |   112 +
+ tsconfig.json                             |    15 +
+ vercel.json                               |     7 +
+ 50 files changed, 17235 insertions(+)
+

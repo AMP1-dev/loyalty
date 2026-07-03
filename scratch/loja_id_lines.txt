@@ -1,0 +1,35 @@
+27 : const [lojaId, setLojaId] = useState<string | null>(null);
+163 : const { data, error } = await supabase.from('roleta_mesa_participacoes').select('*').eq('loja_id', lojaId).order('created_at', { ascending: false });
+174 : const { data, error } = await supabase.from('roleta_mesa_premios').select('*').eq('loja_id', lojaId).order('probabilidade', { ascending: false });
+194 : const { data, error } = await supabase.from('contatos_mesa_remarketing').select('*').eq('loja_id', lojaId).order('data_participacao', { ascending: false });
+206 : const { data, error } = await supabase.from('perguntas_nps').select('*').eq('loja_id', lojaId).order('created_at', { ascending: true });
+245 : const { data } = await supabase.from('config_mesa').select('*').eq('loja_id', lojaId).maybeSingle();
+406 : const { data: ckData } = await supabase.from('checkins').select('*').eq('loja_id', lojaId).eq('status', 'aguardando').order('created_at', { ascending: true });
+466 : const { data: br } = await supabase.from('brindes_pendentes').select('*').eq('cliente_cpf', cpf).eq('loja_id', lojaId).eq('resgatado', false);
+469 : const { data: pm } = await supabase.from('roleta_mesa_participacoes').select('*').eq('cliente_cpf', cpf).eq('loja_id', lojaId).eq('premio_resgatado', false).order('created_at', { ascending: false });
+492 : const { data: recompensasData } = await supabase.from('recompensas').select('id,nome').eq('loja_id', lojaId);
+496 : const { data: vendasData, error: vendasError } = await supabase.from('transacoes').select('*').eq('loja_id', lojaId).order('created_at', { ascending: false });
+520 : const { data: resgatesData } = await supabase.from('resgates').select('*').eq('loja_id', lojaId).order('created_at', { ascending: false });
+592 : const { data: avData } = await supabase.from('respostas_nps').select('*').eq('loja_id', lojaId).order('created_at', { ascending: false });
+593 : const { data: pData } = await supabase.from('perguntas_nps').select('id, pergunta').eq('loja_id', lojaId);
+682 : const { data: rolData } = await supabase.from('roleta_premios').select('*').eq('loja_id', lojaId).order('probabilidade', { ascending: false });
+688 : const { data } = await supabase.from('configuracoes_loja').select('*').eq('loja_id', lojaId).maybeSingle();
+689 : const { data: lojaData } = await supabase.from('lojas').select('senha, limite_usuarios').eq('id', lojaId).single();
+720 : const { data } = await supabase.from('usuarios_loja').select('*').eq('loja_id', lojaId).order('created_at', { ascending: true });
+758 : const channelCheckin = supabase.channel(`fila_aberta_${lojaId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'checkins' }, (p) => { buscarFila(); buscarStats(); if (p.eventType === 'INSERT') Vibration.vibrate([0, 500, 200, 500]); }).subscribe();
+771 : const channelRemarketing = supabase.channel(`remarketing_escuta_${lojaId}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'contatos_mesa_remarketing' }, (p) => {
+779 : const channelMesa = supabase.channel(`mesa_participacoes_${lojaId}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'roleta_mesa_participacoes' }, (p) => {
+827 : const { error } = await supabase.rpc('realizar_pagamento', { p_cliente_cpf: cpfTarget, p_loja_id: lojaId, p_valor: valorFloat, p_usar_cashback: true, p_aplicar_bonus: usaBonusBool });
+893 : await supabase.from('checkins').delete().eq('cliente_cpf', cpfTarget).eq('loja_id', lojaId);
+927 : const { error } = await supabase.from('bonus_pendentes').insert({ loja_id: lojaId, cliente_cpf: cpf, pontos: pontos, data_expiracao: new Date(new Date().setDate(new Date().getDate() + dias)).toISOString() });
+946 : loja_id: lojaId, nome: formRoleta.nome,
+1000 : if (lojaId) await salvarConfigQrMesa(lojaId);
+1074 : const { data } = await supabase.from('recompensas').select('*').eq('loja_id', lojaId);
+1099 : const fileName = `${lojaId}/${Date.now()}.${fileExt}`;
+1129 : const payload = { loja_id: lojaId, nome: form.nome, custo_pontos: pontos, imagem: form.imagem || null, limite_por_cliente: form.limiteCliente ? Number(form.limiteCliente) : null, limite_quantidade: form.limiteDia ? Number(form.limiteDia) : null, limite_total: form.limiteTotal ? Number(form.limiteTotal) : null, ativo: true };
+1137 : const linkQR = `https://springs.amp.ia.br/cliente?loja_id=${lojaId}`;
+1333 : <TouchableOpacity onPress={() => deletarPerguntaNps(pergunta.id, lojaId || '')} style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#ef4444', alignItems: 'center' }}><Text style={{ fontSize: 12 }}>🗑️</Text></TouchableOpacity>
+1359 : <TouchableOpacity onPress={() => salvarConfigQrMesa(lojaId || '')} style={{ backgroundColor: '#10b981', borderRadius: 8, paddingVertical: 12, alignItems: 'center', opacity: loadingSalvar ? 0.6 : 1 }} disabled={loadingSalvar}>
+1457 : <TouchableOpacity onPress={() => deletarPremiomesa(premio.id, lojaId || '')}><Text style={{ fontSize: 18 }}>🗑️</Text></TouchableOpacity>
+1565 : <TouchableOpacity onPress={() => { const template = templatesWA[0]; template && enviarWhatsApp(contato, template, lojaId || ''); }} style={{ flex: 1, paddingVertical: 8, borderRadius: 6, backgroundColor: '#8B5CF6', alignItems: 'center' }}><Text style={{ fontSize: 10, color: '#fff', fontWeight: '700' }}>📱 WhatsApp</Text></TouchableOpacity>
+1568 : <TouchableOpacity onPress={() => deletarContato(contato.id, lojaId || '')} style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#ef4444', alignItems: 'center' }}><Text style={{ fontSize: 11 }}>🗑️</Text></TouchableOpacity>

@@ -181,7 +181,7 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
   const params = useLocalSearchParams();
   const loja_id = loja_id_prop || (params?.loja_id as string);
 
-  const [etapa, setEtapa] = useState<'telefone' | 'nps' | 'escolha_jogo' | 'roleta' | 'jogo_velha' | 'resultado' | 'google'>('telefone');
+  const [etapa, setEtapa] = useState<'telefone' | 'nps' | 'roleta' | 'resultado' | 'google'>('telefone');
   const [telefone, setTelefone] = useState('');
   const [notaNps, setNotaNps] = useState(0);
   const [perguntaCustom, setPerguntaCustom] = useState('Como foi sua experiência?');
@@ -203,11 +203,6 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
 
   const [configLoja, setConfigLoja] = useState<any>(null);
   const [nomeLojaAtual, setNomeLojaAtual] = useState('');
-
-  // Estados do Jogo da Velha
-  const [tabuleiroVelha, setTabuleiroVelha] = useState<(string | null)[]>(Array(9).fill(null));
-  const [vencedorVelha, setVencedorVelha] = useState<string | null>(null);
-  const [linhaVencedora, setLinhaVencedora] = useState<number[] | null>(null);
 
   // Animações removidas pois não usamos mais a roleta
   /*
@@ -411,20 +406,17 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
     }
   };
 
-  const avancarParaEscolhaJogo = () => {
+  const avancarParaRoleta = () => {
     if (notaNps === 0) {
       mostrarToast('Por favor, selecione uma nota ⭐', 'erro');
       return;
     }
     
-    // Sortear prêmio antecipadamente (Ilusão de Escolha)
+    // Preparar Jogo Campo Minado (Ilusão de Escolha)
     const premioSorteado = sortearPremio(premiosRoletaMesa);
     setPremioFinalSorteado(premioSorteado);
-    setEtapa('escolha_jogo');
-  };
-
-  const iniciarCampoMinado = () => {
-    const isWin = !isPremioPerda(premioFinalSorteado);
+    
+    const isWin = !isPremioPerda(premioSorteado);
     
     let script: ('vazio' | 'premio' | 'bomba')[] = [];
     if (isWin) {
@@ -448,14 +440,6 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
     setQuadrados(Array(12).fill(null).map((_, i) => ({ id: i, status: 'fechado', conteudo: 'vazio' })));
 
     setEtapa('roleta');
-  };
-
-  const iniciarJogoVelha = () => {
-    setTabuleiroVelha(Array(9).fill(null));
-    setVencedorVelha(null);
-    setLinhaVencedora(null);
-    setJogoFinalizado(false);
-    setEtapa('jogo_velha');
   };
 
   const clicarQuadrado = async (index: number) => {
@@ -519,144 +503,6 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
     }, 4000);
   };
 
-  // --- Lógica do Jogo da Velha ---
-  const verificarVencedorVelha = (tab: (string | null)[]) => {
-    const linhas = [
-      [0, 1, 2], [3, 4, 5], [6, 7, 8],
-      [0, 3, 6], [1, 4, 7], [2, 5, 8],
-      [0, 4, 8], [2, 4, 6]
-    ];
-    for (let i = 0; i < linhas.length; i++) {
-      const [a, b, c] = linhas[i];
-      if (tab[a] && tab[a] === tab[b] && tab[a] === tab[c]) {
-        return { vencedor: tab[a], linha: linhas[i] };
-      }
-    }
-    if (!tab.includes(null)) return { vencedor: 'empate', linha: null };
-    return null;
-  };
-
-  const minimax = (tab: (string | null)[], depth: number, isMaximizing: boolean): number => {
-    const resultado = verificarVencedorVelha(tab);
-    if (resultado?.vencedor === 'O') return 10 - depth;
-    if (resultado?.vencedor === 'X') return depth - 10;
-    if (resultado?.vencedor === 'empate') return 0;
-
-    if (isMaximizing) {
-      let bestScore = -Infinity;
-      for (let i = 0; i < 9; i++) {
-        if (!tab[i]) {
-          tab[i] = 'O';
-          let score = minimax(tab, depth + 1, false);
-          tab[i] = null;
-          bestScore = Math.max(score, bestScore);
-        }
-      }
-      return bestScore;
-    } else {
-      let bestScore = Infinity;
-      for (let i = 0; i < 9; i++) {
-        if (!tab[i]) {
-          tab[i] = 'X';
-          let score = minimax(tab, depth + 1, true);
-          tab[i] = null;
-          bestScore = Math.min(score, bestScore);
-        }
-      }
-      return bestScore;
-    }
-  };
-
-  const finalizarJogoVelha = (resultadoStr: 'X' | 'O' | 'empate') => {
-    setJogoFinalizado(true);
-    setTimeout(() => {
-      const cleanTel = telefone.replace(/\D/g, '');
-      const isWin = !isPremioPerda(premioFinalSorteado);
-      
-      let premioGanhoReal = premioFinalSorteado;
-      
-      // Se era pra ganhar e ganhou, mantem o premio. Se empatou/perdeu na sorte de ganhar, o sistema dá de consolação.
-      // Se era pra perder, o minimax garante que ele não ganha, logo mantém o prêmio perda.
-      if (!isWin && resultadoStr === 'X') {
-        // Isso matematicamente não deve acontecer com o Minimax, mas por segurança:
-        const outroPremio = premiosRoletaMesa.find(p => !isPremioPerda(p));
-        if (outroPremio) premioGanhoReal = outroPremio;
-      }
-      
-      salvarParticipacaoMesa(cleanTel, premioGanhoReal).catch(e => console.error(e));
-      setPremioGanho(premioGanhoReal);
-      setEtapa('resultado');
-    }, 2000);
-  };
-
-  const jogadaComputadorVelha = (tabAtual: (string | null)[]) => {
-    const isWin = !isPremioPerda(premioFinalSorteado);
-    let bestMove = -1;
-
-    if (isWin) {
-      // Computador joga aleatório (burro) para deixar o cliente ganhar
-      const vazias = tabAtual.map((v, i) => v === null ? i : -1).filter(i => i !== -1);
-      if (vazias.length > 0) {
-        bestMove = vazias[Math.floor(Math.random() * vazias.length)];
-      }
-    } else {
-      // Computador invencível (Minimax) para garantir que o cliente não ganhe o prêmio
-      let bestScore = -Infinity;
-      for (let i = 0; i < 9; i++) {
-        if (!tabAtual[i]) {
-          tabAtual[i] = 'O';
-          let score = minimax(tabAtual, 0, false);
-          tabAtual[i] = null;
-          if (score > bestScore) {
-            bestScore = score;
-            bestMove = i;
-          }
-        }
-      }
-      // Fallback
-      if (bestMove === -1) {
-        const vazias = tabAtual.map((v, i) => v === null ? i : -1).filter(i => i !== -1);
-        if (vazias.length > 0) bestMove = vazias[0];
-      }
-    }
-
-    if (bestMove !== -1) {
-      const novoTab = [...tabAtual];
-      novoTab[bestMove] = 'O';
-      setTabuleiroVelha(novoTab);
-      
-      const res = verificarVencedorVelha(novoTab);
-      if (res) {
-        setVencedorVelha(res.vencedor);
-        setLinhaVencedora(res.linha);
-        finalizarJogoVelha(res.vencedor as any);
-      } else {
-        setVezCliente(true);
-      }
-    }
-  };
-
-  const clicarVelha = (index: number) => {
-    if (jogoFinalizado || tabuleiroVelha[index] || !vezCliente) return;
-
-    const novoTab = [...tabuleiroVelha];
-    novoTab[index] = 'X';
-    setTabuleiroVelha(novoTab);
-    setVezCliente(false);
-
-    const res = verificarVencedorVelha(novoTab);
-    if (res) {
-      setVencedorVelha(res.vencedor);
-      setLinhaVencedora(res.linha);
-      finalizarJogoVelha(res.vencedor as any);
-    } else {
-      setTimeout(() => {
-        jogadaComputadorVelha(novoTab);
-      }, 600);
-    }
-  };
-
-
   const sortearPremio = (premios: any[]) => {
     const totalProb = premios.reduce((sum, p) => sum + (p.probabilidade || 1), 0);
     let random = Math.random() * totalProb;
@@ -719,7 +565,10 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
           cliente_cpf: telLimpo,
           loja_id: lid_final,
           valor: 0,
-          pontos_gerados: valor
+          pontos_gerados: valor,
+          cashback_gerado: 0,
+          premio_nome: premio.nome,
+          tipo_origem: 'roleta_mesa'
         }]);
         if (insErr) console.error('Erro ao creditar pontos na carteira:', insErr);
       } else if (premio?.tipo === 'bonus') {
@@ -757,39 +606,6 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
     }
   };
 
-  const creditarPremioEmDobro = async (premio: any, telLimpo: string, lojaId: string) => {
-    try {
-      const isNada = isPremioPerda(premio) || premio?.tipo === 'nada';
-      if (isNada) {
-        await supabase.from('transacoes').insert([{
-          cliente_cpf: telLimpo, loja_id: lojaId, valor: 0, pontos_gerados: 2
-        }]);
-        return;
-      }
-
-      const multiplicador = configLoja?.bonus_5_estrelas_multiplicador || 2.0;
-      let valor = Number(premio?.valor);
-      if (isNaN(valor) || !valor) {
-        const match = String(premio?.nome || '').match(/\d+/);
-        valor = match ? Number(match[0]) : 10;
-      }
-      const valorExtra = valor * (multiplicador - 1);
-      if (valorExtra <= 0) return;
-
-      if (premio?.tipo === 'pontos') {
-        await supabase.from('transacoes').insert([{
-          cliente_cpf: telLimpo, loja_id: lojaId, valor: 0, pontos_gerados: valorExtra
-        }]);
-      } else if (premio?.tipo === 'cashback') {
-        await supabase.from('cashbacks').insert([{
-          cliente_cpf: telLimpo, loja_id: lojaId, valor: valorExtra, usado: false
-        }]);
-      }
-    } catch (e) {
-      console.error('Erro crédito em dobro:', e);
-    }
-  };
-
   const sincronizarComRemarketig = async (telefone: string, premio: any) => {
     try {
       const lid_final = uuidLojaReal || String(loja_id);
@@ -811,7 +627,7 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
     }
   };
 
-  if (etapa === 'resultado' && notaNps === 5 && premioGanho && premioGanho.tipo !== 'outro') {
+  if (etapa === 'resultado' && notaNps === 5 && premioGanho && !isPremioPerda(premioGanho) && premioGanho.tipo !== 'outro') {
     return (
       <OfertaGoogle
         premio={premioGanho}
@@ -820,7 +636,6 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
         linkGoogle={configLoja?.link_google_meu_negocio}
         multiplicador={configLoja?.bonus_5_estrelas_multiplicador || 2.0}
         onClose={() => setEtapa('telefone')}
-        onGoogleOpened={() => creditarPremioEmDobro(premioGanho, telefone.replace(/\D/g, ''), uuidLojaReal || String(loja_id))}
       />
     );
   }
@@ -891,66 +706,9 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
                     ))
                   )}
                 </View>
-                <TouchableOpacity onPress={avancarParaEscolhaJogo} style={{ backgroundColor: notaNps > 0 ? c.roxo : '#ccc', borderRadius: 12, padding: 16, alignItems: 'center' }} disabled={notaNps === 0}><Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>ESCOLHER JOGO →</Text></TouchableOpacity>
+                <TouchableOpacity onPress={avancarParaRoleta} style={{ backgroundColor: notaNps > 0 ? c.roxo : '#ccc', borderRadius: 12, padding: 16, alignItems: 'center' }} disabled={notaNps === 0}><Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>JOGAR AGORA →</Text></TouchableOpacity>
               </View>
             </ScrollView>
-          )}
-
-          {etapa === 'escolha_jogo' && (
-            <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
-              <View style={{ width: '90%', maxWidth: 400 }}>
-                <Text style={{ fontSize: 24, fontWeight: '900', color: c.texto, textAlign: 'center', marginBottom: 20 }}>Escolha seu desafio!</Text>
-                
-                <TouchableOpacity onPress={iniciarCampoMinado} style={{ backgroundColor: c.card, borderRadius: 16, padding: 24, marginBottom: 16, borderWidth: 2, borderColor: '#ef4444', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 48, marginBottom: 10 }}>💣</Text>
-                  <Text style={{ fontSize: 20, fontWeight: '900', color: c.texto }}>Campo Minado</Text>
-                  <Text style={{ fontSize: 14, color: c.subtexto, textAlign: 'center', marginTop: 5 }}>Desvie das bombas para ganhar seu prêmio.</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity onPress={iniciarJogoVelha} style={{ backgroundColor: c.card, borderRadius: 16, padding: 24, borderWidth: 2, borderColor: '#3b82f6', alignItems: 'center' }}>
-                  <Text style={{ fontSize: 48, marginBottom: 10 }}>❌</Text>
-                  <Text style={{ fontSize: 20, fontWeight: '900', color: c.texto }}>Jogo da Velha</Text>
-                  <Text style={{ fontSize: 14, color: c.subtexto, textAlign: 'center', marginTop: 5 }}>Jogue contra a máquina e teste sua habilidade.</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          )}
-
-          {etapa === 'jogo_velha' && (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%', padding: 20 }}>
-              <Text style={{ fontSize: 28, fontWeight: '900', color: isDark ? '#fff' : c.roxo, marginBottom: 10, textAlign: 'center' }}>
-                JOGO DA VELHA ❌⭕
-              </Text>
-              {!jogoFinalizado && <Text style={{ fontSize: 16, color: c.subtexto, marginBottom: 30, fontWeight: '700' }}>{vezCliente ? 'Sua vez (X)!' : 'Vez do Computador...'}</Text>}
-              {jogoFinalizado && <Text style={{ fontSize: 16, color: c.subtexto, marginBottom: 30, fontWeight: '700', textAlign: 'center' }}>
-                {vencedorVelha === 'X' ? 'Você venceu! 🎉' : vencedorVelha === 'O' ? 'Computador venceu... 🤖' : 'Deu Velha! 😐'}
-              </Text>}
-              
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', width: 300, height: 300, backgroundColor: c.borda, gap: 5 }}>
-                {tabuleiroVelha.map((celula, index) => {
-                  const isLinhaVencedora = linhaVencedora?.includes(index);
-                  return (
-                    <TouchableOpacity
-                      key={index}
-                      disabled={jogoFinalizado || celula !== null || !vezCliente}
-                      onPress={() => clicarVelha(index)}
-                      activeOpacity={0.8}
-                      style={{
-                        width: '32%',
-                        height: '32%',
-                        backgroundColor: isLinhaVencedora ? (vencedorVelha === 'X' ? '#10b981' : '#ef4444') : c.card,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Text style={{ fontSize: 48, fontWeight: '900', color: celula === 'X' ? '#3b82f6' : celula === 'O' ? '#ef4444' : 'transparent' }}>
-                        {celula}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
           )}
 
           {etapa === 'roleta' && (
