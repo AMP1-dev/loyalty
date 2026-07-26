@@ -607,11 +607,6 @@ export default function Cliente() {
     if (lid && tk && tk.status === 'pendente') {
       setMostraIntercambio(true);
     }
-
-    if (typeof window !== 'undefined' && window.history?.replaceState && window.location.search.includes('loja_id')) {
-      const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-      window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
-    }
   };
 
   // 1. CARREGAR SALDOS POR LOJA
@@ -785,11 +780,10 @@ export default function Cliente() {
 
     setCarregando(true);
     try {
-      if (loja_id) {
+      const storeIdEfetivo = uuidLojaReal || (loja_id ? String(loja_id) : null) || lidRef.current;
+      if (storeIdEfetivo) {
         // Fluxo Balcão: Check-in DIRETO (sem PIN) para aparecer no lojista
-
-        // 1. Garantir que o cliente existe na tabela 'clientes' (Manual para evitar erro 42P10)
-        const lid_final = uuidLojaReal || String(loja_id);
+        const lid_final = storeIdEfetivo;
         const { data: exCli } = await supabase.from('clientes').select('cpf').eq('cpf', clean).maybeSingle();
         if (!exCli) {
           const { error: insCliErr } = await supabase.from('clientes').insert([{ cpf: clean, loja_id_origem: lid_final }]);

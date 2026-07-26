@@ -1805,7 +1805,7 @@ export default function MerchantPanel() {
                 <View style={{ flex: 2, minWidth: 320, gap: 15 }}>
                   <View style={[styles.card, { backgroundColor: '#020617', padding: 15, minHeight: 130, justifyContent: 'center', borderColor: '#10b981', borderWidth: 1 }]}>
                      <Text style={{ color: '#10b981', fontSize: 12, fontWeight: 'bold', position: 'absolute', top: 15, left: 15, zIndex: 10 }}>VALOR DA VENDA (R$):</Text>
-                     <TextInput placeholder="R$ 0,00" placeholderTextColor="#1e293b" keyboardType="numeric" value={clienteAtual ? (valorVenda[clienteAtual.id] ? (parseInt(valorVenda[clienteAtual.id], 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '') : ''} onChangeText={(t) => { if (clienteAtual) setValorVenda({ ...valorVenda, [clienteAtual.id]: t.replace(/\D/g, '') }); }} onSubmitEditing={() => { if (clienteAtual) { if (clienteAtual.id === 'manual') atenderManual(); else atender(clienteAtual.id); } }} onKeyPress={(e) => { if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter' && clienteAtual) { if (clienteAtual.id === 'manual') atenderManual(); else atender(clienteAtual.id); } }} style={{ color: '#10b981', fontSize: 64, fontWeight: '900', textAlign: 'right', width: '100%', height: '100%', outlineStyle: 'none', borderWidth: 0, marginTop: 10 } as any} />
+                     <TextInput placeholder="R$ 0,00" placeholderTextColor="#1e293b" keyboardType="numeric" value={clienteAtual ? (valorVenda[clienteAtual.id] ? (parseInt(valorVenda[clienteAtual.id], 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '') : ''} onChangeText={(t) => { if (clienteAtual) setValorVenda({ ...valorVenda, [clienteAtual.id]: t.replace(/\D/g, '') }); }} onSubmitEditing={() => { if (clienteAtual) { const v = parseInt(valorVenda[clienteAtual.id] || '0', 10) / 100; if (v > 0) { if (clienteAtual.id === 'manual') atenderManual(); else atender(clienteAtual.id); } } }} style={{ color: '#10b981', fontSize: 64, fontWeight: '900', textAlign: 'right', width: '100%', height: '100%', outlineStyle: 'none', borderWidth: 0, marginTop: 10 } as any} />
                   </View>
                   <View style={[styles.card, { flex: 1, padding: 25, backgroundColor: '#1e293b', minHeight: 150, justifyContent: 'space-between' }]}>
                     <View><View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}><Text style={{ color: '#10b981', fontSize: 32, fontWeight: '900' }}>{formatarMoeda(stats.totalMes)}</Text><View style={{ alignItems: 'flex-end' }}><Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>{new Date().toLocaleDateString('pt-BR')}</Text><Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>TOTAL DO MÊS</Text></View></View></View>
@@ -1894,8 +1894,10 @@ export default function MerchantPanel() {
                                 setClienteFocadoId(null);
                               }
                             }}
-                            onSubmitEditing={() => { if (valorManual || (clienteAtual && valorVenda[clienteAtual.id])) atenderManual(); }}
-                            onKeyPress={(e) => { if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter' && (valorManual || (clienteAtual && valorVenda[clienteAtual.id]))) atenderManual(); }}
+                            onSubmitEditing={() => {
+                              const val = parseInt(valorManual || (valorVenda['manual'] || '0'), 10) / 100;
+                              if (val > 0) atenderManual();
+                            }}
                             style={{ backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#38bdf8', borderRadius: 10, padding: 10, color: '#fff', fontSize: 14, fontWeight: 'bold' }}
                           />
                           <TextInput
@@ -1910,8 +1912,10 @@ export default function MerchantPanel() {
                                 setValorVenda({ ...valorVenda, [clienteAtual.id]: cleanVal });
                               }
                             }}
-                            onSubmitEditing={atenderManual}
-                            onKeyPress={(e) => { if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter') atenderManual(); }}
+                            onSubmitEditing={() => {
+                              const val = parseInt(valorManual || '0', 10) / 100;
+                              if (val > 0) atenderManual();
+                            }}
                             style={{ backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#10b981', borderRadius: 10, padding: 10, color: '#10b981', fontSize: 16, fontWeight: 'bold' }}
                           />
                           <TouchableOpacity
