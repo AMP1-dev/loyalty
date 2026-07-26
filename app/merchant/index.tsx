@@ -891,7 +891,21 @@ export default function MerchantPanel() {
   };
 
   const removerDaFila = async (id: string) => {
-    if (!window.confirm('Deseja realmente remover este cliente da fila?')) return;
+    if (!window.confirm('Deseja realmente remover este cliente?')) return;
+    if (id === 'manual') {
+      const cpfTarget = telefoneManual.replace(/\D/g, '');
+      if (cpfTarget) {
+        await supabase.from('checkins').delete().eq('cliente_cpf', cpfTarget).eq('loja_id', lojaId);
+      }
+      setTelefoneManual('');
+      setValorManual('');
+      setValorVenda((prev: any) => { const n = { ...prev }; delete n['manual']; return n; });
+      setUsarBonus((prev: any) => { const n = { ...prev }; delete n['manual']; return n; });
+      setCashbacks((prev: any) => { const n = { ...prev }; delete n['manual']; return n; });
+      if (clienteFocadoId === 'manual') setClienteFocadoId(null);
+      mostrarToast('❌ Lançamento manual cancelado.', 'sucesso');
+      return;
+    }
     await supabase.from('checkins').delete().eq('id', id);
     setFila(prev => prev.filter(f => f.id !== id));
     if (clienteFocadoId === id) setClienteFocadoId(null);
@@ -1791,7 +1805,7 @@ export default function MerchantPanel() {
                 <View style={{ flex: 2, minWidth: 320, gap: 15 }}>
                   <View style={[styles.card, { backgroundColor: '#020617', padding: 15, minHeight: 130, justifyContent: 'center', borderColor: '#10b981', borderWidth: 1 }]}>
                      <Text style={{ color: '#10b981', fontSize: 12, fontWeight: 'bold', position: 'absolute', top: 15, left: 15, zIndex: 10 }}>VALOR DA VENDA (R$):</Text>
-                     <TextInput placeholder="R$ 0,00" placeholderTextColor="#1e293b" keyboardType="numeric" value={clienteAtual ? (valorVenda[clienteAtual.id] ? (parseInt(valorVenda[clienteAtual.id], 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '') : ''} onChangeText={(t) => { if (clienteAtual) setValorVenda({ ...valorVenda, [clienteAtual.id]: t.replace(/\D/g, '') }); }} onSubmitEditing={() => { if (clienteAtual) atender(clienteAtual.id); }} style={{ color: '#10b981', fontSize: 64, fontWeight: '900', textAlign: 'right', width: '100%', height: '100%', outlineStyle: 'none', borderWidth: 0, marginTop: 10 } as any} />
+                     <TextInput placeholder="R$ 0,00" placeholderTextColor="#1e293b" keyboardType="numeric" value={clienteAtual ? (valorVenda[clienteAtual.id] ? (parseInt(valorVenda[clienteAtual.id], 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '') : ''} onChangeText={(t) => { if (clienteAtual) setValorVenda({ ...valorVenda, [clienteAtual.id]: t.replace(/\D/g, '') }); }} onSubmitEditing={() => { if (clienteAtual) { if (clienteAtual.id === 'manual') atenderManual(); else atender(clienteAtual.id); } }} onKeyPress={(e) => { if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter' && clienteAtual) { if (clienteAtual.id === 'manual') atenderManual(); else atender(clienteAtual.id); } }} style={{ color: '#10b981', fontSize: 64, fontWeight: '900', textAlign: 'right', width: '100%', height: '100%', outlineStyle: 'none', borderWidth: 0, marginTop: 10 } as any} />
                   </View>
                   <View style={[styles.card, { flex: 1, padding: 25, backgroundColor: '#1e293b', minHeight: 150, justifyContent: 'space-between' }]}>
                     <View><View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}><Text style={{ color: '#10b981', fontSize: 32, fontWeight: '900' }}>{formatarMoeda(stats.totalMes)}</Text><View style={{ alignItems: 'flex-end' }}><Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>{new Date().toLocaleDateString('pt-BR')}</Text><Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>TOTAL DO MÊS</Text></View></View></View>
@@ -1868,10 +1882,11 @@ export default function MerchantPanel() {
                             placeholder="WhatsApp do cliente..."
                             placeholderTextColor="#64748b"
                             keyboardType="numeric"
+                            maxLength={15}
                             value={formatarTelefone(telefoneManual)}
                             onChangeText={(t) => {
-                              setTelefoneManual(t);
-                              const clean = t.replace(/\D/g, '');
+                              const clean = t.replace(/\D/g, '').slice(0, 11);
+                              setTelefoneManual(clean);
                               if (clean.length >= 10) {
                                 buscarFinanceiroDetalhado(clean, 'manual');
                                 setClienteFocadoId('manual');
@@ -1879,6 +1894,8 @@ export default function MerchantPanel() {
                                 setClienteFocadoId(null);
                               }
                             }}
+                            onSubmitEditing={() => { if (valorManual || (clienteAtual && valorVenda[clienteAtual.id])) atenderManual(); }}
+                            onKeyPress={(e) => { if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter' && (valorManual || (clienteAtual && valorVenda[clienteAtual.id]))) atenderManual(); }}
                             style={{ backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#38bdf8', borderRadius: 10, padding: 10, color: '#fff', fontSize: 14, fontWeight: 'bold' }}
                           />
                           <TextInput
@@ -1894,6 +1911,7 @@ export default function MerchantPanel() {
                               }
                             }}
                             onSubmitEditing={atenderManual}
+                            onKeyPress={(e) => { if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter') atenderManual(); }}
                             style={{ backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#10b981', borderRadius: 10, padding: 10, color: '#10b981', fontSize: 16, fontWeight: 'bold' }}
                           />
                           <TouchableOpacity
@@ -1968,10 +1986,9 @@ export default function MerchantPanel() {
                           const url = `https://wa.me/55${clean}?text=${msg}`;
                           if (Platform.OS === 'web') window.open(url, '_blank'); else Linking.openURL(url);
                         }}
-                        style={{ backgroundColor: '#25D36620', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: '#25D36660', flexDirection: 'row', alignItems: 'center', gap: 3 }}
+                        style={{ backgroundColor: '#25D36620', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: '#25D36660' }}
                       >
-                        <Text style={{ fontSize: 10 }}>💬</Text>
-                        <Text style={{ color: '#25D366', fontSize: 9, fontWeight: 'bold' }}>WhatsApp</Text>
+                        <Text style={{ fontSize: 14 }}>💬</Text>
                       </TouchableOpacity>
                     </View>
                   ))}
@@ -2005,21 +2022,8 @@ export default function MerchantPanel() {
           </View>
 
           <View style={{ flexDirection: 'row', gap: 15, marginBottom: 40, flexWrap: 'wrap' }}>
-             <TouchableOpacity onPress={() => setMostrarManual(!mostrarManual)} style={[styles.card, { flex: 1, minWidth: 250, backgroundColor: '#334155', alignItems: 'center', justifyContent: 'center', height: 80 }]}><Text style={{ color: '#fff', fontWeight: 'bold' }}>⌨️ LANÇAMENTO MANUAL</Text></TouchableOpacity>
              <TouchableOpacity onPress={() => setMostrarCatalogo(!mostrarCatalogo)} style={[styles.card, { flex: 1, minWidth: 250, backgroundColor: '#0ea5e9', alignItems: 'center', justifyContent: 'center', height: 80 }]}><Text style={{ color: '#fff', fontWeight: 'bold' }}>🎁 GERENCIAR CATÁLOGO</Text></TouchableOpacity>
              <TouchableOpacity onPress={() => setMostrarRoleta(!mostrarRoleta)} style={[styles.card, { flex: 1, minWidth: 250, backgroundColor: '#db2777', alignItems: 'center', justifyContent: 'center', height: 80 }]}><Text style={{ color: '#fff', fontWeight: 'bold' }}>🎡 CONFIGURAR ROLETA</Text></TouchableOpacity>
-          </View>
-
-          {mostrarManual && (
-            <View style={styles.card} ref={manualInputRef}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <Text style={styles.title}>✍️ Lançamento Manual</Text>
-                <TouchableOpacity onPress={() => setMostrarValidarToken(true)} style={{ backgroundColor: '#8b5cf6', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 }}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 12 }}>🔑 VALIDAR IMPORTAÇÃO</Text></TouchableOpacity>
-              </View>
-
-              <TextInput placeholder="WhatsApp do Cliente" placeholderTextColor="#94A3B8" keyboardType="numeric" value={formatarTelefone(telefoneManual)} onChangeText={(t) => { setTelefoneManual(t); const clean = t.replace(/\D/g, ''); if (clean.length >= 10) buscarFinanceiroDetalhado(clean, 'manual'); }} style={styles.input} />
-              <TextInput placeholder="Valor: R$ 0,00" placeholderTextColor="#94A3B8" keyboardType="numeric" value={valorManual ? (parseInt(valorManual, 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : ''} onChangeText={(t) => setValorManual(t.replace(/\D/g, ''))} style={styles.inputValor} onSubmitEditing={atenderManual} />
-              <TouchableOpacity style={[styles.buttonCenter, { backgroundColor: '#10b981' }]} onPress={atenderManual}><Text style={styles.buttonText}>LANÇAR VENDA MANUAL</Text></TouchableOpacity>
             </View>
           )}
 
