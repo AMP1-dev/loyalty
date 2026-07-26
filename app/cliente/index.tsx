@@ -1191,6 +1191,19 @@ export default function Cliente() {
             <Text style={{ fontSize: 10, fontWeight: '800', color: c.subtexto, letterSpacing: 1 }}>CLUBE DE VANTAGENS</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity
+              onPress={async () => {
+                const clean = cpf.replace(/\D/g, '');
+                if (clean) {
+                  await carregarDados(clean);
+                  await carregarSaldosPorLoja();
+                  mostrarToast('Saldos e extrato atualizados! 🔄', 'sucesso');
+                }
+              }}
+              style={[styles.miniBtn, { backgroundColor: c.card, marginRight: 10 }]}
+            >
+              <Text style={{ fontSize: 16 }}>🔄</Text>
+            </TouchableOpacity>
             <TouchableOpacity onPress={toggleTheme} style={[styles.miniBtn, { backgroundColor: c.card, marginRight: 10 }]}>
               <Text style={{ fontSize: 18 }}>{isDark ? '☀️' : '🌙'}</Text>
             </TouchableOpacity>
@@ -1712,7 +1725,8 @@ export default function Cliente() {
               ) : (
                 (extrato || []).map((t, idx) => {
                   const isResgate = t.tipo === 'resgate';
-                  const icon = isResgate ? '🎁' : (t.tipo_origem === 'roleta' || t.premio_nome ? '🎡' : '🛍️');
+                  const isManual = t.origem === 'manual';
+                  const icon = isResgate ? '🎁' : (t.tipo_origem === 'roleta' || t.premio_nome ? '🎡' : (isManual ? '✍️' : '🛍️'));
                   const iconBg = isResgate ? '#fee2e2' : (isDark ? '#0f172a' : '#ecfdf5');
 
                   return (
@@ -1722,7 +1736,14 @@ export default function Cliente() {
                       </View>
 
                       <View style={{ flex: 1 }}>
-                        <Text style={{ color: c.texto, fontWeight: '900', fontSize: 15 }}>{isResgate ? (t.premio_nome || 'Resgate Efetuado') : t.loja_nome}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <Text style={{ color: c.texto, fontWeight: '900', fontSize: 15 }}>{isResgate ? (t.premio_nome || 'Resgate Efetuado') : t.loja_nome}</Text>
+                          {isManual && (
+                            <View style={{ backgroundColor: '#38bdf820', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#38bdf850' }}>
+                              <Text style={{ color: '#38bdf8', fontSize: 10, fontWeight: '900' }}>✍️ Lançamento Manual</Text>
+                            </View>
+                          )}
+                        </View>
 
                         <Text style={{ color: c.subtexto, fontSize: 11, fontWeight: '700', marginTop: 2 }}>
                           {new Date(t.created_at).toLocaleDateString('pt-BR')} {new Date(t.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}

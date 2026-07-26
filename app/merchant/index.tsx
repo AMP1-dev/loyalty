@@ -1838,43 +1838,55 @@ export default function MerchantPanel() {
                     <Text style={{ color: '#0f172a', fontWeight: 'bold', fontSize: 20 }}>ATENDER</Text>
                   </TouchableOpacity>
                    <View style={[styles.card, { flex: 1, padding: 25, backgroundColor: '#1e293b', minHeight: 150, justifyContent: 'space-between' }]}>
-                      {clienteAtual && (valorVenda[clienteAtual.id] || valorManual) ? (
-                        <View style={{ height: '100%', justifyContent: 'space-between' }}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ color: '#facc15', fontSize: 12, fontWeight: 'bold', marginBottom: 15 }}>💡 RESUMO DA COMPRA:</Text>
-                            <View style={{ gap: 12 }}>
-                               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}><Text style={{ color: '#94a3b8', fontSize: 14 }}>Venda:</Text><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{formatarMoeda(parseInt(valorVenda[clienteAtual.id] || valorManual, 10) / 100)}</Text></View>
-                               {(() => {
-                                  const cpf = clienteAtual.cliente_cpf; const valorReal = parseInt(valorVenda[clienteAtual.id] || valorManual, 10) / 100;
-                                  const saldoAtual = Math.floor(cashbacks[cpf]?.pontos || 0);
-                                  const cb_total = cashbacks[cpf]?.total || 0; const cb_proximo = cashbacks[cpf]?.proximo || 0;
-                                  const usarCb = config.usar_cashback_total ? cb_total : cb_proximo;
-                                  const limiteCb = valorReal * (Number(config.cashback_limite_uso_percent) / 100);
-                                  const cashbackUsado = Math.min(Math.min(valorReal, limiteCb), usarCb);
-                                  const aPagar = valorReal - cashbackUsado;
-                                  const base = config.pontos_sobre_valor_bruto ? valorReal : aPagar;
-                                  const pts = Math.floor(base / (Number(config.reais_por_ponto) || 1));
-                                  const saldoFinal = saldoAtual + pts;
-                                  return (
-                                    <>
-                                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}><Text style={{ color: '#facc15', fontSize: 14 }}>Cashback:</Text><Text style={{ color: '#facc15', fontSize: 18, fontWeight: 'bold' }}>- {formatarMoeda(cashbackUsado)}</Text></View>
-                                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#38bdf815', padding: 10, borderRadius: 10 }}>
-                                        <View>
-                                          <Text style={{ color: '#38bdf8', fontSize: 12 }}>Ganha agora:</Text>
-                                          <Text style={{ color: '#38bdf8', fontSize: 16, fontWeight: '900' }}>+ {pts} SPG</Text>
+                      {clienteAtual && clienteAtual.id !== 'manual' ? (
+                        valorVenda[clienteAtual.id] ? (
+                          <View style={{ height: '100%', justifyContent: 'space-between' }}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ color: '#facc15', fontSize: 12, fontWeight: 'bold', marginBottom: 15 }}>💡 RESUMO DA COMPRA (QR CODE):</Text>
+                              <View style={{ gap: 12 }}>
+                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}><Text style={{ color: '#94a3b8', fontSize: 14 }}>Venda:</Text><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{formatarMoeda(parseInt(valorVenda[clienteAtual.id], 10) / 100)}</Text></View>
+                                 {(() => {
+                                    const cpf = clienteAtual.cliente_cpf; const valorReal = parseInt(valorVenda[clienteAtual.id], 10) / 100;
+                                    const saldoAtual = Math.floor(cashbacks[cpf]?.pontos || 0);
+                                    const cb_total = cashbacks[cpf]?.total || 0; const cb_proximo = cashbacks[cpf]?.proximo || 0;
+                                    const usarCb = config.usar_cashback_total ? cb_total : cb_proximo;
+                                    const limiteCb = valorReal * (Number(config.cashback_limite_uso_percent) / 100);
+                                    const cashbackUsado = Math.min(Math.min(valorReal, limiteCb), usarCb);
+                                    const aPagar = valorReal - cashbackUsado;
+                                    const base = config.pontos_sobre_valor_bruto ? valorReal : aPagar;
+                                    const pts = Math.floor(base / (Number(config.reais_por_ponto) || 1));
+                                    const saldoFinal = saldoAtual + pts;
+                                    return (
+                                      <>
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}><Text style={{ color: '#facc15', fontSize: 14 }}>Cashback:</Text><Text style={{ color: '#facc15', fontSize: 18, fontWeight: 'bold' }}>- {formatarMoeda(cashbackUsado)}</Text></View>
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#38bdf815', padding: 10, borderRadius: 10 }}>
+                                          <View>
+                                            <Text style={{ color: '#38bdf8', fontSize: 12 }}>Ganha agora:</Text>
+                                            <Text style={{ color: '#38bdf8', fontSize: 16, fontWeight: '900' }}>+ {pts} SPG</Text>
+                                          </View>
+                                          <View style={{ alignItems: 'flex-end' }}>
+                                            <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 'bold' }}>SALDO FINAL:</Text>
+                                            <Text style={{ color: '#10b981', fontSize: 18, fontWeight: '900' }}>{saldoFinal} SPG</Text>
+                                          </View>
                                         </View>
-                                        <View style={{ alignItems: 'flex-end' }}>
-                                          <Text style={{ color: '#10b981', fontSize: 10, fontWeight: 'bold' }}>SALDO FINAL:</Text>
-                                          <Text style={{ color: '#10b981', fontSize: 18, fontWeight: '900' }}>{saldoFinal} SPG</Text>
-                                        </View>
-                                      </View>
-                                      <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'flex-end', marginTop: 10 }}><Text style={{ color: '#10b981', fontSize: 42, fontWeight: '900' }}>{formatarMoeda(aPagar)}</Text><Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>A PAGAR</Text></View>
-                                    </>
-                                  );
-                               })()}
+                                        <View style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'flex-end', marginTop: 10 }}><Text style={{ color: '#10b981', fontSize: 42, fontWeight: '900' }}>{formatarMoeda(aPagar)}</Text><Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold' }}>A PAGAR</Text></View>
+                                      </>
+                                    );
+                                 })()}
+                              </View>
                             </View>
                           </View>
-                        </View>
+                        ) : (
+                          <View style={{ flex: 1, justifyContent: 'center', gap: 10 }}>
+                            <Text style={{ color: '#10b981', fontSize: 14, fontWeight: '900' }}>📱 CLIENTE EM ATENDIMENTO (VIA QR CODE)</Text>
+                            <Text style={{ color: '#94a3b8', fontSize: 12, lineHeight: 18 }}>
+                              Cliente <Text style={{ color: '#fff', fontWeight: 'bold' }}>{formatarTelefone(clienteAtual.cliente_cpf)}</Text> selecionado na fila.
+                            </Text>
+                            <Text style={{ color: '#64748b', fontSize: 11, fontStyle: 'italic' }}>
+                              Digite o valor da venda na caixa verde acima ("VALOR DA VENDA") para prosseguir. Lançamento manual desativado durante atendimento QR Code.
+                            </Text>
+                          </View>
+                        )
                       ) : (
                         <View style={{ flex: 1, justifyContent: 'center', gap: 10 }}>
                           <Text style={{ color: '#38bdf8', fontSize: 12, fontWeight: 'bold' }}>⌨️ LANÇAMENTO MANUAL (SEM QR CODE):</Text>
@@ -1908,8 +1920,8 @@ export default function MerchantPanel() {
                             onChangeText={(t) => {
                               const cleanVal = t.replace(/\D/g, '');
                               setValorManual(cleanVal);
-                              if (clienteAtual) {
-                                setValorVenda({ ...valorVenda, [clienteAtual.id]: cleanVal });
+                              if (clienteAtual && clienteAtual.id === 'manual') {
+                                setValorVenda({ ...valorVenda, manual: cleanVal });
                               }
                             }}
                             onSubmitEditing={() => {
