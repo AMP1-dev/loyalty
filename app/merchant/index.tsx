@@ -2024,8 +2024,7 @@ export default function MerchantPanel() {
           <View style={{ flexDirection: 'row', gap: 15, marginBottom: 40, flexWrap: 'wrap' }}>
              <TouchableOpacity onPress={() => setMostrarCatalogo(!mostrarCatalogo)} style={[styles.card, { flex: 1, minWidth: 250, backgroundColor: '#0ea5e9', alignItems: 'center', justifyContent: 'center', height: 80 }]}><Text style={{ color: '#fff', fontWeight: 'bold' }}>🎁 GERENCIAR CATÁLOGO</Text></TouchableOpacity>
              <TouchableOpacity onPress={() => setMostrarRoleta(!mostrarRoleta)} style={[styles.card, { flex: 1, minWidth: 250, backgroundColor: '#db2777', alignItems: 'center', justifyContent: 'center', height: 80 }]}><Text style={{ color: '#fff', fontWeight: 'bold' }}>🎡 CONFIGURAR ROLETA</Text></TouchableOpacity>
-            </View>
-          )}
+          </View>
 
           {mostrarCRM && (
             <View style={styles.card}>
