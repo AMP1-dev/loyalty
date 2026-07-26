@@ -442,6 +442,15 @@ export default function MerchantPanel() {
   const buscarFinanceiroDetalhado = async (cpf: string, idCheckin?: string) => {
     if (!lojaId) return;
 
+    // Garante que o valor da venda inicie limpo sem herdar valores de atendimentos anteriores
+    setValorVenda((prev: any) => {
+      const n = { ...prev };
+      delete n['manual'];
+      delete n[cpf];
+      if (idCheckin) delete n[idCheckin];
+      return n;
+    });
+
     // Busca direta e correta baseada na estrutura real das tabelas
     const cpfsParaBusca = [cpf, cpf.startsWith('55') ? cpf.substring(2) : '55' + cpf];
     const [{ data: trans }, { data: resg }, { data: cash }, { data: bonus }] = await Promise.all([
@@ -938,6 +947,19 @@ export default function MerchantPanel() {
 
     const sucesso = await processarPagamento(cpfTarget, valorReal, usarBonus['manual'] !== false);
     if (sucesso) {
+      // Marca a transação mais recente com origem 'manual'
+      const { data: ultTrans } = await supabase
+        .from('transacoes')
+        .select('id')
+        .eq('cliente_cpf', cpfTarget)
+        .eq('loja_id', lojaId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (ultTrans && ultTrans.length > 0) {
+        await supabase.from('transacoes').update({ origem: 'manual' }).eq('id', ultTrans[0].id);
+      }
+
       // Atualizar status no Remarketing se existir
       const cpfsParaManual = [cpfTarget, cpfTarget.startsWith('55') ? cpfTarget.substring(2) : '55' + cpfTarget];
       const { data: remUpdate } = await supabase.from('contatos_mesa_remarketing')
@@ -952,11 +974,18 @@ export default function MerchantPanel() {
         ));
       }
 
-      setTimeout(async () => {
-        await supabase.from('checkins').delete().eq('cliente_cpf', cpfTarget).eq('loja_id', lojaId);
-      }, 5000);
+      // Limpeza imediata do checkin temporário no Supabase
+      await supabase.from('checkins').delete().eq('cliente_cpf', cpfTarget).eq('loja_id', lojaId);
 
-      Vibration.vibrate(200); setTelefoneManual(''); setValorManual(''); setUsarBonus((prev: any) => ({ ...prev, ['manual']: false })); if (clienteFocadoId === 'manual') setClienteFocadoId(null); buscarFila(); setMostrarManual(false);
+      // Limpeza total de memórias e valores prévios
+      Vibration.vibrate(200);
+      setTelefoneManual('');
+      setValorManual('');
+      setValorVenda((prev: any) => { const n = { ...prev }; delete n['manual']; delete n[cpfTarget]; return n; });
+      setUsarBonus((prev: any) => ({ ...prev, ['manual']: false }));
+      if (clienteFocadoId === 'manual') setClienteFocadoId(null);
+      buscarFila();
+      setMostrarManual(false);
       mostrarToast('✅ Venda Manual registrada com sucesso!', 'sucesso'); 
       setTimeout(() => { buscarStats(); buscarContatosRemarketing(); }, 1500);
     }

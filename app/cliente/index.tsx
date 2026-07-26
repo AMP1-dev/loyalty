@@ -484,6 +484,7 @@ export default function Cliente() {
             if (upsertErr) throw upsertErr;
             setStatus('aguardando');
           } else {
+            await supabase.from('checkins').delete().eq('cliente_cpf', saved).neq('status', 'aguardando');
             await carregarDados(saved, lid_final);
             setStatus('finalizado');
           }
@@ -1062,6 +1063,11 @@ export default function Cliente() {
   };
 
   const sairDaConta = async () => {
+    const cleanCpf = cpf.replace(/\D/g, '');
+    if (cleanCpf) {
+      await supabase.from('checkins').delete().eq('cliente_cpf', cleanCpf);
+    }
+
     if (typeof window !== 'undefined') {
       localStorage.removeItem('cliente_cpf');
       localStorage.removeItem('@cliente_cpf');
@@ -1185,12 +1191,12 @@ export default function Cliente() {
     content = (
       <View style={{ flex: 1, backgroundColor: c.bg }}>
         {/* HEADER PREMIUM */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <View>
-            <Text style={{ fontSize: 26, fontWeight: '900', color: c.neonVerde, letterSpacing: -0.5 }}>PALM SPRINGS</Text>
-            <Text style={{ fontSize: 10, fontWeight: '800', color: c.subtexto, letterSpacing: 1 }}>CLUBE DE VANTAGENS</Text>
+        <View style={{ paddingHorizontal: 20, paddingTop: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View style={{ flex: 1, paddingRight: 10 }}>
+            <Text style={{ fontSize: 24, fontWeight: '900', color: c.neonVerde, letterSpacing: -0.5 }} numberOfLines={1}>PALM SPRINGS</Text>
+            <Text style={{ fontSize: 9, fontWeight: '800', color: c.subtexto, letterSpacing: 0.8 }}>CLUBE DE VANTAGENS</Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <TouchableOpacity
               onPress={async () => {
                 const clean = cpf.replace(/\D/g, '');
@@ -1200,16 +1206,22 @@ export default function Cliente() {
                   mostrarToast('Saldos e extrato atualizados! 🔄', 'sucesso');
                 }
               }}
-              style={[styles.miniBtn, { backgroundColor: c.card, marginRight: 10 }]}
+              style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: c.card, borderWidth: 1, borderColor: c.borda, justifyContent: 'center', alignItems: 'center' }}
             >
-              <Text style={{ fontSize: 16 }}>🔄</Text>
+              <Text style={{ fontSize: 14 }}>🔄</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={toggleTheme} style={[styles.miniBtn, { backgroundColor: c.card, marginRight: 10 }]}>
-              <Text style={{ fontSize: 18 }}>{isDark ? '☀️' : '🌙'}</Text>
+            <TouchableOpacity
+              onPress={toggleTheme}
+              style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: c.card, borderWidth: 1, borderColor: c.borda, justifyContent: 'center', alignItems: 'center' }}
+            >
+              <Text style={{ fontSize: 16 }}>{isDark ? '☀️' : '🌙'}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setMostrarExtrato(true)} style={[styles.miniBtn, { backgroundColor: c.card, flexDirection: 'row', paddingHorizontal: 12, borderColor: '#F59E0B', borderWidth: 1.5 }]}>
-              <Text style={{ fontSize: 14, marginRight: 5 }}>👁️</Text>
-              <Text style={{ fontSize: 10, fontWeight: '900', color: '#F59E0B' }}>EXTRATO</Text>
+            <TouchableOpacity
+              onPress={() => setMostrarExtrato(true)}
+              style={{ height: 36, paddingHorizontal: 10, borderRadius: 18, backgroundColor: c.card, flexDirection: 'row', alignItems: 'center', borderColor: '#F59E0B', borderWidth: 1.5, gap: 4 }}
+            >
+              <Text style={{ fontSize: 12 }}>👁️</Text>
+              <Text style={{ fontSize: 9, fontWeight: '900', color: '#F59E0B' }}>EXTRATO</Text>
             </TouchableOpacity>
           </View>
         </View>
