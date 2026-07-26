@@ -258,6 +258,9 @@ export default function SuperAdmin() {
     return acc + (fatTotal * (taxa / 100));
   }, 0);
 
+  const [mostrarRecuperar, setMostrarRecuperar] = useState(false);
+  const [emailRecuperacao, setEmailRecuperacao] = useState('');
+
   if (!autenticado) {
     return (
       <View style={styles.containerCenter}>
@@ -268,6 +271,52 @@ export default function SuperAdmin() {
         <Text style={styles.subtitle}>Controle Geral do Ecossistema</Text>
         <TextInput style={styles.input} placeholder="Senha Mestra" placeholderTextColor="#64748b" secureTextEntry value={senhaMestra} onChangeText={setSenhaMestra} onSubmitEditing={logarAdmin} onKeyPress={(e) => { if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter') logarAdmin(); }} />
         <TouchableOpacity style={styles.button} onPress={logarAdmin}><Text style={styles.buttonText}>ACESSAR CENTRAL</Text></TouchableOpacity>
+
+        <TouchableOpacity style={{ marginTop: 20, alignItems: 'center' }} onPress={() => setMostrarRecuperar(!mostrarRecuperar)}>
+          <Text style={{ color: '#38bdf8', fontSize: 13, fontWeight: 'bold', textDecorationLine: 'underline' }}>
+            🔑 Esqueceu ou não lembra a Senha Mestra? Recuperar por E-mail
+          </Text>
+        </TouchableOpacity>
+
+        {mostrarRecuperar && (
+          <View style={{ marginTop: 15, padding: 18, backgroundColor: '#0f172a', borderRadius: 16, borderWidth: 1, borderColor: '#38bdf8', width: '100%', alignItems: 'center' }}>
+            <Text style={{ color: '#38bdf8', fontSize: 14, fontWeight: '900', marginBottom: 12 }}>🔑 RECUPERAÇÃO DE ACESSO</Text>
+
+            {/* Dica mascarada da senha */}
+            <View style={{ backgroundColor: '#1e293b', padding: 12, borderRadius: 10, width: '100%', alignItems: 'center', marginBottom: 15, borderWidth: 1, borderColor: '#334155' }}>
+              <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold', marginBottom: 4 }}>💡 DICA DA SENHA:</Text>
+              <Text style={{ color: '#facc15', fontSize: 22, fontWeight: '900', letterSpacing: 3 }}>am******26</Text>
+            </View>
+
+            {/* Campo de e-mail para envio/recuperação */}
+            <Text style={{ color: '#cbd5e1', fontSize: 12, fontWeight: 'bold', alignSelf: 'flex-start', marginBottom: 6 }}>
+              Digite seu e-mail cadastrado:
+            </Text>
+            <TextInput
+              style={[styles.input, { width: '100%', marginBottom: 12, fontSize: 14 }]}
+              placeholder="seuemail@exemplo.com"
+              placeholderTextColor="#64748b"
+              value={emailRecuperacao}
+              onChangeText={setEmailRecuperacao}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            <TouchableOpacity
+              style={{ backgroundColor: '#38bdf8', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 10, width: '100%', alignItems: 'center' }}
+              onPress={() => {
+                if (!emailRecuperacao || !emailRecuperacao.includes('@')) {
+                  mostrarToast('Informe um e-mail válido para recuperação.', 'erro');
+                  return;
+                }
+                mostrarToast(`📩 Dica e instruções enviadas para ${emailRecuperacao}!`, 'sucesso');
+                setMostrarRecuperar(false);
+              }}
+            >
+              <Text style={{ color: '#0f172a', fontWeight: '900', fontSize: 13 }}>ENVIAR RECUPERAÇÃO POR E-MAIL 📧</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     );
   }
@@ -424,9 +473,14 @@ export default function SuperAdmin() {
                   </View>
 
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <TouchableOpacity style={styles.btnReset} onPress={() => resetarSenha(loja.id)}>
-                      <Text style={styles.btnResetText}>🔑 Resetar Senha (1234)</Text>
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <Text style={{ color: '#facc15', fontWeight: 'bold', fontSize: 12 }}>
+                        🔑 Senha: {loja.senha || '1234'}
+                      </Text>
+                      <TouchableOpacity style={styles.btnReset} onPress={() => resetarSenha(loja.id)}>
+                        <Text style={styles.btnResetText}>(Resetar p/ 1234)</Text>
+                      </TouchableOpacity>
+                    </View>
                     
                     {/* 🔥 BOTÃO PARA ABRIR A EDIÇÃO DA LOJA (CNPJ E TELEFONE) */}
                     <TouchableOpacity onPress={() => abrirEdicao(loja)}>

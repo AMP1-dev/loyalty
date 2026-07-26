@@ -88,6 +88,7 @@ export default function MerchantPanel() {
   const [editandoPergunta, setEditandoPergunta] = useState<string | null>(null);
   const [linkGoogleMeuNegocio, setLinkGoogleMeuNegocio] = useState('');
   const [bonusMultiplicador, setBonusMultiplicador] = useState(2.0);
+  const [qtdPerguntasNps, setQtdPerguntasNps] = useState('1');
   const [tamanhoQrMesa, setTamanhoQrMesa] = useState<'10x10' | '15x15' | '20x20'>('10x10');
 
   // --- ESTADOS REMARKETING ---
@@ -121,6 +122,7 @@ export default function MerchantPanel() {
   const [carregandoValidacao, setCarregandoValidacao] = useState(false);
   const [caixaAtiva, setCaixaAtiva] = useState<any>(null);
   const [caixasAnteriores, setCaixasAnteriores] = useState<any[]>([]);
+  const [mostrarAjudaManual, setMostrarAjudaManual] = useState(false);
 
 
   // ════════════════════════════════════════════════════════════════════
@@ -248,6 +250,7 @@ export default function MerchantPanel() {
       setQrMesaAtivo(data.ativo);
       setLinkGoogleMeuNegocio(data.link_google || '');
       setBonusMultiplicador(data.bonus_multiplicador || 2.0);
+      setQtdPerguntasNps(String(data.qtd_perguntas_nps || 1));
     }
   };
 
@@ -259,7 +262,8 @@ export default function MerchantPanel() {
         loja_id: id, 
         ativo: qrMesaAtivo, 
         link_google: linkGoogleMeuNegocio, 
-        bonus_multiplicador: bonusMultiplicador 
+        bonus_multiplicador: bonusMultiplicador,
+        qtd_perguntas_nps: parseInt(qtdPerguntasNps) || 1
       }, { onConflict: 'loja_id' });
       
       if (error) throw error;
@@ -905,15 +909,21 @@ export default function MerchantPanel() {
 
   const atenderManual = async () => {
     const cpfTarget = telefoneManual.replace(/\D/g, '');
-    const valorReal = parseInt(valorManual || '0', 10) / 100;
+    const valInput = valorManual || (clienteAtual && clienteAtual.id === 'manual' ? valorVenda['manual'] : '');
+    const valorReal = parseInt(valInput || '0', 10) / 100;
 
     if (cpfTarget.length < 10) { mostrarToast('Telefone inválido.', 'erro'); return; }
     if ((!valorReal || valorReal <= 0) && !usarBonus['manual']) { mostrarToast('Digite o valor da venda ou ative um Bônus.', 'erro'); return; }
 
+    // Garante check-in ativo com status 'atendido' para notificar o app do cliente em tempo real
+    await supabase.from('checkins').upsert({
+      cliente_cpf: cpfTarget,
+      loja_id: lojaId,
+      status: 'atendido'
+    }, { onConflict: 'cliente_cpf,loja_id' });
+
     const sucesso = await processarPagamento(cpfTarget, valorReal, usarBonus['manual'] !== false);
     if (sucesso) {
-      await supabase.from('checkins').delete().eq('cliente_cpf', cpfTarget).eq('loja_id', lojaId);
-      
       // Atualizar status no Remarketing se existir
       const cpfsParaManual = [cpfTarget, cpfTarget.startsWith('55') ? cpfTarget.substring(2) : '55' + cpfTarget];
       const { data: remUpdate } = await supabase.from('contatos_mesa_remarketing')
@@ -928,8 +938,12 @@ export default function MerchantPanel() {
         ));
       }
 
-      Vibration.vibrate(200); setTelefoneManual(''); setValorManual(''); setUsarBonus((prev: any) => ({ ...prev, ['manual']: false })); buscarFila(); setMostrarManual(false);
-      mostrarToast('✅ Venda Manual registrada!', 'sucesso'); 
+      setTimeout(async () => {
+        await supabase.from('checkins').delete().eq('cliente_cpf', cpfTarget).eq('loja_id', lojaId);
+      }, 5000);
+
+      Vibration.vibrate(200); setTelefoneManual(''); setValorManual(''); setUsarBonus((prev: any) => ({ ...prev, ['manual']: false })); if (clienteFocadoId === 'manual') setClienteFocadoId(null); buscarFila(); setMostrarManual(false);
+      mostrarToast('✅ Venda Manual registrada com sucesso!', 'sucesso'); 
       setTimeout(() => { buscarStats(); buscarContatosRemarketing(); }, 1500);
     }
   };
@@ -1162,7 +1176,10 @@ export default function MerchantPanel() {
   };
 
   const linkQR = `https://springs.amp.ia.br/cliente?loja_id=${lojaId}`;
-  const clienteAtual = clienteFocadoId ? fila.find(c => c.id === clienteFocadoId) || fila[0] : fila[0];
+  const clienteManualClean = telefoneManual.replace(/\D/g, '');
+  const clienteAtual = clienteFocadoId
+    ? (clienteFocadoId === 'manual' && clienteManualClean.length >= 10 ? { id: 'manual', cliente_cpf: clienteManualClean } : (fila.find(c => c.id === clienteFocadoId) || fila[0]))
+    : (fila[0] || (clienteManualClean.length >= 10 ? { id: 'manual', cliente_cpf: clienteManualClean } : null));
 
   if (!lojaId) return <View style={styles.center}><Text style={{ color: '#fff' }}>Carregando Loja...</Text></View>;
 
@@ -1372,7 +1389,9 @@ export default function MerchantPanel() {
                       <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginBottom: 8 }}>Link Google Meu Negócio (4-5 Estrelas):</Text>
                       <TextInput placeholder="https://g.page/..." placeholderTextColor="#94A3B8" value={linkGoogleMeuNegocio} onChangeText={setLinkGoogleMeuNegocio} style={{ borderWidth: 1, borderColor: '#334155', borderRadius: 8, padding: 12, color: '#F8FAFC', marginBottom: 16, fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }} />
                       <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginBottom: 8 }}>Multiplicador Dobro (ex: 2.0 = 2x):</Text>
-                      <TextInput placeholder="2.0" placeholderTextColor="#94A3B8" value={bonusMultiplicador.toString()} onChangeText={(text) => setBonusMultiplicador(parseFloat(text) || 1.0)} keyboardType="decimal-pad" style={{ borderWidth: 1, borderColor: '#334155', borderRadius: 8, padding: 12, color: '#F8FAFC', marginBottom: 20 }} />
+                      <TextInput placeholder="2.0" placeholderTextColor="#94A3B8" value={bonusMultiplicador.toString()} onChangeText={(text) => setBonusMultiplicador(parseFloat(text) || 1.0)} keyboardType="decimal-pad" style={{ borderWidth: 1, borderColor: '#334155', borderRadius: 8, padding: 12, color: '#F8FAFC', marginBottom: 16 }} />
+                      <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginBottom: 8 }}>Qtd. de Perguntas Antes do Jogo:</Text>
+                      <TextInput placeholder="1" placeholderTextColor="#94A3B8" value={qtdPerguntasNps} onChangeText={(t) => setQtdPerguntasNps(t.replace(/\D/g, ''))} keyboardType="number-pad" style={{ borderWidth: 1, borderColor: '#334155', borderRadius: 8, padding: 12, color: '#F8FAFC', marginBottom: 20 }} />
                       <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginBottom: 8 }}>Tamanho do QR:</Text>
                       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
                         {Object.entries(QR_SIZES).map(([key, value]: any) => (
@@ -1669,6 +1688,8 @@ export default function MerchantPanel() {
                <TouchableOpacity onPress={() => setMostrarValidarToken(true)} style={{ backgroundColor: '#8b5cf6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}><Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>🌐 IMPORTAR REDE</Text></TouchableOpacity>
                <TouchableOpacity onPress={() => { setMostrarRemarketing(true); setMostrarMesa(false); setMostrarConfig(false); }}><Text style={[styles.headerButton, { color: mostrarRemarketing ? '#8B5CF6' : '#94A3B8' }]}>📞 Remarketing</Text></TouchableOpacity>
 
+               <TouchableOpacity onPress={() => setMostrarAjudaManual(true)} style={{ backgroundColor: '#1e293b', width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#38bdf8' }}><Text style={{ color: '#38bdf8', fontSize: 14, fontWeight: 'bold' }}>?</Text></TouchableOpacity>
+
                <TouchableOpacity onPress={() => { setMostrarConfig(!mostrarConfig); setMostrarMesa(false); setMostrarRemarketing(false); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Text style={styles.headerButton}>⚙️ Config</Text><Text style={{ color: '#64748b', fontSize: 9, fontWeight: 'bold', backgroundColor: '#1e293b', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>{APP_VERSION}</Text></TouchableOpacity>
                <TouchableOpacity onPress={() => { localStorage.clear(); router.replace('/login'); }}><Text style={styles.closeText}>✕ SAIR</Text></TouchableOpacity>
             </View>
@@ -1784,16 +1805,33 @@ export default function MerchantPanel() {
                 </View>
 
                 <View style={{ flex: 1.5, minWidth: 250, gap: 15 }}>
-                  <TouchableOpacity onPress={() => clienteAtual && atender(clienteAtual.id)} style={[styles.card, { backgroundColor: clienteAtual ? '#10b981' : '#334155', minHeight: 130, alignItems: 'center', justifyContent: 'center' }]}><Text style={{ color: '#0f172a', fontWeight: 'bold', fontSize: 20 }}>ATENDER</Text></TouchableOpacity>
+                  <TouchableOpacity 
+                    onPress={() => {
+                      if (clienteAtual) {
+                        if (clienteAtual.id === 'manual' || telefoneManual.replace(/\D/g, '').length >= 10) {
+                          atenderManual();
+                        } else {
+                          atender(clienteAtual.id);
+                        }
+                      } else if (telefoneManual.replace(/\D/g, '').length >= 10) {
+                        atenderManual();
+                      } else {
+                        mostrarToast('Digite o valor da venda ou informe o telefone manual.', 'erro');
+                      }
+                    }} 
+                    style={[styles.card, { backgroundColor: (clienteAtual || telefoneManual.replace(/\D/g, '').length >= 10) ? '#10b981' : '#334155', minHeight: 130, alignItems: 'center', justifyContent: 'center' }]}
+                  >
+                    <Text style={{ color: '#0f172a', fontWeight: 'bold', fontSize: 20 }}>ATENDER</Text>
+                  </TouchableOpacity>
                    <View style={[styles.card, { flex: 1, padding: 25, backgroundColor: '#1e293b', minHeight: 150, justifyContent: 'space-between' }]}>
-                      {clienteAtual && valorVenda[clienteAtual.id] ? (
+                      {clienteAtual && (valorVenda[clienteAtual.id] || valorManual) ? (
                         <View style={{ height: '100%', justifyContent: 'space-between' }}>
                           <View style={{ flex: 1 }}>
                             <Text style={{ color: '#facc15', fontSize: 12, fontWeight: 'bold', marginBottom: 15 }}>💡 RESUMO DA COMPRA:</Text>
                             <View style={{ gap: 12 }}>
-                               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}><Text style={{ color: '#94a3b8', fontSize: 14 }}>Venda:</Text><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{formatarMoeda(parseInt(valorVenda[clienteAtual.id], 10) / 100)}</Text></View>
+                               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}><Text style={{ color: '#94a3b8', fontSize: 14 }}>Venda:</Text><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{formatarMoeda(parseInt(valorVenda[clienteAtual.id] || valorManual, 10) / 100)}</Text></View>
                                {(() => {
-                                  const cpf = clienteAtual.cliente_cpf; const valorReal = parseInt(valorVenda[clienteAtual.id], 10) / 100;
+                                  const cpf = clienteAtual.cliente_cpf; const valorReal = parseInt(valorVenda[clienteAtual.id] || valorManual, 10) / 100;
                                   const saldoAtual = Math.floor(cashbacks[cpf]?.pontos || 0);
                                   const cb_total = cashbacks[cpf]?.total || 0; const cb_proximo = cashbacks[cpf]?.proximo || 0;
                                   const usarCb = config.usar_cashback_total ? cb_total : cb_proximo;
@@ -1823,7 +1861,49 @@ export default function MerchantPanel() {
                             </View>
                           </View>
                         </View>
-                      ) : (<View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#64748b', fontSize: 16, textAlign: 'center' }}>Digite o valor da venda...</Text></View>)}
+                      ) : (
+                        <View style={{ flex: 1, justifyContent: 'center', gap: 10 }}>
+                          <Text style={{ color: '#38bdf8', fontSize: 12, fontWeight: 'bold' }}>⌨️ LANÇAMENTO MANUAL (SEM QR CODE):</Text>
+                          <TextInput
+                            placeholder="WhatsApp do cliente..."
+                            placeholderTextColor="#64748b"
+                            keyboardType="numeric"
+                            value={formatarTelefone(telefoneManual)}
+                            onChangeText={(t) => {
+                              setTelefoneManual(t);
+                              const clean = t.replace(/\D/g, '');
+                              if (clean.length >= 10) {
+                                buscarFinanceiroDetalhado(clean, 'manual');
+                                setClienteFocadoId('manual');
+                              } else if (clienteFocadoId === 'manual') {
+                                setClienteFocadoId(null);
+                              }
+                            }}
+                            style={{ backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#38bdf8', borderRadius: 10, padding: 10, color: '#fff', fontSize: 14, fontWeight: 'bold' }}
+                          />
+                          <TextInput
+                            placeholder="Valor: R$ 0,00"
+                            placeholderTextColor="#64748b"
+                            keyboardType="numeric"
+                            value={valorManual ? (parseInt(valorManual, 10) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : ''}
+                            onChangeText={(t) => {
+                              const cleanVal = t.replace(/\D/g, '');
+                              setValorManual(cleanVal);
+                              if (clienteAtual) {
+                                setValorVenda({ ...valorVenda, [clienteAtual.id]: cleanVal });
+                              }
+                            }}
+                            onSubmitEditing={atenderManual}
+                            style={{ backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#10b981', borderRadius: 10, padding: 10, color: '#10b981', fontSize: 16, fontWeight: 'bold' }}
+                          />
+                          <TouchableOpacity
+                            onPress={atenderManual}
+                            style={{ backgroundColor: '#10b981', borderRadius: 10, paddingVertical: 10, alignItems: 'center' }}
+                          >
+                            <Text style={{ color: '#0f172a', fontWeight: '900', fontSize: 13 }}>LANÇAR VENDA MANUAL 🚀</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
                    </View>
                 </View>
              </View>
@@ -1874,7 +1954,29 @@ export default function MerchantPanel() {
           <View style={{ flexDirection: 'row', gap: 10, marginBottom: 25, flexWrap: 'wrap' }}>
              <TouchableOpacity onPress={baixarQRCode} style={[styles.card, { flex: 1, minWidth: 250, height: 260, alignItems: 'center', justifyContent: 'center' }]}><QRCode value={linkQR} size={250} getRef={(c) => (qrRef.current = c)} /><Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginTop: 15 }}>📥 QR DO BALCÃO (DOWNLOAD)</Text></TouchableOpacity>
              <View style={{ position: 'absolute', opacity: 0, left: -9999 }}><QRCode value={linkQR} size={1181} getRef={(c) => (qrDownloadRef.current = c)} /></View>
-             <View style={[styles.card, { flex: 1, minWidth: 250, height: 260 }]}><Text style={{ color: '#fff', fontSize: 24, fontWeight: '900' }}>{stats.totalClientesDia || 0}</Text><Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>CLIENTES HOJE</Text><ScrollView nestedScrollEnabled={true}>{(stats as any).vendasDiaFormatada?.map((v: any, i: number) => (<View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 8 }}><Text style={{ color: '#10b981', fontSize: 12, fontWeight: 'bold' }}>{formatarTelefone(v.cpf)} • {formatarMoeda(Number(v.valor))}</Text></View>))}</ScrollView></View>
+             <View style={[styles.card, { flex: 1, minWidth: 250, height: 260 }]}>
+                <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900' }}>{stats.totalClientesDia || 0}</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>CLIENTES HOJE</Text>
+                <ScrollView nestedScrollEnabled={true}>
+                  {(stats as any).vendasDiaFormatada?.map((v: any, i: number) => (
+                    <View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ color: '#10b981', fontSize: 12, fontWeight: 'bold' }}>{formatarTelefone(v.cpf)} • {formatarMoeda(Number(v.valor))}</Text>
+                      <TouchableOpacity
+                        onPress={() => {
+                          const clean = v.cpf.replace(/\D/g, '');
+                          const msg = encodeURIComponent(`Olá! Acesse sua carteira Palm Springs e confira seus pontos e cashback: https://springs.amp.ia.br/cliente`);
+                          const url = `https://wa.me/55${clean}?text=${msg}`;
+                          if (Platform.OS === 'web') window.open(url, '_blank'); else Linking.openURL(url);
+                        }}
+                        style={{ backgroundColor: '#25D36620', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: '#25D36660', flexDirection: 'row', alignItems: 'center', gap: 3 }}
+                      >
+                        <Text style={{ fontSize: 10 }}>💬</Text>
+                        <Text style={{ color: '#25D366', fontSize: 9, fontWeight: 'bold' }}>WhatsApp</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
              <View style={[styles.card, { flex: 1, minWidth: 250, height: 260 }]}><Text style={{ color: '#38bdf8', fontSize: 24, fontWeight: '900' }}>{stats.resgatesMesLista?.length || 0}</Text><Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>SAÍDAS (MÊS)</Text><ScrollView nestedScrollEnabled={true}>{(stats as any).resgatesSumarizados?.map((s: any, i: number) => (<View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 8 }}><Text style={{ color: '#fff', fontSize: 12 }}><Text style={{ fontWeight: 'bold', color: '#38bdf8' }}>{s.qtde}x</Text> {s.nome}</Text></View>))}</ScrollView></View>
              <View style={[styles.card, { flex: 1, minWidth: 250, height: 260 }]}><Text style={{ color: '#ec4899', fontSize: 24, fontWeight: '900' }}>{stats.resgatesHojeLista?.length || 0}</Text><Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: 'bold', marginBottom: 6 }}>RESGATES (HOJE)</Text><ScrollView nestedScrollEnabled={true}>{(stats as any).resgatesListados?.map((r: any, i: number) => (<View key={i} style={{ borderBottomWidth: 1, borderBottomColor: '#334155', paddingVertical: 8 }}><Text style={{ color: '#fff', fontSize: 12 }}>1x {r.nome} • {formatarTelefone(r.telefone)}</Text></View>))}</ScrollView></View>
           </View>
@@ -2045,6 +2147,50 @@ export default function MerchantPanel() {
             <Text style={{ color: '#94a3b8', fontSize: 11, marginBottom: 4 }}>CLIENTE: {caixaAtiva.cliente_cpf}</Text>
             <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>Pontos: {caixaAtiva.pontos_disponiveis}</Text>
             <Text style={{ color: '#94a3b8', fontSize: 10 }}>Taxa: -{caixaAtiva.taxa_em_pontos} SPG</Text>
+          </View>
+        </View>
+      )}
+
+      {mostrarAjudaManual && (
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { width: '90%', maxWidth: 700, maxHeight: '90%', padding: 0 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#334155', backgroundColor: '#0f172a', borderTopLeftRadius: 20, borderTopRightRadius: 20 }}>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#38bdf8' }}>📖 Manual do Sistema</Text>
+              <TouchableOpacity onPress={() => setMostrarAjudaManual(false)} style={styles.closeBtn}><Text style={styles.closeText}>✕</Text></TouchableOpacity>
+            </View>
+            <ScrollView style={{ padding: 20 }}>
+              <Text style={{ color: '#94a3b8', fontSize: 14, marginBottom: 20 }}>Bem-vindo ao manual rápido. Aqui você encontra instruções de como operar cada área do seu painel gerencial.</Text>
+
+              <View style={{ marginBottom: 20, backgroundColor: '#162032', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#334155' }}>
+                <Text style={{ color: '#F8FAFC', fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>🏠 Visão Geral (Dashboard)</Text>
+                <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>Aqui você acompanha os resultados da sua loja em tempo real. Veja o total de vendas, o faturamento do dia e os resgates de prêmios. A lista de clientes "Atrasados" mostra quem não volta há mais de 15 dias.</Text>
+              </View>
+
+              <View style={{ marginBottom: 20, backgroundColor: '#162032', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#334155' }}>
+                <Text style={{ color: '#F8FAFC', fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>💰 Operação de Caixa</Text>
+                <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>1. Peça ao cliente para ler o QR Code da loja ou digite o número do WhatsApp dele no campo principal.{'\n'}2. Digite o valor da compra (ex: 150,00) para calcular os pontos.{'\n'}3. Se o cliente tiver saldo, clique em "USAR CASHBACK" para dar o desconto.{'\n'}4. O operador precisa digitar sua senha de 4 dígitos para confirmar qualquer transação.</Text>
+              </View>
+
+              <View style={{ marginBottom: 20, backgroundColor: '#162032', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#334155' }}>
+                <Text style={{ color: '#F8FAFC', fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>📱 Mesa (Roleta e Avaliações)</Text>
+                <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>- <Text style={{fontWeight: 'bold', color: '#10b981'}}>Baixar QR Mesa:</Text> Imprima e coloque nas mesas. O cliente lê, responde à pesquisa de satisfação (NPS) e ganha o direito de girar a roleta ou jogar o jogo da velha.{'\n'}- Nesta aba, você também vê quem participou, gerencia as fatias/prêmios e acompanha a nota de avaliação da sua loja.</Text>
+              </View>
+
+              <View style={{ marginBottom: 20, backgroundColor: '#162032', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#334155' }}>
+                <Text style={{ color: '#F8FAFC', fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>🌐 Exchange (Importar Rede)</Text>
+                <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>O cliente gerou um token de pontos em outra loja parceira? Clique neste botão superior roxo e valide os 6 dígitos. Os pontos dele vão entrar temporariamente no seu caixa para serem usados.</Text>
+              </View>
+
+              <View style={{ marginBottom: 20, backgroundColor: '#162032', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#334155' }}>
+                <Text style={{ color: '#F8FAFC', fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>📞 Remarketing (WhatsApp)</Text>
+                <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>Use essa ferramenta para engajar quem preencheu o telefone na Mesa. Escolha um template (Agradecimento, Cupom, Saudade), clique em "Selecionar Todos" e faça o envio direto pelo seu WhatsApp.</Text>
+              </View>
+
+              <View style={{ marginBottom: 40, backgroundColor: '#162032', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#334155' }}>
+                <Text style={{ color: '#F8FAFC', fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>⚙️ Configurações</Text>
+                <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>No botão superior "Config", você ajusta o % de cashback, os prêmios da sua vitrine (onde você pode subir fotos reais), e configura a validade dos pontos. Sempre salve após alterar!</Text>
+              </View>
+            </ScrollView>
           </View>
         </View>
       )}

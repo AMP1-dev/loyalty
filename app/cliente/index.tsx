@@ -607,6 +607,11 @@ export default function Cliente() {
     if (lid && tk && tk.status === 'pendente') {
       setMostraIntercambio(true);
     }
+
+    if (typeof window !== 'undefined' && window.history?.replaceState && window.location.search.includes('loja_id')) {
+      const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+      window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+    }
   };
 
   // 1. CARREGAR SALDOS POR LOJA
@@ -1063,9 +1068,15 @@ export default function Cliente() {
   };
 
   const sairDaConta = async () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('cliente_cpf');
+      localStorage.removeItem('@cliente_cpf');
+    }
+    await AsyncStorage.removeItem('cliente_cpf');
+    await AsyncStorage.removeItem('@cliente_cpf');
     await salvarStorage('cliente_cpf', '');
     
-    // Limpar estados da memória RAM para não vazar dados do cliente anterior
+    // Limpar todos os estados da memória RAM para não vazar dados do cliente anterior
     setCpf('');
     setSaldo(0);
     setCashback(0);
@@ -1082,9 +1093,19 @@ export default function Cliente() {
     setEhPrimeiroCadastro(false);
     setMostrarPinModal(false);
     setStatus('idle');
+
+    if (typeof window !== 'undefined' && window.history?.replaceState) {
+      const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+      window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+    }
+    
     mostrarToast('Sessão encerrada com segurança! 👋', 'sucesso');
-    // Força o redirecionamento para limpar a URL de qualquer loja_id e voltar ao estado puramente "app do cliente"
-    router.replace('/cliente');
+    
+    if (typeof window !== 'undefined') {
+      window.location.href = window.location.pathname;
+    } else {
+      router.replace('/cliente');
+    }
   };
 
   let content;

@@ -187,6 +187,11 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
   const [perguntaCustom, setPerguntaCustom] = useState('Como foi sua experiência?');
   const [perguntaIdCustom, setPerguntaIdCustom] = useState<string | null>(null);
   const [tipoPerguntaCustom, setTipoPerguntaCustom] = useState('estrelas');
+
+  const [perguntasAtuais, setPerguntasAtuais] = useState<any[]>([]);
+  const [perguntaIndex, setPerguntaIndex] = useState(0);
+  const [respostasUsuario, setRespostasUsuario] = useState<{perguntaId: string, nota: number}[]>([]);
+
   const [premiosRoletaMesa, setPremiosRoletaMesa] = useState<any[]>([]);
   const [premioGanho, setPremioGanho] = useState<any>(null);
   const [carregando, setCarregando] = useState(false);
@@ -208,6 +213,7 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
   const [tabuleiroVelha, setTabuleiroVelha] = useState<(string | null)[]>(Array(9).fill(null));
   const [vencedorVelha, setVencedorVelha] = useState<string | null>(null);
   const [linhaVencedora, setLinhaVencedora] = useState<number[] | null>(null);
+  const [vezCliente, setVezCliente] = useState(true);
 
   // Animações removidas pois não usamos mais a roleta
   /*
@@ -283,12 +289,21 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
         ]);
       }
 
+      const { data: configMesa } = await supabase.from('config_mesa').select('qtd_perguntas_nps').eq('loja_id', lid_final).maybeSingle();
+      const qtdPerguntas = configMesa?.qtd_perguntas_nps || 1;
+
       const { data: perguntas } = await supabase.from('perguntas_nps').select('*').eq('loja_id', lid_final).eq('ativo', true).order('created_at', { ascending: true });
       if (perguntas && perguntas.length > 0) {
-        const perguntaSorteada = perguntas[Math.floor(Math.random() * perguntas.length)];
-        setPerguntaCustom(perguntaSorteada.pergunta);
-        setPerguntaIdCustom(perguntaSorteada.id);
-        setTipoPerguntaCustom(perguntaSorteada.tipo || 'estrelas');
+        // Embaralhar as perguntas
+        const embaralhadas = [...perguntas].sort(() => 0.5 - Math.random());
+        const sorteadas = embaralhadas.slice(0, Math.min(qtdPerguntas, perguntas.length));
+        setPerguntasAtuais(sorteadas);
+        setPerguntaIndex(0);
+        setRespostasUsuario([]);
+        
+        setPerguntaCustom(sorteadas[0].pergunta);
+        setPerguntaIdCustom(sorteadas[0].id);
+        setTipoPerguntaCustom(sorteadas[0].tipo || 'estrelas');
       }
       setCarregando(false);
     } catch (error) {
@@ -417,6 +432,19 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
       return;
     }
     
+    const novasRespostas = [...respostasUsuario, { perguntaId: perguntaIdCustom || 'geral', nota: notaNps }];
+    setRespostasUsuario(novasRespostas);
+
+    if (perguntaIndex < perguntasAtuais.length - 1) {
+      const nextIndex = perguntaIndex + 1;
+      setPerguntaIndex(nextIndex);
+      setPerguntaCustom(perguntasAtuais[nextIndex].pergunta);
+      setPerguntaIdCustom(perguntasAtuais[nextIndex].id);
+      setTipoPerguntaCustom(perguntasAtuais[nextIndex].tipo || 'estrelas');
+      setNotaNps(0); // Reseta a nota para a próxima pergunta
+      return;
+    }
+
     // Sortear prêmio antecipadamente (Ilusão de Escolha)
     const premioSorteado = sortearPremio(premiosRoletaMesa);
     setPremioFinalSorteado(premioSorteado);
@@ -684,14 +712,16 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
         valor = match ? Number(match[0]) : 10;
       }
 
+      const notaPrincipal = respostasUsuario.length > 0 ? respostasUsuario[0].nota : notaNps;
+
       const resMesa = await supabase.from('roleta_mesa_participacoes').insert({
         loja_id: lid_final,
         cliente_cpf: telLimpo,
         premio_id: pId,
         premio_nome: premio?.nome || 'Prêmio',
         premio_valor: valor,
-        nota_nps: notaNps,
-        oferta_google_dobro: notaNps === 5,
+        nota_nps: notaPrincipal,
+        oferta_google_dobro: notaPrincipal === 5,
         premio_resgatado: (premio?.tipo === 'pontos' || premio?.tipo === 'bonus' || premio?.tipo === 'cashback'),
       });
 
@@ -704,8 +734,8 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
           premio_id: null,
           premio_nome: premio?.nome || 'Prêmio',
           premio_valor: valor,
-          nota_nps: notaNps,
-          oferta_google_dobro: notaNps === 5,
+          nota_nps: notaPrincipal,
+          oferta_google_dobro: notaPrincipal === 5,
           premio_resgatado: (premio?.tipo === 'pontos' || premio?.tipo === 'bonus' || premio?.tipo === 'cashback'),
         });
         if (retryRes.error) {
@@ -793,25 +823,39 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
   const sincronizarComRemarketig = async (telefone: string, premio: any) => {
     try {
       const lid_final = uuidLojaReal || String(loja_id);
+      const notaPrincipal = respostasUsuario.length > 0 ? respostasUsuario[0].nota : notaNps;
+      
       const { data: existente } = await supabase.from('contatos_mesa_remarketing').select('id').eq('loja_id', lid_final).eq('cliente_cpf', telefone).limit(1);
       if (existente && existente.length > 0) {
-        await supabase.from('contatos_mesa_remarketing').update({ premio_ganho: premio.nome, nota_nps: notaNps, status: 'nao_contatado', data_participacao: new Date().toISOString(), data_ultimo_contato: null }).eq('id', existente[0].id);
+        await supabase.from('contatos_mesa_remarketing').update({ premio_ganho: premio.nome, nota_nps: notaPrincipal, status: 'nao_contatado', data_participacao: new Date().toISOString(), data_ultimo_contato: null }).eq('id', existente[0].id);
       } else {
         const tags = [];
-        if (notaNps === 5) tags.push('5_estrelas');
+        if (notaPrincipal === 5) tags.push('5_estrelas');
         if (premio.tipo === 'desconto') tags.push('desconto');
         if (premio.tipo === 'brinde') tags.push('brinde');
-        await supabase.from('contatos_mesa_remarketing').insert({ loja_id: lid_final, cliente_cpf: telefone, premio_ganho: premio.nome, nota_nps: notaNps, status: 'nao_contatado', data_participacao: new Date().toISOString(), tags: tags, marketing_consentido: true });
+        await supabase.from('contatos_mesa_remarketing').insert({ loja_id: lid_final, cliente_cpf: telefone, premio_ganho: premio.nome, nota_nps: notaPrincipal, status: 'nao_contatado', data_participacao: new Date().toISOString(), tags: tags, marketing_consentido: true });
       }
 
       // Salvar na tabela de NPS para o Dashboard
-      await supabase.from('respostas_nps').insert({ loja_id: lid_final, cliente_cpf: telefone, resposta: String(notaNps), pergunta_id: perguntaIdCustom });
+      const inserts = respostasUsuario.map(r => ({
+        loja_id: lid_final,
+        cliente_cpf: telefone,
+        resposta: String(r.nota),
+        pergunta_id: r.perguntaId
+      }));
+      
+      if (inserts.length > 0) {
+        await supabase.from('respostas_nps').insert(inserts);
+      } else {
+        await supabase.from('respostas_nps').insert({ loja_id: lid_final, cliente_cpf: telefone, resposta: String(notaNps), pergunta_id: perguntaIdCustom });
+      }
     } catch (error) {
       console.error(error);
     }
   };
 
-  if (etapa === 'resultado' && notaNps === 5 && premioGanho && premioGanho.tipo !== 'outro') {
+  const notaPrincipalExibicao = respostasUsuario.length > 0 ? respostasUsuario[0].nota : notaNps;
+  if (etapa === 'resultado' && notaPrincipalExibicao === 5 && premioGanho && premioGanho.tipo !== 'outro') {
     return (
       <OfertaGoogle
         premio={premioGanho}
@@ -891,7 +935,7 @@ export default function MesaRoleta({ lojaId: loja_id_prop, onClose }: { lojaId?:
                     ))
                   )}
                 </View>
-                <TouchableOpacity onPress={avancarParaEscolhaJogo} style={{ backgroundColor: notaNps > 0 ? c.roxo : '#ccc', borderRadius: 12, padding: 16, alignItems: 'center' }} disabled={notaNps === 0}><Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>ESCOLHER JOGO →</Text></TouchableOpacity>
+                <TouchableOpacity onPress={avancarParaEscolhaJogo} style={{ backgroundColor: notaNps > 0 ? c.roxo : '#ccc', borderRadius: 12, padding: 16, alignItems: 'center' }} disabled={notaNps === 0}><Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>{perguntaIndex < perguntasAtuais.length - 1 ? 'PRÓXIMA PERGUNTA →' : 'ESCOLHER JOGO →'}</Text></TouchableOpacity>
               </View>
             </ScrollView>
           )}
