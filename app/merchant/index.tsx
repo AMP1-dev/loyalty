@@ -947,11 +947,12 @@ export default function MerchantPanel() {
 
     const sucesso = await processarPagamento(cpfTarget, valorReal, usarBonus['manual'] !== false);
     if (sucesso) {
-      // Marca a transação mais recente com origem 'manual'
+      // Marca a transação mais recente com origem 'manual' (usando cpfsParaBusca com e sem prefixo 55)
+      const cpfsParaBusca = [cpfTarget, cpfTarget.startsWith('55') ? cpfTarget.substring(2) : '55' + cpfTarget];
       const { data: ultTrans } = await supabase
         .from('transacoes')
         .select('id')
-        .eq('cliente_cpf', cpfTarget)
+        .in('cliente_cpf', cpfsParaBusca)
         .eq('loja_id', lojaId)
         .order('created_at', { ascending: false })
         .limit(1);
@@ -1959,6 +1960,56 @@ export default function MerchantPanel() {
                             }}
                             style={{ backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#10b981', borderRadius: 10, padding: 10, color: '#10b981', fontSize: 16, fontWeight: 'bold' }}
                           />
+
+                          {/* Resumo parcial da compra manual (pontos, cashback, A PAGAR) em tempo real */}
+                          {(() => {
+                            const valInput = valorManual || (valorVenda['manual'] || '');
+                            const valorReal = parseInt(valInput || '0', 10) / 100;
+                            if (!valorReal || valorReal <= 0) return null;
+
+                            const cpfTarget = telefoneManual.replace(/\D/g, '');
+                            const saldoAtual = Math.floor(cashbacks[cpfTarget]?.pontos || 0);
+                            const cb_total = cashbacks[cpfTarget]?.total || 0;
+                            const cb_proximo = cashbacks[cpfTarget]?.proximo || 0;
+                            const usarCb = config.usar_cashback_total ? cb_total : cb_proximo;
+                            const limiteCb = valorReal * (Number(config.cashback_limite_uso_percent || 100) / 100);
+                            const cashbackUsado = Math.min(Math.min(valorReal, limiteCb), usarCb);
+                            const aPagar = valorReal - cashbackUsado;
+                            const base = config.pontos_sobre_valor_bruto ? valorReal : aPagar;
+                            const pts = Math.floor(base / (Number(config.reais_por_ponto) || 1));
+                            const saldoFinal = saldoAtual + pts;
+
+                            return (
+                              <View style={{ backgroundColor: '#0f172a', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#10b98150', gap: 6 }}>
+                                <Text style={{ color: '#facc15', fontSize: 10, fontWeight: 'bold' }}>💡 RESUMO DA COMPRA MANUAL:</Text>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                  <Text style={{ color: '#94a3b8', fontSize: 12 }}>Venda:</Text>
+                                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>{formatarMoeda(valorReal)}</Text>
+                                </View>
+                                {cashbackUsado > 0 && (
+                                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                    <Text style={{ color: '#facc15', fontSize: 12 }}>Cashback Usado:</Text>
+                                    <Text style={{ color: '#facc15', fontSize: 14, fontWeight: 'bold' }}>- {formatarMoeda(cashbackUsado)}</Text>
+                                  </View>
+                                )}
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#38bdf815', padding: 8, borderRadius: 8, alignItems: 'center' }}>
+                                  <View>
+                                    <Text style={{ color: '#38bdf8', fontSize: 10 }}>Ganha Agora:</Text>
+                                    <Text style={{ color: '#38bdf8', fontSize: 14, fontWeight: '900' }}>+ {pts} SPG</Text>
+                                  </View>
+                                  <View style={{ alignItems: 'flex-end' }}>
+                                    <Text style={{ color: '#10b981', fontSize: 9, fontWeight: 'bold' }}>SALDO FINAL:</Text>
+                                    <Text style={{ color: '#10b981', fontSize: 14, fontWeight: '900' }}>{saldoFinal} SPG</Text>
+                                  </View>
+                                </View>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                                  <Text style={{ color: '#10b981', fontSize: 12, fontWeight: 'bold' }}>A PAGAR:</Text>
+                                  <Text style={{ color: '#10b981', fontSize: 24, fontWeight: '900' }}>{formatarMoeda(aPagar)}</Text>
+                                </View>
+                              </View>
+                            );
+                          })()}
+
                           <TouchableOpacity
                             onPress={atenderManual}
                             style={{ backgroundColor: '#10b981', borderRadius: 10, paddingVertical: 10, alignItems: 'center' }}
