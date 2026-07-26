@@ -958,7 +958,14 @@ export default function MerchantPanel() {
         .limit(1);
 
       if (ultTrans && ultTrans.length > 0) {
-        await supabase.from('transacoes').update({ origem: 'manual' }).eq('id', ultTrans[0].id);
+        const { error: upErr } = await supabase
+          .from('transacoes')
+          .update({ origem: 'manual', observacao: 'Lançamento Manual', descricao: 'Lançamento Manual' })
+          .eq('id', ultTrans[0].id);
+
+        if (upErr) {
+          await supabase.from('transacoes').update({ origem: 'manual' }).eq('id', ultTrans[0].id);
+        }
       }
 
       // Atualizar status no Remarketing se existir

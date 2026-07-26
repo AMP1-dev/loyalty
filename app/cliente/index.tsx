@@ -543,27 +543,34 @@ export default function Cliente() {
     }
     else setNomeLojaAtual('Minha Carteira PALM');
 
+    const cleanCpf = cpfBusca ? cpfBusca.replace(/\D/g, '') : '';
+    const cpfsParaBusca = Array.from(new Set([
+      cleanCpf,
+      cleanCpf.startsWith('55') ? cleanCpf.substring(2) : '55' + cleanCpf,
+      cpfBusca || ''
+    ])).filter(Boolean);
+
     const [{ data: trans }, { data: res }, { data: cash }, { data: bonus }] = await Promise.all([
-      supabase.from('transacoes').select('*').eq('cliente_cpf', cpfBusca).order('created_at', { ascending: false }),
-      supabase.from('resgates').select('*').eq('cliente_cpf', cpfBusca).order('created_at', { ascending: false }),
-      supabase.from('cashbacks').select('*').eq('cliente_cpf', cpfBusca),
-      supabase.from('bonus_pendentes').select('*').eq('cliente_cpf', cpfBusca).eq('usado', false)
+      supabase.from('transacoes').select('*').in('cliente_cpf', cpfsParaBusca).order('created_at', { ascending: false }),
+      supabase.from('resgates').select('*').in('cliente_cpf', cpfsParaBusca).order('created_at', { ascending: false }),
+      supabase.from('cashbacks').select('*').in('cliente_cpf', cpfsParaBusca),
+      supabase.from('bonus_pendentes').select('*').in('cliente_cpf', cpfsParaBusca).eq('usado', false)
     ]);
 
     // Combinar para o Extrato
     const comb = [
-      ...(trans || []).map(t => ({ ...t, tipo: 'ganho', loja_nome: mapLojas[t.loja_id] || 'Loja Parceira' })),
+      ...(trans || []).map(t => ({ ...t, tipo: 'ganho', valor: t.valor || t.valor_venda, loja_nome: mapLojas[t.loja_id] || 'Loja Parceira' })),
       ...(res || []).map(r => ({ ...r, tipo: 'resgate', pontos_usados: r.pontos_usados, loja_nome: mapLojas[r.loja_id] || 'Loja Parceira' })),
       ...(cash || []).map(c => ({ ...c, tipo: 'cashback_ganho', loja_nome: mapLojas[c.loja_id] || 'Loja Parceira' }))
     ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-    // Agrupar cashbacks ganhos com as transações de mesma data/loja para não poluir o extrato
+    // Agrupar cashbacks ganhos com as transações de mesma data/loja
     const extratoFinal: any[] = [];
     comb.forEach(item => {
       if (item.tipo === 'ganho') {
         const cb = (cash || []).find(c =>
           c.loja_id === item.loja_id &&
-          Math.abs(new Date(c.created_at).getTime() - new Date(item.created_at).getTime()) < 5000
+          Math.abs(new Date(c.created_at).getTime() - new Date(item.created_at).getTime()) < 10000
         );
         extratoFinal.push({ ...item, cashback_valor: cb?.valor });
       } else if (item.tipo === 'resgate') {
