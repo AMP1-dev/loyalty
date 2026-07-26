@@ -1744,7 +1744,7 @@ export default function Cliente() {
               ) : (
                 (extrato || []).map((t, idx) => {
                   const isResgate = t.tipo === 'resgate';
-                  const isManual = t.origem === 'manual';
+                  const isManual = !isResgate && (t.checkin_id === null || t.checkin_id === undefined || t.origem === 'manual');
                   const icon = isResgate ? '🎁' : (t.tipo_origem === 'roleta' || t.premio_nome ? '🎡' : (isManual ? '✍️' : '🛍️'));
                   const iconBg = isResgate ? '#fee2e2' : (isDark ? '#0f172a' : '#ecfdf5');
 
