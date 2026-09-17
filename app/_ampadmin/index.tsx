@@ -85,44 +85,61 @@ export default function SuperAdmin() {
   const carregarDadosGerais = async () => {
     setLoading(true);
     
-    // Busca Lojas e Telefones
-    const { data: lojasData } = await supabase.from('lojas').select('*').order('created_at', { ascending: false });
-    const { data: configsData } = await supabase.from('configuracoes_loja').select('loja_id, telefone, endereco, numero, bairro, cidade, estado, cep');
+    try {
+      // Busca Lojas (seguro sem forçar order por coluna inexistente)
+      const { data: lojasData, error: lojasError } = await supabase.from('lojas').select('*');
+      
+      if (lojasError) {
+        console.error('Erro ao buscar lojas:', lojasError);
+        mostrarToast(`Erro ao carregar lojas: ${lojasError.message}`, 'erro');
+      }
 
-    const configsMap: any = {};
-    (configsData || []).forEach(c => {
-      configsMap[c.loja_id] = c;
-    });
-    
-    if (lojasData) {
-      const lojasComConfig = lojasData.map(l => ({
-        ...l,
-        telefone: configsMap[l.id]?.telefone || '',
-        endereco: configsMap[l.id]?.endereco || '',
-        numero: configsMap[l.id]?.numero || '',
-        bairro: configsMap[l.id]?.bairro || '',
-        cidade: configsMap[l.id]?.cidade || '',
-        estado: configsMap[l.id]?.estado || '',
-        cep: configsMap[l.id]?.cep || ''
-      }));
-      setLojas(lojasComConfig);
-      const taxasTemp: any = {};
-      lojasComConfig.forEach(l => taxasTemp[l.id] = String(l.taxa_comissao || 0));
-      setTaxasEditaveis(taxasTemp);
+      const { data: configsData } = await supabase.from('configuracoes_loja').select('loja_id, telefone, endereco, numero, bairro, cidade, estado, cep');
+
+      const configsMap: any = {};
+      (configsData || []).forEach(c => {
+        configsMap[c.loja_id] = c;
+      });
+      
+      if (lojasData) {
+        const lojasOrdenadas = [...lojasData].sort((a, b) => {
+          if (a.created_at && b.created_at) return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          return (a.nome || '').localeCompare(b.nome || '');
+        });
+
+        const lojasComConfig = lojasOrdenadas.map(l => ({
+          ...l,
+          telefone: configsMap[l.id]?.telefone || '',
+          endereco: configsMap[l.id]?.endereco || '',
+          numero: configsMap[l.id]?.numero || '',
+          bairro: configsMap[l.id]?.bairro || '',
+          cidade: configsMap[l.id]?.cidade || '',
+          estado: configsMap[l.id]?.estado || '',
+          cep: configsMap[l.id]?.cep || ''
+        }));
+        setLojas(lojasComConfig);
+        const taxasTemp: any = {};
+        lojasComConfig.forEach(l => taxasTemp[l.id] = String(l.taxa_comissao || 0));
+        setTaxasEditaveis(taxasTemp);
+      }
+
+      const dataInicio = new Date(anoFiltro, mesFiltro - 1, 1).toISOString();
+      const dataFim = new Date(anoFiltro, mesFiltro, 0, 23, 59, 59, 999).toISOString();
+      const { data: transacoes } = await supabase.from('transacoes').select('loja_id, valor').gte('created_at', dataInicio).lte('created_at', dataFim);
+      
+      const faturamentoMap: any = {};
+      (transacoes || []).forEach(t => {
+        if (!faturamentoMap[t.loja_id]) faturamentoMap[t.loja_id] = 0;
+        faturamentoMap[t.loja_id] += Number(t.valor);
+      });
+
+      setFaturamentos(faturamentoMap);
+    } catch (err: any) {
+      console.error('Erro ao carregar dados:', err);
+      mostrarToast('Erro ao carregar dados.', 'erro');
+    } finally {
+      setLoading(false);
     }
-
-    const dataInicio = new Date(anoFiltro, mesFiltro - 1, 1).toISOString();
-    const dataFim = new Date(anoFiltro, mesFiltro, 0, 23, 59, 59, 999).toISOString();
-    const { data: transacoes } = await supabase.from('transacoes').select('loja_id, valor').gte('created_at', dataInicio).lte('created_at', dataFim);
-    
-    const faturamentoMap: any = {};
-    (transacoes ||[]).forEach(t => {
-      if (!faturamentoMap[t.loja_id]) faturamentoMap[t.loja_id] = 0;
-      faturamentoMap[t.loja_id] += Number(t.valor);
-    });
-
-    setFaturamentos(faturamentoMap);
-    setLoading(false);
   };
 
   // 🔥 CONSULTA NA RECEITA FEDERAL (BRASIL API)
@@ -421,7 +438,25 @@ export default function SuperAdmin() {
 
         <Text style={styles.sectionTitle}>🏢 Gerenciamento de Lojas</Text>
 
-        {loading && <Text style={{ color: '#94a3b8', textAlign: 'center', marginBottom: 20 }}>Calculando faturamentos...</Text>}
+        {loading && <Text style={{ color: '#94a3b8', textAlign: 'center', marginBottom: 20 }}>Carregando dados das lojas...</Text>}
+
+        {!loading && lojas.length === 0 && (
+          <View style={{ backgroundColor: '#0f172a', padding: 25, borderRadius: 16, borderWidth: 1, borderColor: '#334155', alignItems: 'center', marginVertical: 10 }}>
+            <Text style={{ fontSize: 32, marginBottom: 10 }}>🏢</Text>
+            <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold', textAlign: 'center' }}>Nenhuma loja encontrada no banco de dados</Text>
+            <Text style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center', marginTop: 6, marginBottom: 20, maxWidth: 350 }}>
+              Verifique se a tabela 'lojas' possui registros e se o RLS (Row Level Security) do Supabase está liberado para leitura pública.
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity style={[styles.button, { backgroundColor: '#1e293b', borderWidth: 1, borderColor: '#38bdf8', paddingHorizontal: 15 }]} onPress={carregarDadosGerais}>
+                <Text style={[styles.buttonText, { color: '#38bdf8', fontSize: 13 }]}>🔄 RECARREGAR</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, { backgroundColor: '#10b981', paddingHorizontal: 15 }]} onPress={() => setModalLoja({ visivel: true, id: null, nome: '', cnpj: '', telefone: '', limite_usuarios: '1' })}>
+                <Text style={[styles.buttonText, { color: '#fff', fontSize: 13 }]}>+ CADASTRAR LOJA</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {lojasFiltradas.map(loja => {
           const fatTotal = faturamentos[loja.id] || 0;

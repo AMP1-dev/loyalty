@@ -513,18 +513,43 @@ export default function Cliente() {
       if (!data || data.status !== 'aguardando') {
         clearInterval(interval);
         
-        // Pede a validação do PIN antes de liberar a tela
-        const { data: exCli } = await supabase.from('clientes').select('pin_hash').eq('cpf', clean).maybeSingle();
-        if (!exCli?.pin_hash) {
-          setEhPrimeiroCadastro(true);
-          setPinModoValidar(false);
-        } else {
-          setEhPrimeiroCadastro(false);
-          setPinModoValidar(true);
+        const storeIdAtual = lidRef.current || String(loja_id);
+
+        // Verifica nas configurações da loja se o lojista exige PIN no balcão
+        let exigePin = false;
+        try {
+          if (storeIdAtual) {
+            const { data: cfgLoja } = await supabase
+              .from('configuracoes_loja')
+              .select('exigir_pin_cliente')
+              .eq('loja_id', storeIdAtual)
+              .maybeSingle();
+            exigePin = cfgLoja?.exigir_pin_cliente === true;
+          }
+        } catch (e) {
+          exigePin = false;
         }
-        setValidandoPinCheckout(true);
-        setPinDigitado(['', '', '', '']);
-        setMostrarPinModal(true);
+
+        if (exigePin) {
+          // Modo Seguro: Pede a validação/criação do PIN antes de liberar a tela
+          const { data: exCli } = await supabase.from('clientes').select('pin_hash').eq('cpf', clean).maybeSingle();
+          if (!exCli?.pin_hash) {
+            setEhPrimeiroCadastro(true);
+            setPinModoValidar(false);
+          } else {
+            setEhPrimeiroCadastro(false);
+            setPinModoValidar(true);
+          }
+          setValidandoPinCheckout(true);
+          setPinDigitado(['', '', '', '']);
+          setMostrarPinModal(true);
+        } else {
+          // Modo Livre / Rápido: Libera a tela do cliente imediatamente com saldo e painel completo!
+          setValidandoPinCheckout(false);
+          setMostrarPinModal(false);
+          await carregarDados(clean, storeIdAtual);
+          setStatus('finalizado');
+        }
       }
     }, 3000);
     return () => clearInterval(interval);

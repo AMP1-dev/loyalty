@@ -48,7 +48,7 @@ export default function MerchantPanel() {
   const [formRoleta, setFormRoleta] = useState<any>({});
   const [formError, setFormError] = useState('');
   const [mostrarConfig, setMostrarConfig] = useState(false);
-  const [config, setConfig] = useState<any>({ nome_loja: '', cor_primaria: '#10b981', cashback_percent: '10', cashback_expiracao_dias: '30', reais_por_ponto: '1', pontos_expiracao_dias: '365', pontos_sobre_valor_bruto: true, usar_cashback_total: false, limite_resgates_diario_cliente: '', tempo_bloqueio_minutos: '', bonus_retorno_pontos: '50', bonus_retorno_validade_dias: '3', senha: '', link_google_meu_negocio: '', intercambio_taxa: '0.1' });
+  const [config, setConfig] = useState<any>({ nome_loja: '', cor_primaria: '#10b981', cashback_percent: '10', cashback_expiracao_dias: '30', reais_por_ponto: '1', pontos_expiracao_dias: '365', pontos_sobre_valor_bruto: true, usar_cashback_total: false, limite_resgates_diario_cliente: '', tempo_bloqueio_minutos: '', bonus_retorno_pontos: '50', bonus_retorno_validade_dias: '3', senha: '', link_google_meu_negocio: '', intercambio_taxa: '0.1', exigir_pin_cliente: false });
   const [loadingSalvar, setLoadingSalvar] = useState(false);
   const [carregandoFoto, setCarregandoFoto] = useState(false);
   const [toast, setToast] = useState({ message: '', tipo: 'sucesso', visible: false });
@@ -722,7 +722,8 @@ export default function MerchantPanel() {
         bonus_retorno_validade_dias: String(data.bonus_retorno_validade_dias || 3),
         roleta_ativa: data.roleta_ativa || false,
         roleta_intervalo_dias: data.roleta_intervalo_dias !== null && data.roleta_intervalo_dias !== undefined ? String(data.roleta_intervalo_dias) : '1',
-        intercambio_taxa: data.intercambio_taxa !== null && data.intercambio_taxa !== undefined ? String(data.intercambio_taxa) : '0.1'
+        intercambio_taxa: data.intercambio_taxa !== null && data.intercambio_taxa !== undefined ? String(data.intercambio_taxa) : '0.1',
+        exigir_pin_cliente: data.exigir_pin_cliente === true
       }));
     } else {
       setConfig((prev: any) => ({ ...prev, senha: lojaData?.senha || '' }));
@@ -1083,7 +1084,8 @@ export default function MerchantPanel() {
       bairro: config.bairro, cidade: config.cidade, estado: config.estado, cep: config.cep,
       roleta_ativa: config.roleta_ativa, 
       roleta_intervalo_dias: config.roleta_intervalo_dias !== "" ? Number(config.roleta_intervalo_dias) : 1,
-      link_google_meu_negocio: config.link_google_meu_negocio || null
+      link_google_meu_negocio: config.link_google_meu_negocio || null,
+      exigir_pin_cliente: config.exigir_pin_cliente === true
     }, { onConflict: 'loja_id' });
 
     if (config.senha && config.senha.trim() !== '') await supabase.from('lojas').update({ senha: config.senha }).eq('id', lojaId);
@@ -1349,7 +1351,7 @@ export default function MerchantPanel() {
                 </View>
               </View>
 
-              <Text style={[styles.label, { color: '#facc15', marginTop: 20 }]}>🚫 LIMITES DE SEGURANÇA:</Text>
+              <Text style={[styles.label, { color: '#facc15', marginTop: 20 }]}>🚫 LIMITES DE SEGURANÇA E ACESSO:</Text>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: '#94a3b8', fontSize: 10 }}>LIMITE RESGATES / DIA / CLIENTE</Text>
@@ -1359,6 +1361,23 @@ export default function MerchantPanel() {
                   <Text style={{ color: '#94a3b8', fontSize: 10 }}>BLOQUEIO NPS (MINUTOS)</Text>
                   <TextInput value={config.tempo_bloqueio_minutos} onChangeText={(t) => setConfig({ ...config, tempo_bloqueio_minutos: t })} style={styles.input} keyboardType="numeric" />
                 </View>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#020617', padding: 16, borderRadius: 14, marginTop: 14, borderWidth: 1, borderColor: config.exigir_pin_cliente ? '#10b981' : '#334155' }}>
+                <View style={{ flex: 1, paddingRight: 12 }}>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>
+                    🔑 Exigir PIN do Cliente no Balcão
+                  </Text>
+                  <Text style={{ color: '#94a3b8', fontSize: 11, marginTop: 4, lineHeight: 16 }}>
+                    {config.exigir_pin_cliente
+                      ? 'ATIVADO: O cliente precisa criar ou digitar sua senha de 4 dígitos após o atendimento para liberar a carteira.'
+                      : 'DESATIVADO (Modo Livre / Rápido): Assim que a venda é lançada no balcão, a tela do cliente abre automaticamente sem exigir senha.'}
+                  </Text>
+                </View>
+                <Switch
+                  value={config.exigir_pin_cliente === true}
+                  onValueChange={(v) => setConfig({ ...config, exigir_pin_cliente: v })}
+                />
               </View>
 
               <View style={{ marginBottom: 30, marginTop: 20 }}>
