@@ -124,6 +124,15 @@ export default function MerchantPanel() {
   const [caixasAnteriores, setCaixasAnteriores] = useState<any[]>([]);
   const [mostrarAjudaManual, setMostrarAjudaManual] = useState(false);
 
+  // ════════════════════════════════════════════════════════════════════
+  // GESTÃO DE NOMES DE CLIENTES E OFERTAS CUSTOMIZADAS DE REMARKETING
+  // ════════════════════════════════════════════════════════════════════
+  const [nomesClientes, setNomesClientes] = useState<{ [cpf: string]: string }>({});
+  const [modalEditarNome, setModalEditarNome] = useState<{ visivel: boolean; cpf: string; nome: string } | null>(null);
+  const [salvandoNome, setSalvandoNome] = useState(false);
+  const [customOferta, setCustomOferta] = useState<{ [id: string]: { tipo: 'pontos' | 'cashback' | 'mensagem'; pontos: string; cashback: string; dias: string } }>({});
+  const [mostrarExportarModal, setMostrarExportarModal] = useState(false);
+
 
   // ════════════════════════════════════════════════════════════════════
   // INATIVIDADE E AUTO-LOGOUT (4 HORAS)
@@ -197,6 +206,8 @@ export default function MerchantPanel() {
     const { data, error } = await supabase.from('contatos_mesa_remarketing').select('*').eq('loja_id', lojaId).order('data_participacao', { ascending: false });
     if (!error && data) {
       setContatosMesa(data);
+      const cpfs = data.map(c => c.cliente_cpf);
+      carregarNomesClientes(cpfs);
       const nc = data.filter(c => c.status === 'nao_contatado').length;
       const c = data.filter(c => c.status !== 'nao_contatado').length;
       const n5 = data.filter(c => c.nota_nps === 5).length;
@@ -281,15 +292,222 @@ export default function MerchantPanel() {
     if (Platform.OS === 'web') window.open(`https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(url)}`, '_blank');
   };
 
-  const exportarTelefonesCSV = (id: any) => {
-    const rows = contatosMesa.map(c => `${c.cliente_cpf};${c.nota_nps};${c.status};${c.data_participacao}`);
-    const csv = "Telefone;Nota;Status;Data\n" + rows.join("\n");
-    if (Platform.OS === 'web') {
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.setAttribute('hidden', ''); a.setAttribute('href', url); a.setAttribute('download', 'contatos_springs.csv');
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  const getOfertaContato = (id: string) => {
+    return customOferta[id] || {
+      tipo: 'pontos',
+      pontos: String(config.bonus_retorno_pontos || 50),
+      cashback: '5.00',
+      dias: String(config.bonus_retorno_validade_dias || 3)
+    };
+  };
+
+  const setOfertaCampo = (id: string, campo: string, valor: any) => {
+    setCustomOferta(prev => ({
+      ...prev,
+      [id]: {
+        ...getOfertaContato(id),
+        [campo]: valor
+      }
+    }));
+  };
+
+  const enviarWhatsAppCustomizado = async (contato: any) => {
+    const oferta = getOfertaContato(contato.id);
+    const cleanCpf = contato.cliente_cpf.replace(/\D/g, '');
+    const nome = nomesClientes[cleanCpf] || contato.nome || '';
+    const nomeLoja = config.nome_fantasia || config.nome_loja || 'Nossa Loja';
+    const dias = parseInt(oferta.dias) || 3;
+
+    let mensagem = '';
+    const saudacao = nome ? `Olá, ${nome}! Tudo bem?` : `Olá! Tudo bem?`;
+
+    if (oferta.tipo === 'pontos') {
+      const pts = parseInt(oferta.pontos) || 50;
+      const expDate = new Date();
+      expDate.setDate(expDate.getDate() + dias);
+      await supabase.from('bonus_pendentes').insert([{
+        loja_id: lojaId,
+        cliente_cpf: cleanCpf,
+        pontos: pts,
+        data_expiracao: expDate.toISOString(),
+        usado: false
+      }]);
+
+      mensagem = `${saudacao} Aqui é da ${nomeLoja}! ✨\n\nPreparamos um presente especial para você: *${pts} Springs de bônus* para usar na sua próxima visita!\n\n⏳ *Válido por ${dias} dias.* Basta vir nos visitar e informar seu número no balcão. Esperamos você!`;
+    } else if (oferta.tipo === 'cashback') {
+      const cbValor = parseFloat(oferta.cashback.replace(',', '.')) || 5.0;
+      const expDate = new Date();
+      expDate.setDate(expDate.getDate() + dias);
+      await supabase.from('cashbacks').insert([{
+        loja_id: lojaId,
+        cliente_cpf: cleanCpf,
+        valor: cbValor,
+        usado: false
+      }]);
+
+      mensagem = `${saudacao} Aqui é da ${nomeLoja}! 💰\n\nVocê acaba de ganhar um cupom de *R$ ${cbValor.toFixed(2)} de Cashback* exclusivo para sua próxima compra!\n\n⏳ *Válido por ${dias} dias.* Venha aproveitar!`;
+    } else {
+      mensagem = `${saudacao} Aqui é da ${nomeLoja}! Vimos que você nos visitou recentemente. O que podemos fazer para sua próxima visita ser ainda mais especial? Gostaríamos muito do seu feedback! 🌟`;
     }
+
+    await supabase.from('contatos_mesa_remarketing').update({
+      status: 'contatado',
+      data_ultimo_contato: new Date().toISOString()
+    }).eq('id', contato.id);
+
+    const url = `https://wa.me/55${cleanCpf}?text=${encodeURIComponent(mensagem)}`;
+    if (Platform.OS === 'web') window.open(url, '_blank');
+    else Linking.openURL(url);
+
+    buscarContatosRemarketing();
+    mostrarToast(`Mensagem enviada para ${nome || formatarTelefone(cleanCpf)}!`, 'sucesso');
+  };
+
+  const baixarCSV = (conteudoCsv: string, nomeArquivo: string) => {
+    const blob = new Blob(['\uFEFF' + conteudoCsv], { type: 'text/csv;charset=utf-8;' });
+    if (Platform.OS === 'web') {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.setAttribute('hidden', '');
+      a.setAttribute('href', url);
+      a.setAttribute('download', `${nomeArquivo}_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      mostrarToast(`📥 Planilha "${nomeArquivo}" exportada com sucesso!`, 'sucesso');
+    } else {
+      Alert.alert('Download', 'Acesse pelo navegador no computador para baixar os relatórios em Excel.');
+    }
+  };
+
+  const exportarBaseClientesExcel = async () => {
+    if (!lojaId) return;
+    mostrarToast('Gerando relatório de clientes...', 'sucesso');
+    try {
+      const [{ data: vendas }, { data: resgates }, { data: cashbacksData }, { data: clientesData }] = await Promise.all([
+        supabase.from('transacoes').select('*').eq('loja_id', lojaId),
+        supabase.from('resgates').select('*').eq('loja_id', lojaId),
+        supabase.from('cashbacks').select('*').eq('loja_id', lojaId),
+        supabase.from('clientes').select('cpf, nome')
+      ]);
+
+      const mapaNomes: { [cpf: string]: string } = {};
+      (clientesData || []).forEach(c => {
+        if (c.nome) {
+          const cl = c.cpf.replace(/\D/g, '');
+          mapaNomes[cl] = c.nome;
+          if (cl.startsWith('55')) mapaNomes[cl.substring(2)] = c.nome;
+        }
+      });
+
+      const clientesMap: { [cpf: string]: { totalGasto: number; totalTransacoes: number; totalPontosGanhos: number; totalPontosUsados: number; totalCashbackDisponivel: number; ultimaVisita: string } } = {};
+
+      (vendas || []).forEach(v => {
+        const cpf = normalizarCPF(v.cliente_cpf);
+        if (!clientesMap[cpf]) {
+          clientesMap[cpf] = { totalGasto: 0, totalTransacoes: 0, totalPontosGanhos: 0, totalPontosUsados: 0, totalCashbackDisponivel: 0, ultimaVisita: v.created_at };
+        }
+        clientesMap[cpf].totalGasto += Number(v.valor || 0);
+        clientesMap[cpf].totalTransacoes += 1;
+        clientesMap[cpf].totalPontosGanhos += Number(v.pontos_gerados || 0);
+        if (new Date(v.created_at) > new Date(clientesMap[cpf].ultimaVisita)) {
+          clientesMap[cpf].ultimaVisita = v.created_at;
+        }
+      });
+
+      (resgates || []).forEach(r => {
+        const cpf = normalizarCPF(r.cliente_cpf);
+        if (clientesMap[cpf]) {
+          clientesMap[cpf].totalPontosUsados += Number(r.pontos_usados || 0);
+        }
+      });
+
+      (cashbacksData || []).forEach(c => {
+        const cpf = normalizarCPF(c.cliente_cpf);
+        if (!c.usado && clientesMap[cpf]) {
+          clientesMap[cpf].totalCashbackDisponivel += Number(c.valor || 0);
+        }
+      });
+
+      const cabecalho = "Telefone;Nome do Cliente;Saldo Springs Atual;Cashback Disponível (R$);Total Gasto na Loja (R$);Total de Compras;Última Visita\n";
+      const linhas = Object.keys(clientesMap).map(cpf => {
+        const cli = clientesMap[cpf];
+        const nome = mapaNomes[cpf] || 'Não informado';
+        const saldoSPG = Math.max(0, cli.totalPontosGanhos - cli.totalPontosUsados);
+        const dataUltima = cli.ultimaVisita ? new Date(cli.ultimaVisita).toLocaleDateString('pt-BR') : 'N/A';
+        return `${formatarTelefone(cpf)};${nome};${saldoSPG};${cli.totalCashbackDisponivel.toFixed(2).replace('.', ',')};${cli.totalGasto.toFixed(2).replace('.', ',')};${cli.totalTransacoes};${dataUltima}`;
+      });
+
+      baixarCSV(cabecalho + linhas.join("\n"), `Base_Clientes_${config.nome_loja ? config.nome_loja.replace(/\s+/g, '_') : 'Loja'}`);
+    } catch (e: any) {
+      mostrarToast(`Erro ao exportar: ${e.message}`, 'erro');
+    }
+  };
+
+  const exportarVendasExcel = async () => {
+    if (!lojaId) return;
+    mostrarToast('Gerando histórico de vendas...', 'sucesso');
+    try {
+      const [{ data: vendas }, { data: clientesData }] = await Promise.all([
+        supabase.from('transacoes').select('*').eq('loja_id', lojaId).order('created_at', { ascending: false }),
+        supabase.from('clientes').select('cpf, nome')
+      ]);
+
+      const mapaNomes: { [cpf: string]: string } = {};
+      (clientesData || []).forEach(c => {
+        if (c.nome) {
+          const cl = c.cpf.replace(/\D/g, '');
+          mapaNomes[cl] = c.nome;
+          if (cl.startsWith('55')) mapaNomes[cl.substring(2)] = c.nome;
+        }
+      });
+
+      const cabecalho = "Data;Hora;Telefone;Nome do Cliente;Valor da Venda (R$);Pontos Gerados (SPG);Tipo / Origem\n";
+      const linhas = (vendas || []).map(v => {
+        const cpf = normalizarCPF(v.cliente_cpf);
+        const nome = mapaNomes[cpf] || 'Não informado';
+        const d = parseDataSupabase(v.created_at);
+        const dataStr = d.toLocaleDateString('pt-BR');
+        const horaStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const valorStr = Number(v.valor || 0).toFixed(2).replace('.', ',');
+        const origem = v.origem === 'manual' ? 'Lançamento Manual' : 'QR Code Balcão';
+        return `${dataStr};${horaStr};${formatarTelefone(cpf)};${nome};${valorStr};${v.pontos_gerados || 0};${origem}`;
+      });
+
+      baixarCSV(cabecalho + linhas.join("\n"), `Historico_Vendas_${config.nome_loja ? config.nome_loja.replace(/\s+/g, '_') : 'Loja'}`);
+    } catch (e: any) {
+      mostrarToast(`Erro ao exportar: ${e.message}`, 'erro');
+    }
+  };
+
+  const exportarRemarketingExcel = async () => {
+    if (!lojaId) return;
+    mostrarToast('Gerando contatos de remarketing...', 'sucesso');
+    try {
+      const { data: contatos } = await supabase
+        .from('contatos_mesa_remarketing')
+        .select('*')
+        .eq('loja_id', lojaId)
+        .order('data_participacao', { ascending: false });
+
+      const cabecalho = "Data Participação;Telefone;Nome do Cliente;Nota NPS;Prêmio Ganho;Status Contato;Último Contato\n";
+      const linhas = (contatos || []).map(c => {
+        const cpf = normalizarCPF(c.cliente_cpf);
+        const nome = nomesClientes[cpf] || c.nome || 'Não informado';
+        const dataPart = c.data_participacao ? new Date(c.data_participacao).toLocaleDateString('pt-BR') : 'N/A';
+        const statusLabel = c.status === 'nao_contatado' ? 'Não Contatado' : c.status === 'contatado' ? 'Contatado' : c.status === 'respondeu' ? 'Respondeu' : 'Converteu';
+        const ultContato = c.data_ultimo_contato ? new Date(c.data_ultimo_contato).toLocaleDateString('pt-BR') : 'Nunca';
+        return `${dataPart};${formatarTelefone(cpf)};${nome};${c.nota_nps || 'N/A'};${c.premio_ganho || 'Nenhum'};${statusLabel};${ultContato}`;
+      });
+
+      baixarCSV(cabecalho + linhas.join("\n"), `Remarketing_NPS_${config.nome_loja ? config.nome_loja.replace(/\s+/g, '_') : 'Loja'}`);
+    } catch (e: any) {
+      mostrarToast(`Erro ao exportar: ${e.message}`, 'erro');
+    }
+  };
+
+  const exportarTelefonesCSV = (id: any) => {
+    exportarRemarketingExcel();
   };
 
   const toggleSelecionado = (id: string) => {
@@ -411,13 +629,81 @@ export default function MerchantPanel() {
     load();
   }, []);
 
+  const carregarNomesClientes = async (cpfs: string[]) => {
+    if (!cpfs || cpfs.length === 0) return;
+    try {
+      const cleanCpfs = Array.from(new Set(cpfs.map(c => c.replace(/\D/g, ''))));
+      const cpfsVariacoes = cleanCpfs.flatMap(c => [c, c.startsWith('55') ? c.substring(2) : '55' + c]);
+      
+      const { data } = await supabase
+        .from('clientes')
+        .select('cpf, nome')
+        .in('cpf', cpfsVariacoes);
+
+      if (data && data.length > 0) {
+        const mapa: { [cpf: string]: string } = {};
+        data.forEach(item => {
+          if (item.nome) {
+            const clean = item.cpf.replace(/\D/g, '');
+            mapa[clean] = item.nome;
+            if (clean.startsWith('55')) mapa[clean.substring(2)] = item.nome;
+            else mapa['55' + clean] = item.nome;
+          }
+        });
+        setNomesClientes(prev => ({ ...prev, ...mapa }));
+      }
+    } catch (e) {
+      console.log('Erro ao buscar nomes de clientes:', e);
+    }
+  };
+
+  const salvarNomeCliente = async () => {
+    if (!modalEditarNome || !modalEditarNome.cpf) return;
+    setSalvandoNome(true);
+    const clean = modalEditarNome.cpf.replace(/\D/g, '');
+    const novoNome = modalEditarNome.nome.trim();
+
+    try {
+      const cpfsUpdate = [clean, clean.startsWith('55') ? clean.substring(2) : '55' + clean];
+      
+      // Salva / Atualiza na tabela clientes
+      await supabase.from('clientes').upsert(
+        cpfsUpdate.map(cpf => ({ cpf, nome: novoNome })),
+        { onConflict: 'cpf' }
+      );
+
+      // Atualiza também nos contatos de remarketing se existirem
+      if (lojaId) {
+        await supabase.from('contatos_mesa_remarketing')
+          .update({ nome: novoNome })
+          .in('cliente_cpf', cpfsUpdate)
+          .eq('loja_id', lojaId);
+      }
+
+      setNomesClientes(prev => {
+        const n = { ...prev };
+        cpfsUpdate.forEach(c => { n[c] = novoNome; });
+        return n;
+      });
+
+      mostrarToast(`Nome salvo com sucesso: "${novoNome}"!`, 'sucesso');
+      setModalEditarNome(null);
+    } catch (e: any) {
+      mostrarToast(`Erro ao salvar nome: ${e.message}`, 'erro');
+    } finally {
+      setSalvandoNome(false);
+    }
+  };
+
   const buscarFila = async () => {
     if (!lojaId) return;
     const { data: ckData } = await supabase.from('checkins').select('*').eq('loja_id', lojaId).eq('status', 'aguardando').order('created_at', { ascending: true });
     
-    // Buscar se clientes na fila possuem tokens de intercâmbio
+    // Buscar se clientes na fila possuem tokens de intercâmbio e nomes
     if (ckData && ckData.length > 0) {
       const cpfs = ckData.map(c => c.cliente_cpf);
+      carregarNomesClientes(cpfs);
+
       const { data: tkData } = await supabase.from('intercambio_tokens')
         .select('cliente_cpf, token, total_pontos_a_transferir, criado_em')
         .in('cliente_cpf', cpfs)
@@ -442,16 +728,7 @@ export default function MerchantPanel() {
   const buscarFinanceiroDetalhado = async (cpf: string, idCheckin?: string) => {
     if (!lojaId) return;
 
-    // Garante que o valor da venda inicie limpo sem herdar valores de atendimentos anteriores
-    setValorVenda((prev: any) => {
-      const n = { ...prev };
-      delete n['manual'];
-      delete n[cpf];
-      if (idCheckin) delete n[idCheckin];
-      return n;
-    });
-
-    // Busca direta e correta baseada na estrutura real das tabelas
+    // Busca direta e correta baseada na estrutura real das tabelas (sem apagar o valor digitado pelo lojista)
     const cpfsParaBusca = [cpf, cpf.startsWith('55') ? cpf.substring(2) : '55' + cpf];
     const [{ data: trans }, { data: resg }, { data: cash }, { data: bonus }] = await Promise.all([
       supabase.from('transacoes').select('pontos_gerados').in('cliente_cpf', cpfsParaBusca).eq('loja_id', lojaId),
@@ -586,6 +863,8 @@ export default function MerchantPanel() {
       const atrasados = crmLista.filter((c: any) => c.atrasado);
       setHistoricoCRM(atrasados);
       setClientesAtrasados(atrasados.length);
+      const cpfsCrm = atrasados.map((c: any) => c.cliente_cpf);
+      if (cpfsCrm.length > 0) carregarNomesClientes(cpfsCrm);
 
       const cashbackUsadoMes = resgatesMesLista.reduce((a: any, r: any) => a + (Number(r.valor_cashback) || 0), 0);
       const pontosResgatadosMesTotal = resgatesMesLista.reduce((a: any, r: any) => a + (Number(r.pontos_usados) || 0), 0);
@@ -1009,20 +1288,35 @@ export default function MerchantPanel() {
   const confirmarCRM = async (comBonus: boolean) => {
     if (!modalCRM) return;
     const { cpf, pontos, dias } = modalCRM;
+    const nome = nomesClientes[cpf] || '';
+    const nomeLoja = config.nome_fantasia || config.nome_loja || 'Nossa Loja';
+    const cleanCpf = cpf.replace(/\D/g, '');
     setModalCRM(null);
 
     if (comBonus) {
-      const { error } = await supabase.from('bonus_pendentes').insert({ loja_id: lojaId, cliente_cpf: cpf, pontos: pontos, data_expiracao: new Date(new Date().setDate(new Date().getDate() + dias)).toISOString() });
+      const expDate = new Date();
+      expDate.setDate(expDate.getDate() + (Number(dias) || 3));
+      const { error } = await supabase.from('bonus_pendentes').insert([{
+        loja_id: lojaId,
+        cliente_cpf: cleanCpf,
+        pontos: Number(pontos) || 50,
+        data_expiracao: expDate.toISOString(),
+        usado: false
+      }]);
       if (error) { mostrarToast(`Erro ao agendar bônus: ${error.message}`, 'erro'); return; }
-      mostrarToast(`🎁 Promessa de ${pontos} SPG agendada!`, 'sucesso');
+      mostrarToast(`🎁 Promessa de ${pontos} SPG agendada para ${nome || formatarTelefone(cleanCpf)}!`, 'sucesso');
     }
 
-    const textoBonus = comBonus ? ` Ganhe ${pontos} Springs de presente na sua próxima compra em nossa loja! Válido por ${dias} dias.` : '';
-    const texto = encodeURIComponent(`Olá! Sentimos sua falta.${textoBonus}`);
+    const saudacao = nome ? `Olá, ${nome}! Tudo bem?` : `Olá! Tudo bem?`;
+    const textoBonus = comBonus 
+      ? ` Aqui é da ${nomeLoja}. Sentimos sua falta! Preparamos um presente especial: você ganhou *${pontos} Springs de bônus* para usar na sua próxima compra! ⏳ Válido por ${dias} dias. Esperamos você!`
+      : ` Aqui é da ${nomeLoja}. Sentimos sua falta e preparamos muitas novidades! Venha nos visitar em breve.`;
+    const texto = encodeURIComponent(`${saudacao}${textoBonus}`);
 
     setTimeout(() => {
-      if (Platform.OS === 'web') window.open(`https://wa.me/55${cpf}?text=${texto}`, '_blank');
-      else Linking.openURL(`https://wa.me/55${cpf}?text=${texto}`);
+      const url = `https://wa.me/55${cleanCpf}?text=${texto}`;
+      if (Platform.OS === 'web') window.open(url, '_blank');
+      else Linking.openURL(url);
     }, 500);
   };
 
@@ -1662,29 +1956,125 @@ export default function MerchantPanel() {
               {contatosFiltrados.length === 0 ? (
                 <View style={{ backgroundColor: '#1e293b', borderRadius: 12, padding: 20, alignItems: 'center', borderWidth: 1, borderColor: '#334155' }}><Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: '600' }}>Nenhum contato encontrado</Text></View>
               ) : (
-                contatosFiltrados.map((contato) => (
-                  <View key={contato.id} style={{ backgroundColor: '#1e293b', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: selecionados.includes(contato.id) ? '#8B5CF6' : '#334155', borderLeftWidth: 3, borderLeftColor: contato.status === 'nao_contatado' ? '#f59e0b' : contato.status === 'contatado' ? '#10b981' : contato.status === 'respondeu' ? '#3b82f6' : '#8b5cf6' }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                      <TouchableOpacity onPress={() => toggleSelecionado(contato.id)} style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: selecionados.includes(contato.id) ? '#8B5CF6' : '#334155', backgroundColor: selecionados.includes(contato.id) ? '#8B5CF6' : 'transparent', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>{selecionados.includes(contato.id) && <Text style={{ color: '#fff', fontWeight: '900' }}>✓</Text>}</TouchableOpacity>
-                      <View style={{ flex: 1 }}><Text style={{ fontSize: 12, fontWeight: '700', color: '#F8FAFC' }}>{formatarTelefone(contato.cliente_cpf)}</Text><Text style={{ fontSize: 10, color: '#94A3B8' }}>{contato.premio_ganho || 'Sem prêmio'}</Text></View>
-                      <View style={{ alignItems: 'center' }}><Text style={{ fontSize: 11, fontWeight: '700', color: '#d97706' }}>{contato.nota_nps}⭐</Text><Text style={{ fontSize: 9, color: '#94A3B8' }}>{contato.status === 'nao_contatado' ? '🔴' : contato.status === 'contatado' ? '✅' : contato.status === 'respondeu' ? '💬' : '🎉'}</Text></View>
+                contatosFiltrados.map((contato) => {
+                  const clean = contato.cliente_cpf.replace(/\D/g, '');
+                  const nome = nomesClientes[clean] || contato.nome || '';
+                  const oferta = getOfertaContato(contato.id);
+                  return (
+                    <View key={contato.id} style={{ backgroundColor: '#1e293b', borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: selecionados.includes(contato.id) ? '#8B5CF6' : '#334155', borderLeftWidth: 4, borderLeftColor: contato.status === 'nao_contatado' ? '#f59e0b' : contato.status === 'contatado' ? '#10b981' : contato.status === 'respondeu' ? '#3b82f6' : '#8b5cf6' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                        <TouchableOpacity onPress={() => toggleSelecionado(contato.id)} style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: selecionados.includes(contato.id) ? '#8B5CF6' : '#334155', backgroundColor: selecionados.includes(contato.id) ? '#8B5CF6' : 'transparent', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>{selecionados.includes(contato.id) && <Text style={{ color: '#fff', fontWeight: '900' }}>✓</Text>}</TouchableOpacity>
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#F8FAFC' }}>{formatarTelefone(contato.cliente_cpf)}</Text>
+                            {nome ? (
+                              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#10b981' }}>• {nome}</Text>
+                            ) : null}
+                            <TouchableOpacity onPress={() => setModalEditarNome({ visivel: true, cpf: contato.cliente_cpf, nome: nome })} style={{ paddingHorizontal: 4 }}>
+                              <Text style={{ fontSize: 11, color: '#38bdf8' }}>{nome ? '✏️' : '+ Nome'}</Text>
+                            </TouchableOpacity>
+                          </View>
+                          <Text style={{ fontSize: 10, color: '#94A3B8' }}>{contato.premio_ganho || 'Sem prêmio'}</Text>
+                        </View>
+                        <View style={{ alignItems: 'center' }}><Text style={{ fontSize: 11, fontWeight: '700', color: '#d97706' }}>{contato.nota_nps}⭐</Text><Text style={{ fontSize: 9, color: '#94A3B8' }}>{contato.status === 'nao_contatado' ? '🔴' : contato.status === 'contatado' ? '✅' : contato.status === 'respondeu' ? '💬' : '🎉'}</Text></View>
+                      </View>
+
+                      {/* BOX DE OFERTA CUSTOMIZADA POR CLIENTE */}
+                      <View style={{ backgroundColor: '#0f172a', padding: 10, borderRadius: 10, marginVertical: 8, borderWidth: 1, borderColor: '#334155' }}>
+                        <Text style={{ fontSize: 10, color: '#94a3b8', fontWeight: 'bold', marginBottom: 6 }}>🎯 OFERTA INDIVIDUAL (WHATSAPP):</Text>
+                        <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
+                          <TouchableOpacity
+                            onPress={() => setOfertaCampo(contato.id, 'tipo', 'pontos')}
+                            style={{ flex: 1, paddingVertical: 6, borderRadius: 6, backgroundColor: oferta.tipo === 'pontos' ? '#facc1520' : '#1e293b', borderWidth: 1, borderColor: oferta.tipo === 'pontos' ? '#facc15' : '#334155', alignItems: 'center' }}
+                          >
+                            <Text style={{ fontSize: 10, fontWeight: 'bold', color: oferta.tipo === 'pontos' ? '#facc15' : '#94a3b8' }}>✨ Springs</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => setOfertaCampo(contato.id, 'tipo', 'cashback')}
+                            style={{ flex: 1, paddingVertical: 6, borderRadius: 6, backgroundColor: oferta.tipo === 'cashback' ? '#10b98120' : '#1e293b', borderWidth: 1, borderColor: oferta.tipo === 'cashback' ? '#10b981' : '#334155', alignItems: 'center' }}
+                          >
+                            <Text style={{ fontSize: 10, fontWeight: 'bold', color: oferta.tipo === 'cashback' ? '#10b981' : '#94a3b8' }}>💰 Cashback</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => setOfertaCampo(contato.id, 'tipo', 'mensagem')}
+                            style={{ flex: 1, paddingVertical: 6, borderRadius: 6, backgroundColor: oferta.tipo === 'mensagem' ? '#38bdf820' : '#1e293b', borderWidth: 1, borderColor: oferta.tipo === 'mensagem' ? '#38bdf8' : '#334155', alignItems: 'center' }}
+                          >
+                            <Text style={{ fontSize: 10, fontWeight: 'bold', color: oferta.tipo === 'mensagem' ? '#38bdf8' : '#94a3b8' }}>💬 Mensagem</Text>
+                          </TouchableOpacity>
+                        </View>
+
+                        {oferta.tipo === 'pontos' && (
+                          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>PONTOS BÔNUS:</Text>
+                              <TextInput
+                                value={oferta.pontos}
+                                onChangeText={(t) => setOfertaCampo(contato.id, 'pontos', t.replace(/\D/g, ''))}
+                                keyboardType="numeric"
+                                style={{ backgroundColor: '#1e293b', color: '#facc15', padding: 6, borderRadius: 6, fontSize: 12, fontWeight: 'bold', borderWidth: 1, borderColor: '#facc1540' }}
+                              />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>VALIDADE (DIAS):</Text>
+                              <TextInput
+                                value={oferta.dias}
+                                onChangeText={(t) => setOfertaCampo(contato.id, 'dias', t.replace(/\D/g, ''))}
+                                keyboardType="numeric"
+                                style={{ backgroundColor: '#1e293b', color: '#38bdf8', padding: 6, borderRadius: 6, fontSize: 12, fontWeight: 'bold', borderWidth: 1, borderColor: '#38bdf840' }}
+                              />
+                            </View>
+                          </View>
+                        )}
+
+                        {oferta.tipo === 'cashback' && (
+                          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>VALOR CASHBACK (R$):</Text>
+                              <TextInput
+                                value={oferta.cashback}
+                                onChangeText={(t) => setOfertaCampo(contato.id, 'cashback', t)}
+                                keyboardType="numeric"
+                                style={{ backgroundColor: '#1e293b', color: '#10b981', padding: 6, borderRadius: 6, fontSize: 12, fontWeight: 'bold', borderWidth: 1, borderColor: '#10b98140' }}
+                              />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>VALIDADE (DIAS):</Text>
+                              <TextInput
+                                value={oferta.dias}
+                                onChangeText={(t) => setOfertaCampo(contato.id, 'dias', t.replace(/\D/g, ''))}
+                                keyboardType="numeric"
+                                style={{ backgroundColor: '#1e293b', color: '#38bdf8', padding: 6, borderRadius: 6, fontSize: 12, fontWeight: 'bold', borderWidth: 1, borderColor: '#38bdf840' }}
+                              />
+                            </View>
+                          </View>
+                        )}
+                      </View>
+
+                      <View style={{ marginBottom: 10, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#334155' }}>
+                        <Text style={{ fontSize: 10, color: '#94A3B8', marginBottom: 4 }}>📅 {new Date(contato.data_participacao).toLocaleDateString('pt-BR')}</Text>
+                        {contato.tags && contato.tags.length > 0 && (
+                          <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>{contato.tags.map((tag: string, idx: number) => (
+                            <View key={idx} style={{ backgroundColor: '#8B5CF620', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 4 }}><Text style={{ fontSize: 9, color: '#8B5CF6', fontWeight: '600' }}>{tag}</Text></View>
+                          ))}</View>
+                        )}
+                      </View>
+                      <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                        <TouchableOpacity
+                          onPress={() => enviarWhatsAppCustomizado(contato)}
+                          style={{ flex: 2, paddingVertical: 9, borderRadius: 8, backgroundColor: '#25D366', alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}
+                        >
+                          <Text style={{ fontSize: 14 }}>💬</Text>
+                          <Text style={{ fontSize: 11, color: '#0f172a', fontWeight: '900' }}>
+                            {oferta.tipo === 'pontos' ? `ENVIAR +${oferta.pontos} SPG` : oferta.tipo === 'cashback' ? `ENVIAR R$ ${oferta.cashback}` : 'ENVIAR WHATSAPP'}
+                          </Text>
+                        </TouchableOpacity>
+                        {contato.status === 'contatado' && (<TouchableOpacity onPress={() => marcarComoRespondeu(contato.id, lojaId || '')} style={{ flex: 1, paddingVertical: 8, borderRadius: 6, backgroundColor: '#3b82f6', alignItems: 'center' }}><Text style={{ fontSize: 10, color: '#fff', fontWeight: '700' }}>💬 Respondeu</Text></TouchableOpacity>)}
+                        {contato.status === 'respondeu' && (<TouchableOpacity onPress={() => marcarComoConverteu(contato.id, lojaId || '')} style={{ flex: 1, paddingVertical: 8, borderRadius: 6, backgroundColor: '#10b981', alignItems: 'center' }}><Text style={{ fontSize: 10, color: '#fff', fontWeight: '700' }}>🎉 Converteu</Text></TouchableOpacity>)}
+                        <TouchableOpacity onPress={() => deletarContato(contato.id, lojaId || '')} style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#ef4444', alignItems: 'center' }}><Text style={{ fontSize: 11 }}>🗑️</Text></TouchableOpacity>
+                      </View>
                     </View>
-                    <View style={{ marginBottom: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#334155' }}>
-                      <Text style={{ fontSize: 10, color: '#94A3B8', marginBottom: 4 }}>📅 {new Date(contato.data_participacao).toLocaleDateString('pt-BR')}</Text>
-                      {contato.tags && contato.tags.length > 0 && (
-                        <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>{contato.tags.map((tag: string, idx: number) => (
-                          <View key={idx} style={{ backgroundColor: '#8B5CF620', paddingVertical: 4, paddingHorizontal: 8, borderRadius: 4 }}><Text style={{ fontSize: 9, color: '#8B5CF6', fontWeight: '600' }}>{tag}</Text></View>
-                        ))}</View>
-                      )}
-                    </View>
-                    <View style={{ flexDirection: 'row', gap: 8 }}>
-                      <TouchableOpacity onPress={() => { const template = templatesWA[0]; template && enviarWhatsApp(contato, template, lojaId || ''); }} style={{ flex: 1, paddingVertical: 8, borderRadius: 6, backgroundColor: '#8B5CF6', alignItems: 'center' }}><Text style={{ fontSize: 10, color: '#fff', fontWeight: '700' }}>📱 WhatsApp</Text></TouchableOpacity>
-                      {contato.status === 'contatado' && (<TouchableOpacity onPress={() => marcarComoRespondeu(contato.id, lojaId || '')} style={{ flex: 1, paddingVertical: 8, borderRadius: 6, backgroundColor: '#3b82f6', alignItems: 'center' }}><Text style={{ fontSize: 10, color: '#fff', fontWeight: '700' }}>💬 Respondeu</Text></TouchableOpacity>)}
-                      {contato.status === 'respondeu' && (<TouchableOpacity onPress={() => marcarComoConverteu(contato.id, lojaId || '')} style={{ flex: 1, paddingVertical: 8, borderRadius: 6, backgroundColor: '#10b981', alignItems: 'center' }}><Text style={{ fontSize: 10, color: '#fff', fontWeight: '700' }}>🎉 Converteu</Text></TouchableOpacity>)}
-                      <TouchableOpacity onPress={() => deletarContato(contato.id, lojaId || '')} style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#ef4444', alignItems: 'center' }}><Text style={{ fontSize: 11 }}>🗑️</Text></TouchableOpacity>
-                    </View>
-                  </View>
-                ))
+                  );
+                })
               )}
             </ScrollView>
           </View>
@@ -1693,13 +2083,39 @@ export default function MerchantPanel() {
 
       {modalCRM && (
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Enviar Mensagem</Text>
-            <Text style={styles.modalSub}>Deseja enviar {modalCRM.pontos} Springs de presente para atrair o cliente {formatarTelefone(modalCRM.cpf)} de volta?</Text>
+          <View style={[styles.modalCard, { maxWidth: 450, width: '90%' }]}>
+            <Text style={styles.modalTitle}>📲 Reengajamento de Cliente</Text>
+            <Text style={styles.modalSub}>
+              Cliente: <Text style={{ color: '#fff', fontWeight: 'bold' }}>{nomesClientes[modalCRM.cpf] ? `${nomesClientes[modalCRM.cpf]} (${formatarTelefone(modalCRM.cpf)})` : formatarTelefone(modalCRM.cpf)}</Text>
+            </Text>
+            
+            <View style={{ marginTop: 15, backgroundColor: '#0f172a', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#334155' }}>
+              <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold', marginBottom: 6 }}>BÔNUS DE RETORNO (SPRINGS):</Text>
+              <TextInput
+                value={String(modalCRM.pontos)}
+                onChangeText={(t) => setModalCRM({ ...modalCRM, pontos: Number(t.replace(/\D/g, '')) || 0 })}
+                keyboardType="numeric"
+                style={[styles.input, { marginTop: 0, fontSize: 16, fontWeight: 'bold', color: '#facc15' }]}
+              />
+              <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold', marginTop: 10, marginBottom: 6 }}>VALIDADE DA OFERTA (DIAS):</Text>
+              <TextInput
+                value={String(modalCRM.dias)}
+                onChangeText={(t) => setModalCRM({ ...modalCRM, dias: Number(t.replace(/\D/g, '')) || 1 })}
+                keyboardType="numeric"
+                style={[styles.input, { marginTop: 0, fontSize: 16, fontWeight: 'bold', color: '#38bdf8' }]}
+              />
+            </View>
+
             <View style={{ gap: 10, marginTop: 20 }}>
-              <TouchableOpacity style={[styles.buttonCenter, { backgroundColor: '#facc15' }]} onPress={() => confirmarCRM(true)}><Text style={[styles.buttonText, { color: '#0f172a' }]}>🎁 SIM, ENVIAR BÔNUS</Text></TouchableOpacity>
-              <TouchableOpacity style={[styles.button, { backgroundColor: '#334155', height: 50 }]} onPress={() => { setMostrarManual(!mostrarManual); if (!mostrarManual) setTimeout(() => mainScrollRef.current?.scrollTo({ y: 800, animated: true }), 100); }}><Text style={styles.buttonText}>⌨️ LANÇAMENTO MANUAL</Text></TouchableOpacity>
-              <TouchableOpacity style={{ alignItems: 'center', marginTop: 15 }} onPress={() => setModalCRM(null)}><Text style={{ color: '#ef4444', fontWeight: 'bold' }}>CANCELAR</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.buttonCenter, { backgroundColor: '#facc15' }]} onPress={() => confirmarCRM(true)}>
+                <Text style={[styles.buttonText, { color: '#0f172a' }]}>🎁 ENVIAR COM BÔNUS ({modalCRM.pontos} SPG)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, { backgroundColor: '#334155' }]} onPress={() => confirmarCRM(false)}>
+                <Text style={styles.buttonText}>💬 ENVIAR APENAS MENSAGEM</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ alignItems: 'center', marginTop: 10 }} onPress={() => setModalCRM(null)}>
+                <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>CANCELAR</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -1752,8 +2168,9 @@ export default function MerchantPanel() {
           <View style={[styles.header, { alignItems: 'center' }]}>
             <Text style={[styles.logo, { textAlign: 'left', marginBottom: 0, fontSize: 24 }]}>PALM SPRINGS</Text>
             <View style={{ flex: 1, alignItems: 'flex-start', marginLeft: 20 }}><Text style={{ color: '#fff', fontSize: 28, fontWeight: 'bold' }}>{(config.nome_fantasia || config.nome_loja)?.toUpperCase() || 'LOJA PARCEIRA'}</Text></View>
-            <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
                <TouchableOpacity onPress={() => { buscarFila(); buscarStats(); buscarAvaliacoesERoleta(); mostrarToast('Dados Sincronizados!', 'sucesso'); }} style={{ backgroundColor: '#1e293b', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#334155' }}><Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 'bold' }}>🔄 SINCRONIZAR</Text></TouchableOpacity>
+               <TouchableOpacity onPress={() => setMostrarExportarModal(true)} style={{ backgroundColor: '#0284c7', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}><Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>📊 EXPORTAR</Text></TouchableOpacity>
                <TouchableOpacity onPress={() => { setMostrarMesa(true); setMostrarConfig(false); setMostrarRemarketing(false); }}><Text style={[styles.headerButton, { color: mostrarMesa ? '#8B5CF6' : '#94A3B8' }]}>📱 Mesa</Text></TouchableOpacity>
                <TouchableOpacity onPress={() => setMostrarValidarToken(true)} style={{ backgroundColor: '#8b5cf6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}><Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>🌐 IMPORTAR REDE</Text></TouchableOpacity>
                <TouchableOpacity onPress={() => { setMostrarRemarketing(true); setMostrarMesa(false); setMostrarConfig(false); }}><Text style={[styles.headerButton, { color: mostrarRemarketing ? '#8B5CF6' : '#94A3B8' }]}>📞 Remarketing</Text></TouchableOpacity>
@@ -1782,7 +2199,16 @@ export default function MerchantPanel() {
                                    </View>
                                  )}
                                </View>
-                               <Text style={{ color: '#fff', fontSize: 42, fontWeight: '900', letterSpacing: -1.5, marginTop: -5 }}>{formatarTelefone(clienteAtual.cliente_cpf)}</Text>
+                               <Text style={{ color: '#fff', fontSize: 38, fontWeight: '900', letterSpacing: -1, marginTop: -2 }}>{formatarTelefone(clienteAtual.cliente_cpf)}</Text>
+                               <TouchableOpacity
+                                 onPress={() => setModalEditarNome({ visivel: true, cpf: clienteAtual.cliente_cpf, nome: nomesClientes[clienteAtual.cliente_cpf] || '' })}
+                                 style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, backgroundColor: '#1e293b', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, alignSelf: 'flex-start', borderWidth: 1, borderColor: '#334155' }}
+                               >
+                                 <Text style={{ color: nomesClientes[clienteAtual.cliente_cpf] ? '#10b981' : '#94a3b8', fontSize: 12, fontWeight: 'bold' }}>
+                                   👤 {nomesClientes[clienteAtual.cliente_cpf] || 'Sem nome cadastrado'}
+                                 </Text>
+                                 <Text style={{ color: '#38bdf8', fontSize: 11 }}>✏️</Text>
+                               </TouchableOpacity>
                             </View>
                             <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
                               {clienteAtual.temToken && (
@@ -1842,7 +2268,10 @@ export default function MerchantPanel() {
                          fila.filter(c => c.id !== (clienteAtual?.id)).map((c, i) => (
                             <View key={c.id} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1e293b', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                                 <Text style={{ color: '#cbd5e1', fontSize: 14, fontWeight: 'bold' }}>{i + 2}º • {formatarTelefone(c.cliente_cpf)}</Text>
+                                 <Text style={{ color: '#cbd5e1', fontSize: 14, fontWeight: 'bold' }}>
+                                   {i + 2}º • {formatarTelefone(c.cliente_cpf)}
+                                   {nomesClientes[c.cliente_cpf] ? ` (${nomesClientes[c.cliente_cpf]})` : ''}
+                                 </Text>
                                  {c.temToken && (
                                    <View style={{ backgroundColor: '#8B5CF620', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#8B5CF640', flexDirection: 'row', alignItems: 'center', gap: 2 }}>
                                      <Text style={{ fontSize: 9 }}>🔄</Text>
@@ -1850,7 +2279,13 @@ export default function MerchantPanel() {
                                    </View>
                                  )}
                                </View>
-                               <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}><TouchableOpacity onPress={() => removerDaFila(c.id)} style={{ paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: '#ef4444', fontSize: 12, fontWeight: 'bold' }}>✕</Text></TouchableOpacity><TouchableOpacity onPress={() => setClienteFocadoId(c.id)} style={{ backgroundColor: '#38bdf820', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}><Text style={{ color: '#38bdf8', fontSize: 10, fontWeight: 'bold' }}>PUXAR ⬆️</Text></TouchableOpacity></View>
+                               <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                                 <TouchableOpacity onPress={() => setModalEditarNome({ visivel: true, cpf: c.cliente_cpf, nome: nomesClientes[c.cliente_cpf] || '' })} style={{ paddingHorizontal: 6, paddingVertical: 4 }}>
+                                   <Text style={{ fontSize: 12 }}>✏️</Text>
+                                 </TouchableOpacity>
+                                 <TouchableOpacity onPress={() => removerDaFila(c.id)} style={{ paddingHorizontal: 8, paddingVertical: 4 }}><Text style={{ color: '#ef4444', fontSize: 12, fontWeight: 'bold' }}>✕</Text></TouchableOpacity>
+                                 <TouchableOpacity onPress={() => setClienteFocadoId(c.id)} style={{ backgroundColor: '#38bdf820', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}><Text style={{ color: '#38bdf8', fontSize: 10, fontWeight: 'bold' }}>PUXAR ⬆️</Text></TouchableOpacity>
+                               </View>
                             </View>
                           ))
                        )}
@@ -2150,13 +2585,40 @@ export default function MerchantPanel() {
 
           {mostrarCRM && (
             <View style={styles.card}>
-              <Text style={styles.title}>📲 Clientes para Contato</Text>
-              {historicoCRM.map(venda => (
-                <View key={venda.id} style={styles.crmItem}>
-                  <View style={{ flex: 1 }}><Text style={styles.crmTelefone}>{formatarTelefone(venda.cliente_cpf)}</Text><Text style={styles.crmDetalhe}>Última Compra: {formatarMoeda(Number(venda.valor))} em {parseDataSupabase(venda.created_at).toLocaleDateString('pt-BR')}</Text></View>
-                  <TouchableOpacity onPress={() => iniciarCRM(venda.cliente_cpf)}><Text style={{ fontSize: 28 }}>💬</Text></TouchableOpacity>
-                </View>
-              ))}
+              <Text style={styles.title}>📲 Clientes para Contato (Ausentes há mais de 15 dias)</Text>
+              {historicoCRM.length === 0 ? (
+                <Text style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', padding: 15 }}>Nenhum cliente atrasado no momento! 🎉</Text>
+              ) : (
+                historicoCRM.map(venda => {
+                  const cpfClean = venda.cliente_cpf.replace(/\D/g, '');
+                  const nome = nomesClientes[cpfClean] || '';
+                  return (
+                    <View key={venda.id} style={styles.crmItem}>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Text style={styles.crmTelefone}>{formatarTelefone(venda.cliente_cpf)}</Text>
+                          {nome ? (
+                            <Text style={{ color: '#10b981', fontSize: 13, fontWeight: 'bold' }}>• {nome}</Text>
+                          ) : (
+                            <TouchableOpacity onPress={() => setModalEditarNome({ visivel: true, cpf: venda.cliente_cpf, nome: '' })} style={{ backgroundColor: '#334155', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                              <Text style={{ color: '#94a3b8', fontSize: 10 }}>+ Nome</Text>
+                            </TouchableOpacity>
+                          )}
+                          {nome ? (
+                            <TouchableOpacity onPress={() => setModalEditarNome({ visivel: true, cpf: venda.cliente_cpf, nome })} style={{ paddingHorizontal: 4 }}>
+                              <Text style={{ fontSize: 12 }}>✏️</Text>
+                            </TouchableOpacity>
+                          ) : null}
+                        </View>
+                        <Text style={styles.crmDetalhe}>Última Compra: {formatarMoeda(Number(venda.valor))} em {parseDataSupabase(venda.created_at).toLocaleDateString('pt-BR')}</Text>
+                      </View>
+                      <TouchableOpacity onPress={() => iniciarCRM(venda.cliente_cpf)} style={{ backgroundColor: '#25D36620', padding: 8, borderRadius: 10, borderWidth: 1, borderColor: '#25D36660' }}>
+                        <Text style={{ fontSize: 22 }}>💬</Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })
+              )}
             </View>
           )}
 
@@ -2318,6 +2780,112 @@ export default function MerchantPanel() {
             </ScrollView>
           </View>
         </View>
+      )}
+
+      {modalEditarNome && (
+        <Modal visible={modalEditarNome.visivel} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalCard, { maxWidth: 420, width: '90%' }]}>
+              <Text style={styles.modalTitle}>👤 Nome do Cliente</Text>
+              <Text style={styles.modalSub}>
+                Telefone: <Text style={{ color: '#fff', fontWeight: 'bold' }}>{formatarTelefone(modalEditarNome.cpf)}</Text>
+              </Text>
+              
+              <View style={{ marginTop: 15 }}>
+                <Text style={styles.label}>NOME COMPLETO OU APELIDO:</Text>
+                <TextInput
+                  placeholder="Ex: Helena, Dr. Roberto..."
+                  placeholderTextColor="#475569"
+                  value={modalEditarNome.nome}
+                  onChangeText={(t) => setModalEditarNome({ ...modalEditarNome, nome: t })}
+                  style={[styles.input, { fontSize: 16, color: '#fff' }]}
+                  autoFocus
+                  onSubmitEditing={salvarNomeCliente}
+                />
+              </View>
+
+              <View style={{ gap: 10, marginTop: 20 }}>
+                <TouchableOpacity
+                  style={[styles.buttonCenter, { backgroundColor: '#10b981', marginTop: 0 }]}
+                  onPress={salvarNomeCliente}
+                  disabled={salvandoNome}
+                >
+                  <Text style={styles.buttonText}>{salvandoNome ? 'SALVANDO...' : '💾 SALVAR NOME'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ alignItems: 'center', padding: 8 }}
+                  onPress={() => setModalEditarNome(null)}
+                  disabled={salvandoNome}
+                >
+                  <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>CANCELAR</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {mostrarExportarModal && (
+        <Modal visible={mostrarExportarModal} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalCard, { maxWidth: 520, width: '90%' }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+                <Text style={[styles.modalTitle, { marginBottom: 0, color: '#38bdf8' }]}>📊 Exportar Dados (Excel / CSV)</Text>
+                <TouchableOpacity onPress={() => setMostrarExportarModal(false)} style={styles.closeBtn}>
+                  <Text style={styles.closeText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={{ color: '#94a3b8', fontSize: 13, marginBottom: 20, lineHeight: 18 }}>
+                Baixe planilhas completas com formato nativo para Excel no Windows (UTF-8 com separador ';').
+              </Text>
+
+              <View style={{ gap: 12 }}>
+                <TouchableOpacity
+                  onPress={() => { exportarBaseClientesExcel(); setMostrarExportarModal(false); }}
+                  style={{ backgroundColor: '#162032', padding: 16, borderRadius: 14, borderWidth: 1, borderColor: '#10b981', flexDirection: 'row', alignItems: 'center', gap: 14 }}
+                >
+                  <Text style={{ fontSize: 26 }}>👥</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#10b981', fontSize: 15, fontWeight: 'bold' }}>Base Completa de Clientes</Text>
+                    <Text style={{ color: '#94a3b8', fontSize: 11, marginTop: 2 }}>Telefone, Nome, Saldo Springs, Cashback, Total Gasto e Visitas</Text>
+                  </View>
+                  <Text style={{ color: '#10b981', fontSize: 16 }}>📥</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => { exportarVendasExcel(); setMostrarExportarModal(false); }}
+                  style={{ backgroundColor: '#162032', padding: 16, borderRadius: 14, borderWidth: 1, borderColor: '#38bdf8', flexDirection: 'row', alignItems: 'center', gap: 14 }}
+                >
+                  <Text style={{ fontSize: 26 }}>💳</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#38bdf8', fontSize: 15, fontWeight: 'bold' }}>Histórico de Vendas & Caixa</Text>
+                    <Text style={{ color: '#94a3b8', fontSize: 11, marginTop: 2 }}>Data, Hora, Cliente, Valor R$, Pontos Gerados e Origem (Balcão/Manual)</Text>
+                  </View>
+                  <Text style={{ color: '#38bdf8', fontSize: 16 }}>📥</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => { exportarRemarketingExcel(); setMostrarExportarModal(false); }}
+                  style={{ backgroundColor: '#162032', padding: 16, borderRadius: 14, borderWidth: 1, borderColor: '#8b5cf6', flexDirection: 'row', alignItems: 'center', gap: 14 }}
+                >
+                  <Text style={{ fontSize: 26 }}>🎡</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#8b5cf6', fontSize: 15, fontWeight: 'bold' }}>Remarketing & Pesquisas NPS</Text>
+                    <Text style={{ color: '#94a3b8', fontSize: 11, marginTop: 2 }}>Data, Telefone, Nome, Nota NPS, Prêmio Ganho e Status de Contato</Text>
+                  </View>
+                  <Text style={{ color: '#8b5cf6', fontSize: 16 }}>📥</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => setMostrarExportarModal(false)}
+                style={{ backgroundColor: '#334155', padding: 12, borderRadius: 10, alignItems: 'center', marginTop: 20 }}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13 }}>FECHAR</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       )}
     </View>
   );

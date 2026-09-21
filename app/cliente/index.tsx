@@ -322,6 +322,7 @@ export default function Cliente() {
   const [configLoja, setConfigLoja] = useState<any>(null);
   const [banners, setBanners] = useState<any[]>([]);
   const [nomeLojaAtual, setNomeLojaAtual] = useState('');
+  const [nomeCliente, setNomeCliente] = useState('');
 
   const [mostrarPinModal, setMostrarPinModal] = useState(false);
   const [erroPin, setErroPin] = useState('');
@@ -575,12 +576,17 @@ export default function Cliente() {
       cpfBusca || ''
     ])).filter(Boolean);
 
-    const [{ data: trans }, { data: res }, { data: cash }, { data: bonus }] = await Promise.all([
+    const [{ data: trans }, { data: res }, { data: cash }, { data: bonus }, { data: cliInfo }] = await Promise.all([
       supabase.from('transacoes').select('*').in('cliente_cpf', cpfsParaBusca).order('created_at', { ascending: false }),
       supabase.from('resgates').select('*').in('cliente_cpf', cpfsParaBusca).order('created_at', { ascending: false }),
       supabase.from('cashbacks').select('*').in('cliente_cpf', cpfsParaBusca),
-      supabase.from('bonus_pendentes').select('*').in('cliente_cpf', cpfsParaBusca).eq('usado', false)
+      supabase.from('bonus_pendentes').select('*').in('cliente_cpf', cpfsParaBusca).eq('usado', false),
+      supabase.from('clientes').select('nome').in('cpf', cpfsParaBusca).maybeSingle()
     ]);
+
+    if (cliInfo?.nome) {
+      setNomeCliente(cliInfo.nome);
+    }
 
     // Combinar para o Extrato
     const comb = [
@@ -1110,6 +1116,7 @@ export default function Cliente() {
     
     // Limpar todos os estados da memória RAM para não vazar dados do cliente anterior
     setCpf('');
+    setNomeCliente('');
     setSaldo(0);
     setCashback(0);
     setSaldoLocal(0);
@@ -1189,8 +1196,12 @@ export default function Cliente() {
         <View style={{ height: 150, justifyContent: 'center', alignItems: 'center' }}>
           <PulsingAI color={c.neonVerde} />
         </View>
-        <Text style={{ marginTop: 20, color: c.texto, fontWeight: '900', fontSize: 18 }}>Aguardando liberação...</Text>
-        <Text style={{ marginTop: 10, color: c.subtexto, fontSize: 13, textAlign: 'center', paddingHorizontal: 40, lineHeight: 20 }}>Acessando ⏳</Text>
+        <Text style={{ marginTop: 20, color: c.texto, fontWeight: '900', fontSize: 18 }}>
+          {nomeCliente ? `Olá, ${nomeCliente}!` : 'Aguardando liberação...'}
+        </Text>
+        <Text style={{ marginTop: 10, color: c.subtexto, fontSize: 13, textAlign: 'center', paddingHorizontal: 40, lineHeight: 20 }}>
+          {nomeCliente ? 'Aguardando atendimento no balcão ⏳' : 'Acessando ⏳'}
+        </Text>
 
         <TouchableOpacity
           onPress={() => { setStatus('idle'); salvarStorage('cliente_cpf', ''); }}
@@ -1225,8 +1236,12 @@ export default function Cliente() {
         {/* HEADER PREMIUM */}
         <View style={{ paddingHorizontal: 20, paddingTop: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View style={{ flex: 1, paddingRight: 10 }}>
-            <Text style={{ fontSize: 24, fontWeight: '900', color: c.neonVerde, letterSpacing: -0.5 }} numberOfLines={1}>PALM SPRINGS</Text>
-            <Text style={{ fontSize: 9, fontWeight: '800', color: c.subtexto, letterSpacing: 0.8 }}>CLUBE DE VANTAGENS</Text>
+            <Text style={{ fontSize: 24, fontWeight: '900', color: c.neonVerde, letterSpacing: -0.5 }} numberOfLines={1}>
+              {nomeCliente ? `Olá, ${nomeCliente}!` : 'PALM SPRINGS'}
+            </Text>
+            <Text style={{ fontSize: 9, fontWeight: '800', color: c.subtexto, letterSpacing: 0.8 }}>
+              {nomeCliente ? 'CLUBE DE VANTAGENS PALM SPRINGS' : 'CLUBE DE VANTAGENS'}
+            </Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <TouchableOpacity
