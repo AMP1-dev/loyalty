@@ -123,6 +123,84 @@ export default function MerchantPanel() {
   const [caixaAtiva, setCaixaAtiva] = useState<any>(null);
   const [caixasAnteriores, setCaixasAnteriores] = useState<any[]>([]);
   const [mostrarAjudaManual, setMostrarAjudaManual] = useState(false);
+  const [manualTab, setManualTab] = useState<'conceito' | 'caixa' | 'config' | 'exchange' | 'crm' | 'mesa' | 'catalogo' | 'exportar'>('conceito');
+
+  const baixarManualCompleto = () => {
+    const textoManual = `# MANUAL OPERACIONAL & GUIA CONCEITUAL - PALM SPRINGS (AMP LOYALTY)
+========================================================================
+
+1. CONCEITO GERAL DO ECOSSISTEMA
+- Moeda Springs (SPG): Moeda de fidelidade acumulada a cada compra.
+- Cashback (%): Retorno em dinheiro (R$) que o cliente ganha de crédito.
+- Regra Reais por Ponto: Define quantos reais gastos geram 1 ponto SPG.
+
+2. OPERAÇÃO DE BALCÃO (PDV)
+- Check-in: Cliente lê QR Code no balcão ou lojista digita telefone no campo manual.
+- Nome do Cliente: Clique em [ ✏️ ] ao lado do telefone para cadastrar/editar. O cliente é recepcionado por "Olá, [Nome]!" no app.
+- Valor da Venda: O valor digitado não é apagado automaticamente durante negociações.
+- Uso de Cashback: Pode ser abatido no total da compra se o cliente tiver saldo.
+
+3. GUIA DE CONFIGURAÇÕES (RECOMENDAÇÕES POR SEGMENTO)
+- Alimentação (Cafeterias, Restaurantes):
+  * Cashback: 5% a 10%
+  * Reais por Ponto: 1 (R$ 1,00 = 1 SPG)
+  * Expiração Cashback: 30 dias
+  * Expiração Pontos: 180 a 365 dias
+  * Inatividade CRM: 15 dias
+  * Bônus Retorno: 50 SPG (Validade: 3 a 5 dias)
+
+- Farmácias, Pet Shops e Mercados:
+  * Cashback: 3% a 5%
+  * Reais por Ponto: 5 (R$ 5,00 = 1 SPG)
+  * Expiração Cashback: 60 dias
+  * Expiração Pontos: 365 dias
+  * Inatividade CRM: 20 a 30 dias
+  * Bônus Retorno: 80 a 100 SPG (Validade: 7 dias)
+
+- Roupas, Calçados, Barbearias e Serviços:
+  * Cashback: 5% a 10%
+  * Reais por Ponto: 10 (R$ 10,00 = 1 SPG)
+  * Expiração Cashback: 90 dias
+  * Expiração Pontos: 365 dias
+  * Inatividade CRM: 30 a 45 dias
+  * Bônus Retorno: 150 a 200 SPG (Validade: 10 a 15 dias)
+
+4. EXCHANGE & TROCA DE REDE
+- Regra de Ouro: "Aceita Troca" = NÃO (Padrão de Segurança).
+- Somente produtos marcados com SIM pelo lojista exibem o selo "ACEITA TROCA".
+- Validação de Token: Botão superior "🌐 IMPORTAR REDE" > Digite 6 dígitos > "VALIDAR".
+
+5. REMARKETING & CRM
+- CRM de Balcão: Alerta clientes ausentes há mais de X dias (configurável em Config).
+- Remarketing de Mesa: Contatos que responderam pesquisa NPS na mesa.
+- Customização: Ajuste pontos, cashback ou mensagem individualmente linha a linha.
+
+6. MESA, NPS E ROLETA
+- QR Mesa: Imprima em Config > Módulo QR Mesas.
+- Avaliação 5 Estrelas: Direciona o cliente para avaliar no Google Meu Negócio.
+
+7. CATÁLOGO DE PRÊMIOS
+- Cadastre prêmios com foto e custo em Springs.
+- Exclua itens com o botão vermelho [ 🗑️ EXCLUIR ].
+
+8. EXPORTAÇÃO EXCEL
+- Botão "📊 EXPORTAR" no topo baixa arquivos CSV formatados para Excel com UTF-8 BOM.
+========================================================================`;
+
+    if (Platform.OS === 'web') {
+      const blob = new Blob([textoManual], { type: 'text/markdown;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'Manual_Operacional_Palm_Springs.txt');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      mostrarToast('📥 Manual baixado com sucesso!', 'sucesso');
+    } else {
+      mostrarToast('Acesse pelo computador para baixar o arquivo completo.', 'sucesso');
+    }
+  };
 
   // ════════════════════════════════════════════════════════════════════
   // GESTÃO DE NOMES DE CLIENTES E OFERTAS CUSTOMIZADAS DE REMARKETING
@@ -2230,7 +2308,10 @@ export default function MerchantPanel() {
                <TouchableOpacity onPress={() => setMostrarValidarToken(true)} style={{ backgroundColor: '#8b5cf6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}><Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>🌐 IMPORTAR REDE</Text></TouchableOpacity>
                <TouchableOpacity onPress={() => { setMostrarRemarketing(true); setMostrarMesa(false); setMostrarConfig(false); }}><Text style={[styles.headerButton, { color: mostrarRemarketing ? '#8B5CF6' : '#94A3B8' }]}>📞 Remarketing</Text></TouchableOpacity>
 
-               <TouchableOpacity onPress={() => setMostrarAjudaManual(true)} style={{ backgroundColor: '#1e293b', width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#38bdf8' }}><Text style={{ color: '#38bdf8', fontSize: 14, fontWeight: 'bold' }}>?</Text></TouchableOpacity>
+               <TouchableOpacity onPress={() => setMostrarAjudaManual(true)} style={{ backgroundColor: '#0284c720', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#38bdf8', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                 <Text style={{ fontSize: 13 }}>📖</Text>
+                 <Text style={{ color: '#38bdf8', fontSize: 11, fontWeight: 'bold' }}>MANUAL</Text>
+               </TouchableOpacity>
 
                <TouchableOpacity onPress={() => { setMostrarConfig(!mostrarConfig); setMostrarMesa(false); setMostrarRemarketing(false); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Text style={styles.headerButton}>⚙️ Config</Text><Text style={{ color: '#64748b', fontSize: 9, fontWeight: 'bold', backgroundColor: '#1e293b', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>{APP_VERSION}</Text></TouchableOpacity>
                <TouchableOpacity onPress={() => { localStorage.clear(); router.replace('/login'); }}><Text style={styles.closeText}>✕ SAIR</Text></TouchableOpacity>
@@ -2823,47 +2904,341 @@ export default function MerchantPanel() {
       )}
 
       {mostrarAjudaManual && (
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { width: '90%', maxWidth: 700, maxHeight: '90%', padding: 0 }]}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#334155', backgroundColor: '#0f172a', borderTopLeftRadius: 20, borderTopRightRadius: 20 }}>
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#38bdf8' }}>📖 Manual do Sistema</Text>
-              <TouchableOpacity onPress={() => setMostrarAjudaManual(false)} style={styles.closeBtn}><Text style={styles.closeText}>✕</Text></TouchableOpacity>
+        <Modal visible={mostrarAjudaManual} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalCard, { width: '95%', maxWidth: 880, maxHeight: '92%', padding: 0, overflow: 'hidden' }]}>
+              
+              {/* HEADER DO MODAL */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#334155', backgroundColor: '#0f172a' }}>
+                <View>
+                  <Text style={{ fontSize: 20, fontWeight: '900', color: '#38bdf8' }}>📖 Manual Operacional & Guia Conceitual</Text>
+                  <Text style={{ color: '#94a3b8', fontSize: 11, marginTop: 2 }}>Plataforma Palm Springs • Ecossistema AMP Loyalty</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <TouchableOpacity
+                    onPress={baixarManualCompleto}
+                    style={{ backgroundColor: '#0284c7', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                  >
+                    <Text style={{ fontSize: 12 }}>📥</Text>
+                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>BAIXAR (.TXT)</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setMostrarAjudaManual(false)} style={styles.closeBtn}>
+                    <Text style={styles.closeText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* BARRA DE NAVEGAÇÃO POR ABAS */}
+              <View style={{ backgroundColor: '#1e293b', borderBottomWidth: 1, borderBottomColor: '#334155' }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 8, gap: 6 }}>
+                  {[
+                    { id: 'conceito', label: '📌 1. Conceito' },
+                    { id: 'caixa', label: '💰 2. Balcão / PDV' },
+                    { id: 'config', label: '⚙️ 3. Configurações & Exemplos' },
+                    { id: 'exchange', label: '🔄 4. Exchange (Rede)' },
+                    { id: 'crm', label: '📞 5. CRM & Remarketing' },
+                    { id: 'mesa', label: '📱 6. Mesa & NPS' },
+                    { id: 'catalogo', label: '🎁 7. Catálogo' },
+                    { id: 'exportar', label: '📊 8. Exportação' },
+                  ].map(tab => (
+                    <TouchableOpacity
+                      key={tab.id}
+                      onPress={() => setManualTab(tab.id as any)}
+                      style={{
+                        backgroundColor: manualTab === tab.id ? '#38bdf8' : '#0f172a',
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: manualTab === tab.id ? '#38bdf8' : '#334155',
+                      }}
+                    >
+                      <Text style={{
+                        color: manualTab === tab.id ? '#0f172a' : '#94a3b8',
+                        fontWeight: 'bold',
+                        fontSize: 12,
+                      }}>
+                        {tab.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* CONTEÚDO DAS ABAS */}
+              <ScrollView style={{ padding: 20, maxHeight: 600 }}>
+                {/* ABA 1: CONCEITO */}
+                {manualTab === 'conceito' && (
+                  <View style={{ gap: 16 }}>
+                    <View style={{ backgroundColor: '#162032', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#334155' }}>
+                      <Text style={{ color: '#38bdf8', fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>🌟 O que é a Plataforma Palm Springs?</Text>
+                      <Text style={{ color: '#cbd5e1', fontSize: 13, lineHeight: 20 }}>
+                        O Palm Springs é uma infraestrutura completa de fidelização, retenção de clientes e marketing de retorno direto para comércios locais e redes colaborativas. O objetivo principal é aumentar a taxa de recompra e o ticket médio através de recompensas imediatas e relacionamentos automatizados.
+                      </Text>
+                    </View>
+
+                    <Text style={{ color: '#fff', fontSize: 15, fontWeight: 'bold', marginTop: 5 }}>Os 4 Pilares Estratégicos:</Text>
+                    
+                    <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
+                      <View style={{ flex: 1, minWidth: 240, backgroundColor: '#0f172a', padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#10b981' }}>
+                        <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 14, marginBottom: 4 }}>1. Moeda Springs (SPG)</Text>
+                        <Text style={{ color: '#94a3b8', fontSize: 12, lineHeight: 18 }}>Moeda de fidelidade acumulada a cada compra para resgate de produtos do catálogo local ou da rede.</Text>
+                      </View>
+                      
+                      <View style={{ flex: 1, minWidth: 240, backgroundColor: '#0f172a', padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#facc15' }}>
+                        <Text style={{ color: '#facc15', fontWeight: 'bold', fontSize: 14, marginBottom: 4 }}>2. Cashback em Dinheiro (R$)</Text>
+                        <Text style={{ color: '#94a3b8', fontSize: 12, lineHeight: 18 }}>Crédito financeiro em R$ que o cliente recebe como desconto na próxima visita, incentivando a volta rápida.</Text>
+                      </View>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', gap: 12, flexWrap: 'wrap' }}>
+                      <View style={{ flex: 1, minWidth: 240, backgroundColor: '#0f172a', padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#ec4899' }}>
+                        <Text style={{ color: '#ec4899', fontWeight: 'bold', fontSize: 14, marginBottom: 4 }}>3. Módulo Mesa & NPS</Text>
+                        <Text style={{ color: '#94a3b8', fontSize: 12, lineHeight: 18 }}>Pesquisa de satisfação na mesa que alimenta o Google Meu Negócio e oferece Roleta de Prêmios para captar novos contatos.</Text>
+                      </View>
+                      
+                      <View style={{ flex: 1, minWidth: 240, backgroundColor: '#0f172a', padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#8b5cf6' }}>
+                        <Text style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: 14, marginBottom: 4 }}>4. CRM & Remarketing</Text>
+                        <Text style={{ color: '#94a3b8', fontSize: 12, lineHeight: 18 }}>Identifica clientes ausentes (15, 20 ou 30 dias) e dispara mensagens personalizadas de resgate com bônus e ofertas.</Text>
+                      </View>
+                    </View>
+
+                    <View style={{ backgroundColor: '#020617', padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#1e293b' }}>
+                      <Text style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: 12, marginBottom: 6 }}>📐 FÓRMULA DE CÁLCULO DAS VENDAS:</Text>
+                      <Text style={{ color: '#cbd5e1', fontSize: 12, fontFamily: 'monospace' }}>• Pontos Gerados = Valor da Venda (R$) / [Reais por Ponto]{'\n'}• Cashback Gerado = Valor da Venda (R$) * [% de Cashback]</Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* ABA 2: CAIXA / BALCÃO */}
+                {manualTab === 'caixa' && (
+                  <View style={{ gap: 14 }}>
+                    <Text style={{ color: '#38bdf8', fontSize: 16, fontWeight: 'bold' }}>💰 Operação de Balcão Passo a Passo</Text>
+                    
+                    {[
+                      { num: '1', title: 'Identificação do Cliente', desc: 'O cliente lê o QR Code do balcão (entra na fila automaticamente) ou o operador digita o WhatsApp com DDD no campo manual.' },
+                      { num: '2', title: 'Cadastro do Nome (Personalização)', desc: 'Clique no botão ✏️ ao lado do telefone para cadastrar ou editar o nome do cliente. Ele será recepcionado por "Olá, [Nome]!" no app próprio.' },
+                      { num: '3', title: 'Lançamento do Valor', desc: 'Digite o valor total da venda no campo "Valor da Venda (R$)". O valor digitado não se apaga durante negociações ou conversas.' },
+                      { num: '4', title: 'Uso de Cashback / Resgate', desc: 'Se o cliente tiver saldo de cashback em R$, você pode abater o valor na compra com 1 clique no botão "USAR CASHBACK".' },
+                      { num: '5', title: 'Entregas de Bônus Pendentes', desc: 'Se o cliente ganhou um bônus no WhatsApp ou um brinde na Roleta da Mesa, o sistema exibirá uma notificação dourada no topo para entrega/validação.' },
+                      { num: '6', title: 'Finalização Segura', desc: 'O operador confirma com sua senha de 4 dígitos. Os pontos e créditos entram instantaneamente na conta do cliente.' },
+                    ].map(item => (
+                      <View key={item.num} style={{ backgroundColor: '#162032', padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#334155', flexDirection: 'row', gap: 12 }}>
+                        <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#38bdf820', borderWidth: 1, borderColor: '#38bdf8', alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: 13 }}>{item.num}</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>{item.title}</Text>
+                          <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 4, lineHeight: 18 }}>{item.desc}</Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* ABA 3: CONFIGURAÇÕES & EXEMPLOS */}
+                {manualTab === 'config' && (
+                  <View style={{ gap: 14 }}>
+                    <Text style={{ color: '#38bdf8', fontSize: 16, fontWeight: 'bold' }}>⚙️ Guia de Preenchimento & Recomendações por Segmento</Text>
+                    <Text style={{ color: '#94a3b8', fontSize: 12 }}>Acesse o menu <Text style={{ color: '#fff', fontWeight: 'bold' }}>⚙️ Config</Text> no topo para configurar. Veja as sugestões comprovadas para cada perfil de negócio:</Text>
+
+                    {/* CARD CAFETERIA / RESTAURANTE */}
+                    <View style={{ backgroundColor: '#162032', padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#10b981' }}>
+                      <Text style={{ color: '#10b981', fontSize: 15, fontWeight: 'bold', marginBottom: 6 }}>☕ 1. Alimentação (Cafeterias, Restaurantes, Hamburguerias)</Text>
+                      <Text style={{ color: '#94a3b8', fontSize: 11, marginBottom: 8 }}>Perfil: Alta frequência de retorno e ticket de consumo semanal.</Text>
+                      <View style={{ backgroundColor: '#0f172a', padding: 10, borderRadius: 8, gap: 4 }}>
+                        <Text style={{ color: '#cbd5e1', fontSize: 12 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>• Cashback:</Text> 5% a 10%</Text>
+                        <Text style={{ color: '#cbd5e1', fontSize: 12 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>• Reais por Ponto:</Text> 1 (R$ 1,00 = 1 Springs)</Text>
+                        <Text style={{ color: '#cbd5e1', fontSize: 12 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>• Expiração Cashback:</Text> 30 dias (Gera urgência para voltar)</Text>
+                        <Text style={{ color: '#cbd5e1', fontSize: 12 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>• Inatividade CRM:</Text> 15 dias (Se passar de 15 dias sem vir, é alertado)</Text>
+                        <Text style={{ color: '#cbd5e1', fontSize: 12 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>• Bônus de Retorno:</Text> 50 SPG com 3 a 5 dias de validade</Text>
+                      </View>
+                    </View>
+
+                    {/* CARD FARMÁCIA / PET */}
+                    <View style={{ backgroundColor: '#162032', padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#facc15' }}>
+                      <Text style={{ color: '#facc15', fontSize: 15, fontWeight: 'bold', marginBottom: 6 }}>💊 2. Varejo Essencial (Farmácias, Pet Shops, Mercadinhos)</Text>
+                      <Text style={{ color: '#94a3b8', fontSize: 11, marginBottom: 8 }}>Perfil: Compras quinzenais ou mensais de necessidade contínua.</Text>
+                      <View style={{ backgroundColor: '#0f172a', padding: 10, borderRadius: 8, gap: 4 }}>
+                        <Text style={{ color: '#cbd5e1', fontSize: 12 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>• Cashback:</Text> 3% a 5%</Text>
+                        <Text style={{ color: '#cbd5e1', fontSize: 12 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>• Reais por Ponto:</Text> 5 (R$ 5,00 = 1 Springs)</Text>
+                        <Text style={{ color: '#cbd5e1', fontSize: 12 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>• Expiração Cashback:</Text> 60 dias</Text>
+                        <Text style={{ color: '#cbd5e1', fontSize: 12 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>• Inatividade CRM:</Text> 20 a 30 dias</Text>
+                        <Text style={{ color: '#cbd5e1', fontSize: 12 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>• Bônus de Retorno:</Text> 80 a 100 SPG com 7 dias de validade</Text>
+                      </View>
+                    </View>
+
+                    {/* CARD MODA / SERVIÇOS */}
+                    <View style={{ backgroundColor: '#162032', padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#a78bfa' }}>
+                      <Text style={{ color: '#a78bfa', fontSize: 15, fontWeight: 'bold', marginBottom: 6 }}>💈 3. Moda & Serviços (Vestuário, Barbearias, Clínicas, Salões)</Text>
+                      <Text style={{ color: '#94a3b8', fontSize: 11, marginBottom: 8 }}>Perfil: Ciclo de recompra mensal ou bimensal com ticket maior.</Text>
+                      <View style={{ backgroundColor: '#0f172a', padding: 10, borderRadius: 8, gap: 4 }}>
+                        <Text style={{ color: '#cbd5e1', fontSize: 12 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>• Cashback:</Text> 5% a 10%</Text>
+                        <Text style={{ color: '#cbd5e1', fontSize: 12 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>• Reais por Ponto:</Text> 10 (R$ 10,00 = 1 Springs)</Text>
+                        <Text style={{ color: '#cbd5e1', fontSize: 12 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>• Expiração Cashback:</Text> 90 dias</Text>
+                        <Text style={{ color: '#cbd5e1', fontSize: 12 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>• Inatividade CRM:</Text> 30 a 45 dias</Text>
+                        <Text style={{ color: '#cbd5e1', fontSize: 12 }}><Text style={{ color: '#fff', fontWeight: 'bold' }}>• Bônus de Retorno:</Text> 150 a 200 SPG com 15 dias de validade</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                {/* ABA 4: EXCHANGE & REDE */}
+                {manualTab === 'exchange' && (
+                  <View style={{ gap: 14 }}>
+                    <Text style={{ color: '#8b5cf6', fontSize: 16, fontWeight: 'bold' }}>🔄 Intercâmbio de Pontos (Exchange da Rede)</Text>
+                    
+                    <View style={{ backgroundColor: '#162032', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#8b5cf6' }}>
+                      <Text style={{ color: '#c4b5fd', fontSize: 14, fontWeight: 'bold', marginBottom: 6 }}>🔒 Regra de Segurança: "Aceita Troca" = NÃO por Padrão</Text>
+                      <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>
+                        Para proteger a margem do lojista, todo prêmio cadastrado no seu catálogo nasce como <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>NÃO</Text> (exclusivo para pontos da sua própria loja).
+                      </Text>
+                      <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18, marginTop: 8 }}>
+                        O app do cliente permanece limpo, sem nenhuma etiqueta de troca. Somente quando você marcar a chave <Text style={{ color: '#10b981', fontWeight: 'bold' }}>SIM: Aceitar Troca de Rede</Text>, o produto exibirá os selos <Text style={{ color: '#8b5cf6', fontWeight: 'bold' }}>🔄 ACEITA TROCA</Text> e <Text style={{ color: '#38bdf8', fontWeight: 'bold' }}>🌐 REDE • TROCA LIVRE</Text>.
+                      </Text>
+                    </View>
+
+                    <View style={{ backgroundColor: '#0f172a', padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#334155' }}>
+                      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 13, marginBottom: 8 }}>🔑 Como validar um Token de Troca no Caixa:</Text>
+                      <Text style={{ color: '#94a3b8', fontSize: 12, lineHeight: 18 }}>
+                        1. O cliente gera no app dele um token de 6 caracteres.{'\n'}
+                        2. No topo do seu painel, clique no botão roxo <Text style={{ color: '#a78bfa', fontWeight: 'bold' }}>🌐 IMPORTAR REDE</Text>.{'\n'}
+                        3. Digite os 6 dígitos e clique em <Text style={{ color: '#a78bfa', fontWeight: 'bold' }}>VALIDAR</Text>.{'\n'}
+                        4. Os pontos líquidos (com desconto da taxa da rede) são liberados para consumo na sua Caixa Ativa.
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* ABA 5: CRM & REMARKETING */}
+                {manualTab === 'crm' && (
+                  <View style={{ gap: 14 }}>
+                    <Text style={{ color: '#38bdf8', fontSize: 16, fontWeight: 'bold' }}>📞 CRM & Estratégias de Remarketing</Text>
+                    
+                    <View style={{ backgroundColor: '#162032', padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#334155' }}>
+                      <Text style={{ color: '#8b5cf6', fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>A) CRM de Clientes Ausentes (Balcão)</Text>
+                      <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>
+                        O sistema calcula automaticamente quem comprou no seu caixa mas não retorna há mais de X dias (configurado no menu Config, ex: 15 ou 20 dias). Clique no card roxo do dashboard para abrir a lista e acionar o WhatsApp diretamente com ofertas atrativas de bônus.
+                      </Text>
+                    </View>
+
+                    <View style={{ backgroundColor: '#162032', padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#334155' }}>
+                      <Text style={{ color: '#38bdf8', fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>B) Remarketing de Mesa (Pesquisas & Roleta)</Text>
+                      <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>
+                        Contatos que participaram da pesquisa de satisfação ou da roleta na mesa ficam organizados na aba <Text style={{ color: '#fff', fontWeight: 'bold' }}>📞 Remarketing</Text>.
+                      </Text>
+                      <View style={{ backgroundColor: '#0f172a', padding: 10, borderRadius: 8, marginTop: 8 }}>
+                        <Text style={{ color: '#10b981', fontWeight: 'bold', fontSize: 12, marginBottom: 4 }}>✨ Customização Linha a Linha:</Text>
+                        <Text style={{ color: '#94a3b8', fontSize: 11, lineHeight: 16 }}>
+                          • Escolha para cada cliente: <Text style={{ color: '#facc15' }}>Pontos Bônus</Text>, <Text style={{ color: '#10b981' }}>Cashback em R$</Text> ou <Text style={{ color: '#38bdf8' }}>Mensagem Simples</Text>.{'\n'}
+                          • Defina a quantidade e a validade da oferta.{'\n'}
+                          • O bônus é salvo no sistema e aguardará o cliente no balcão quando ele retornar.
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                {/* ABA 6: MESA, NPS & ROLETA */}
+                {manualTab === 'mesa' && (
+                  <View style={{ gap: 14 }}>
+                    <Text style={{ color: '#38bdf8', fontSize: 16, fontWeight: 'bold' }}>📱 Módulo QR Mesas, Pesquisa NPS & Roleta</Text>
+                    
+                    <View style={{ backgroundColor: '#162032', padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#334155' }}>
+                      <Text style={{ color: '#10b981', fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>1. Impressão de Displays de Mesa</Text>
+                      <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>
+                        No menu <Text style={{ color: '#fff', fontWeight: 'bold' }}>⚙️ Config</Text> → <Text style={{ color: '#fff', fontWeight: 'bold' }}>Módulo QR Mesas</Text>, gere a arte para display com seu logotipo e imprima no tamanho ideal (10x10cm, 15x15cm ou 20x20cm).
+                      </Text>
+                    </View>
+
+                    <View style={{ backgroundColor: '#162032', padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#334155' }}>
+                      <Text style={{ color: '#facc15', fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>2. Alavancagem no Google Meu Negócio</Text>
+                      <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>
+                        Ao responder a pesquisa na mesa, clientes que dão avaliação máxima (5 Estrelas) são direcionados com 1 toque para postar a avaliação no seu Google Maps, elevando seu ranqueamento orgânico na sua cidade.
+                      </Text>
+                    </View>
+
+                    <View style={{ backgroundColor: '#162032', padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#334155' }}>
+                      <Text style={{ color: '#db2777', fontSize: 14, fontWeight: 'bold', marginBottom: 4 }}>3. Roleta de Prêmios e Gamificação</Text>
+                      <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>
+                        Configure fatias de prêmios (Pontos, Cashback ou Brindes) com probabilidades percentuais para surpreender e encantar o público logo após o atendimento.
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* ABA 7: CATÁLOGO */}
+                {manualTab === 'catalogo' && (
+                  <View style={{ gap: 14 }}>
+                    <Text style={{ color: '#38bdf8', fontSize: 16, fontWeight: 'bold' }}>🎁 Gestão do Catálogo de Prêmios</Text>
+                    
+                    <View style={{ backgroundColor: '#162032', padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#334155' }}>
+                      <Text style={{ color: '#38bdf8', fontSize: 14, fontWeight: 'bold', marginBottom: 6 }}>Cadastrando Novos Prêmios:</Text>
+                      <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>
+                        1. Clique em <Text style={{ color: '#38bdf8', fontWeight: 'bold' }}>🎁 GERENCIAR CATÁLOGO</Text> e depois em <Text style={{ color: '#38bdf8', fontWeight: 'bold' }}>+ NOVO PRÊMIO</Text>.{'\n'}
+                        2. Digite o nome do prêmio e a quantidade de Springs necessárias.{'\n'}
+                        3. Clique em <Text style={{ color: '#3b82f6', fontWeight: 'bold' }}>📤 ENVIAR FOTO</Text> para anexar uma imagem real do produto.{'\n'}
+                        4. Escolha se o produto deve aceitar pontos da rede (Padrão: NÃO).
+                      </Text>
+                    </View>
+
+                    <View style={{ backgroundColor: '#162032', padding: 14, borderRadius: 10, borderWidth: 1, borderColor: '#ef4444' }}>
+                      <Text style={{ color: '#ef4444', fontSize: 14, fontWeight: 'bold', marginBottom: 6 }}>🗑️ Exclusão de Prêmios:</Text>
+                      <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>
+                        Em qualquer card de produto, clique no botão vermelho <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>🗑️ EXCLUIR</Text> para remover produtos descontinuados ou testes do seu catálogo com confirmação imediata.
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* ABA 8: EXPORTAÇÃO */}
+                {manualTab === 'exportar' && (
+                  <View style={{ gap: 14 }}>
+                    <Text style={{ color: '#38bdf8', fontSize: 16, fontWeight: 'bold' }}>📊 Exportação para Excel & Segurança de Dados</Text>
+                    
+                    <Text style={{ color: '#94a3b8', fontSize: 12 }}>
+                      Clique no botão azul superior <Text style={{ color: '#38bdf8', fontWeight: 'bold' }}>📊 EXPORTAR</Text> para baixar relatórios contábeis e de clientes em formato compatível com Excel (.csv com UTF-8 BOM e separador de ponto e vírgula):
+                    </Text>
+
+                    <View style={{ backgroundColor: '#162032', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#10b981' }}>
+                      <Text style={{ color: '#10b981', fontSize: 13, fontWeight: 'bold' }}>👥 1. Base Completa de Clientes</Text>
+                      <Text style={{ color: '#94a3b8', fontSize: 11, marginTop: 2 }}>Exporta telefone, nome cadastrado, saldo de pontos SPG, cashback acumulado, total já gasto em R$ e data da última visita.</Text>
+                    </View>
+
+                    <View style={{ backgroundColor: '#162032', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#38bdf8' }}>
+                      <Text style={{ color: '#38bdf8', fontSize: 13, fontWeight: 'bold' }}>💳 2. Histórico de Vendas & Caixa</Text>
+                      <Text style={{ color: '#94a3b8', fontSize: 11, marginTop: 2 }}>Extrato financeiro com data, hora, cliente, valor em R$, pontos gerados, cashback concedido e tipo de lançamento.</Text>
+                    </View>
+
+                    <View style={{ backgroundColor: '#162032', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#8b5cf6' }}>
+                      <Text style={{ color: '#8b5cf6', fontSize: 13, fontWeight: 'bold' }}>🎡 3. Remarketing & Pesquisas NPS</Text>
+                      <Text style={{ color: '#94a3b8', fontSize: 11, marginTop: 2 }}>Relatório de engajamento da mesa com notas NPS, prêmios ganhos na roleta e status de contato no WhatsApp.</Text>
+                    </View>
+                  </View>
+                )}
+              </ScrollView>
+
+              {/* FOOTER DO MODAL */}
+              <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: '#334155', backgroundColor: '#0f172a', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <TouchableOpacity
+                  onPress={baixarManualCompleto}
+                  style={{ backgroundColor: '#0284c720', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: '#0284c7', flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                >
+                  <Text style={{ fontSize: 14 }}>📥</Text>
+                  <Text style={{ color: '#38bdf8', fontSize: 12, fontWeight: 'bold' }}>BAIXAR MANUAL COMPLETO (.TXT)</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setMostrarAjudaManual(false)}
+                  style={{ backgroundColor: '#334155', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>FECHAR</Text>
+                </TouchableOpacity>
+              </View>
+
             </View>
-            <ScrollView style={{ padding: 20 }}>
-              <Text style={{ color: '#94a3b8', fontSize: 14, marginBottom: 20 }}>Bem-vindo ao manual rápido. Aqui você encontra instruções de como operar cada área do seu painel gerencial.</Text>
-
-              <View style={{ marginBottom: 20, backgroundColor: '#162032', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#334155' }}>
-                <Text style={{ color: '#F8FAFC', fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>🏠 Visão Geral (Dashboard)</Text>
-                <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>Aqui você acompanha os resultados da sua loja em tempo real. Veja o total de vendas, o faturamento do dia e os resgates de prêmios. A lista de clientes "Atrasados" mostra quem não volta há mais de 15 dias.</Text>
-              </View>
-
-              <View style={{ marginBottom: 20, backgroundColor: '#162032', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#334155' }}>
-                <Text style={{ color: '#F8FAFC', fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>💰 Operação de Caixa</Text>
-                <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>1. Peça ao cliente para ler o QR Code da loja ou digite o número do WhatsApp dele no campo principal.{'\n'}2. Digite o valor da compra (ex: 150,00) para calcular os pontos.{'\n'}3. Se o cliente tiver saldo, clique em "USAR CASHBACK" para dar o desconto.{'\n'}4. O operador precisa digitar sua senha de 4 dígitos para confirmar qualquer transação.</Text>
-              </View>
-
-              <View style={{ marginBottom: 20, backgroundColor: '#162032', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#334155' }}>
-                <Text style={{ color: '#F8FAFC', fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>📱 Mesa (Roleta e Avaliações)</Text>
-                <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>- <Text style={{fontWeight: 'bold', color: '#10b981'}}>Baixar QR Mesa:</Text> Imprima e coloque nas mesas. O cliente lê, responde à pesquisa de satisfação (NPS) e ganha o direito de girar a roleta ou jogar o jogo da velha.{'\n'}- Nesta aba, você também vê quem participou, gerencia as fatias/prêmios e acompanha a nota de avaliação da sua loja.</Text>
-              </View>
-
-              <View style={{ marginBottom: 20, backgroundColor: '#162032', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#334155' }}>
-                <Text style={{ color: '#F8FAFC', fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>🌐 Exchange (Importar Rede)</Text>
-                <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>O cliente gerou um token de pontos em outra loja parceira? Clique neste botão superior roxo e valide os 6 dígitos. Os pontos dele vão entrar temporariamente no seu caixa para serem usados.</Text>
-              </View>
-
-              <View style={{ marginBottom: 20, backgroundColor: '#162032', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#334155' }}>
-                <Text style={{ color: '#F8FAFC', fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>📞 Remarketing (WhatsApp)</Text>
-                <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>Use essa ferramenta para engajar quem preencheu o telefone na Mesa. Escolha um template (Agradecimento, Cupom, Saudade), clique em "Selecionar Todos" e faça o envio direto pelo seu WhatsApp.</Text>
-              </View>
-
-              <View style={{ marginBottom: 40, backgroundColor: '#162032', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#334155' }}>
-                <Text style={{ color: '#F8FAFC', fontSize: 16, fontWeight: 'bold', marginBottom: 8 }}>⚙️ Configurações</Text>
-                <Text style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 18 }}>No botão superior "Config", você ajusta o % de cashback, os prêmios da sua vitrine (onde você pode subir fotos reais), e configura a validade dos pontos. Sempre salve após alterar!</Text>
-              </View>
-            </ScrollView>
           </View>
-        </View>
+        </Modal>
       )}
 
       {modalEditarNome && (
