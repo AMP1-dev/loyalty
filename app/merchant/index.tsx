@@ -462,21 +462,23 @@ export default function MerchantPanel() {
     if (!lojaId) return;
     mostrarToast('Gerando relatório de clientes...', 'sucesso');
     try {
-      const [{ data: vendas }, { data: resgates }, { data: cashbacksData }, { data: clientesData }] = await Promise.all([
+      const [{ data: vendas }, { data: resgates }, { data: cashbacksData }] = await Promise.all([
         supabase.from('transacoes').select('*').eq('loja_id', lojaId),
         supabase.from('resgates').select('*').eq('loja_id', lojaId),
-        supabase.from('cashbacks').select('*').eq('loja_id', lojaId),
-        supabase.from('clientes').select('cpf, nome')
+        supabase.from('cashbacks').select('*').eq('loja_id', lojaId)
       ]);
 
-      const mapaNomes: { [cpf: string]: string } = {};
-      (clientesData || []).forEach(c => {
-        if (c.nome) {
-          const cl = c.cpf.replace(/\D/g, '');
-          mapaNomes[cl] = c.nome;
-          if (cl.startsWith('55')) mapaNomes[cl.substring(2)] = c.nome;
-        }
-      });
+      const mapaNomes: { [cpf: string]: string } = { ...nomesClientes };
+      try {
+        const { data: remData } = await supabase.from('contatos_mesa_remarketing').select('cliente_cpf, cliente_nome').eq('loja_id', lojaId);
+        (remData || []).forEach(r => {
+          if (r.cliente_nome) {
+            const cl = r.cliente_cpf.replace(/\D/g, '');
+            mapaNomes[cl] = r.cliente_nome;
+            if (cl.startsWith('55')) mapaNomes[cl.substring(2)] = r.cliente_nome;
+          }
+        });
+      } catch (e) {}
 
       const clientesMap: { [cpf: string]: { totalGasto: number; totalTransacoes: number; totalPontosGanhos: number; totalPontosUsados: number; totalCashbackDisponivel: number; ultimaVisita: string } } = {};
 
@@ -526,19 +528,19 @@ export default function MerchantPanel() {
     if (!lojaId) return;
     mostrarToast('Gerando histórico de vendas...', 'sucesso');
     try {
-      const [{ data: vendas }, { data: clientesData }] = await Promise.all([
-        supabase.from('transacoes').select('*').eq('loja_id', lojaId).order('created_at', { ascending: false }),
-        supabase.from('clientes').select('cpf, nome')
-      ]);
+      const { data: vendas } = await supabase.from('transacoes').select('*').eq('loja_id', lojaId).order('created_at', { ascending: false });
 
-      const mapaNomes: { [cpf: string]: string } = {};
-      (clientesData || []).forEach(c => {
-        if (c.nome) {
-          const cl = c.cpf.replace(/\D/g, '');
-          mapaNomes[cl] = c.nome;
-          if (cl.startsWith('55')) mapaNomes[cl.substring(2)] = c.nome;
-        }
-      });
+      const mapaNomes: { [cpf: string]: string } = { ...nomesClientes };
+      try {
+        const { data: remData } = await supabase.from('contatos_mesa_remarketing').select('cliente_cpf, cliente_nome').eq('loja_id', lojaId);
+        (remData || []).forEach(r => {
+          if (r.cliente_nome) {
+            const cl = r.cliente_cpf.replace(/\D/g, '');
+            mapaNomes[cl] = r.cliente_nome;
+            if (cl.startsWith('55')) mapaNomes[cl.substring(2)] = r.cliente_nome;
+          }
+        });
+      } catch (e) {}
 
       const cabecalho = "Data;Hora;Telefone;Nome do Cliente;Valor da Venda (R$);Pontos Gerados (SPG);Tipo / Origem\n";
       const linhas = (vendas || []).map(v => {
@@ -712,22 +714,49 @@ export default function MerchantPanel() {
     try {
       const cleanCpfs = Array.from(new Set(cpfs.map(c => c.replace(/\D/g, ''))));
       const cpfsVariacoes = cleanCpfs.flatMap(c => [c, c.startsWith('55') ? c.substring(2) : '55' + c]);
-      
-      const { data } = await supabase
-        .from('clientes')
-        .select('cpf, nome')
-        .in('cpf', cpfsVariacoes);
+      const mapa: { [cpf: string]: string } = {};
 
-      if (data && data.length > 0) {
-        const mapa: { [cpf: string]: string } = {};
-        data.forEach(item => {
-          if (item.nome) {
-            const clean = item.cpf.replace(/\D/g, '');
-            mapa[clean] = item.nome;
-            if (clean.startsWith('55')) mapa[clean.substring(2)] = item.nome;
-            else mapa['55' + clean] = item.nome;
-          }
-        });
+      // 1. Tenta carregar da tabela clientes
+      try {
+        const { data: cliData } = await supabase
+          .from('clientes')
+          .select('cpf, nome')
+          .in('cpf', cpfsVariacoes);
+
+        if (cliData && cliData.length > 0) {
+          cliData.forEach(item => {
+            if (item.nome) {
+              const clean = item.cpf.replace(/\D/g, '');
+              mapa[clean] = item.nome;
+              if (clean.startsWith('55')) mapa[clean.substring(2)] = item.nome;
+              else mapa['55' + clean] = item.nome;
+            }
+          });
+        }
+      } catch (e) {}
+
+      // 2. Complementa com nomes salvos em contatos_mesa_remarketing (coluna cliente_nome)
+      try {
+        const { data: remData } = await supabase
+          .from('contatos_mesa_remarketing')
+          .select('cliente_cpf, cliente_nome')
+          .in('cliente_cpf', cpfsVariacoes);
+
+        if (remData && remData.length > 0) {
+          remData.forEach(item => {
+            if (item.cliente_nome) {
+              const clean = item.cliente_cpf.replace(/\D/g, '');
+              if (!mapa[clean]) {
+                mapa[clean] = item.cliente_nome;
+                if (clean.startsWith('55')) mapa[clean.substring(2)] = item.cliente_nome;
+                else mapa['55' + clean] = item.cliente_nome;
+              }
+            }
+          });
+        }
+      } catch (e) {}
+
+      if (Object.keys(mapa).length > 0) {
         setNomesClientes(prev => ({ ...prev, ...mapa }));
       }
     } catch (e) {
@@ -744,18 +773,22 @@ export default function MerchantPanel() {
     try {
       const cpfsUpdate = [clean, clean.startsWith('55') ? clean.substring(2) : '55' + clean];
       
-      // Salva / Atualiza na tabela clientes
-      await supabase.from('clientes').upsert(
-        cpfsUpdate.map(cpf => ({ cpf, nome: novoNome })),
-        { onConflict: 'cpf' }
-      );
+      // Salva / Atualiza na tabela clientes (caso a coluna nome exista)
+      try {
+        await supabase.from('clientes').upsert(
+          cpfsUpdate.map(cpf => ({ cpf, nome: novoNome })),
+          { onConflict: 'cpf' }
+        );
+      } catch (e) {}
 
-      // Atualiza também nos contatos de remarketing se existirem
+      // Atualiza também na tabela de contatos da mesa com a coluna correta (cliente_nome)
       if (lojaId) {
-        await supabase.from('contatos_mesa_remarketing')
-          .update({ nome: novoNome })
-          .in('cliente_cpf', cpfsUpdate)
-          .eq('loja_id', lojaId);
+        try {
+          await supabase.from('contatos_mesa_remarketing')
+            .update({ cliente_nome: novoNome })
+            .in('cliente_cpf', cpfsUpdate)
+            .eq('loja_id', lojaId);
+        } catch (e) {}
       }
 
       setNomesClientes(prev => {
@@ -763,6 +796,11 @@ export default function MerchantPanel() {
         cpfsUpdate.forEach(c => { n[c] = novoNome; });
         return n;
       });
+
+      // Salva em localStorage como redundância imediata
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`@nome_cliente_${clean}`, novoNome);
+      }
 
       mostrarToast(`Nome salvo com sucesso: "${novoNome}"!`, 'sucesso');
       setModalEditarNome(null);
@@ -1084,13 +1122,14 @@ export default function MerchantPanel() {
         roleta_ativa: data.roleta_ativa || false,
         roleta_intervalo_dias: data.roleta_intervalo_dias !== null && data.roleta_intervalo_dias !== undefined ? String(data.roleta_intervalo_dias) : '1',
         intercambio_taxa: data.intercambio_taxa !== null && data.intercambio_taxa !== undefined ? String(data.intercambio_taxa) : '0.1',
-        exigir_pin_cliente: data.exigir_pin_cliente === true,
-        dias_inatividade_crm: (typeof window !== 'undefined' && localStorage.getItem(`@dias_inatividade_${lojaId}`)) || '15'
+        exigir_pin_cliente: data.exigir_pin_cliente !== undefined ? (data.exigir_pin_cliente === true) : (typeof window !== 'undefined' && localStorage.getItem(`@exigir_pin_${lojaId}`) === 'true'),
+        dias_inatividade_crm: data.dias_inatividade_crm !== undefined ? String(data.dias_inatividade_crm) : ((typeof window !== 'undefined' && localStorage.getItem(`@dias_inatividade_${lojaId}`)) || '15')
       }));
     } else {
       setConfig((prev: any) => ({
         ...prev,
         senha: lojaData?.senha || '',
+        exigir_pin_cliente: (typeof window !== 'undefined' && localStorage.getItem(`@exigir_pin_${lojaId}`) === 'true'),
         dias_inatividade_crm: (typeof window !== 'undefined' && localStorage.getItem(`@dias_inatividade_${lojaId}`)) || '15'
       }));
     }
@@ -1453,30 +1492,57 @@ export default function MerchantPanel() {
 
   const salvarConfig = async () => {
     setLoadingSalvar(true);
-    const { error } = await supabase.from('configuracoes_loja').upsert({
-      loja_id: lojaId, nome_loja: config.nome_loja, nome_fantasia: config.nome_fantasia || null, cor_primaria: config.cor_primaria,
-      cashback_percent: Number(config.cashback_percent) || 0, cashback_expiracao_dias: Number(config.cashback_expiracao_dias) || 30,
-      cashback_limite_uso_percent: Number(config.cashback_limite_uso_percent) || 100, reais_por_ponto: Number(config.reais_por_ponto) || 1,
-      pontos_expiracao_dias: Number(config.pontos_expiracao_dias) || 365, pontos_sobre_valor_bruto: config.pontos_sobre_valor_bruto,
+    
+    const payloadBase: any = {
+      loja_id: lojaId,
+      nome_loja: config.nome_loja,
+      nome_fantasia: config.nome_fantasia || null,
+      cor_primaria: config.cor_primaria,
+      cashback_percent: Number(config.cashback_percent) || 0,
+      cashback_expiracao_dias: Number(config.cashback_expiracao_dias) || 30,
+      cashback_limite_uso_percent: Number(config.cashback_limite_uso_percent) || 100,
+      reais_por_ponto: Number(config.reais_por_ponto) || 1,
+      pontos_expiracao_dias: Number(config.pontos_expiracao_dias) || 365,
+      pontos_sobre_valor_bruto: config.pontos_sobre_valor_bruto,
       limite_resgates_diario_cliente: config.limite_resgates_diario_cliente ? Number(config.limite_resgates_diario_cliente) : null,
       tempo_bloqueio_minutos: config.tempo_bloqueio_minutos ? Number(config.tempo_bloqueio_minutos) : null,
-      bonus_retorno_pontos: Number(config.bonus_retorno_pontos) || 50, bonus_retorno_validade_dias: Number(config.bonus_retorno_validade_dias) || 3,
-      usar_cashback_total: config.usar_cashback_total, telefone: config.telefone, endereco: config.endereco, numero: config.numero,
-      bairro: config.bairro, cidade: config.cidade, estado: config.estado, cep: config.cep,
-      roleta_ativa: config.roleta_ativa, 
+      bonus_retorno_pontos: Number(config.bonus_retorno_pontos) || 50,
+      bonus_retorno_validade_dias: Number(config.bonus_retorno_validade_dias) || 3,
+      usar_cashback_total: config.usar_cashback_total,
+      telefone: config.telefone,
+      endereco: config.endereco,
+      numero: config.numero,
+      bairro: config.bairro,
+      cidade: config.cidade,
+      estado: config.estado,
+      cep: config.cep,
+      roleta_ativa: config.roleta_ativa,
       roleta_intervalo_dias: config.roleta_intervalo_dias !== "" ? Number(config.roleta_intervalo_dias) : 1,
-      link_google_meu_negocio: config.link_google_meu_negocio || null,
-      exigir_pin_cliente: config.exigir_pin_cliente === true
+      link_google_meu_negocio: config.link_google_meu_negocio || null
+    };
+
+    // Tenta salvar com as novas colunas
+    let { error } = await supabase.from('configuracoes_loja').upsert({
+      ...payloadBase,
+      exigir_pin_cliente: config.exigir_pin_cliente === true,
+      dias_inatividade_crm: Number(config.dias_inatividade_crm) || 15
     }, { onConflict: 'loja_id' });
+
+    // Se o Supabase acusar falta da coluna, salva o payload base e guarda em localStorage
+    if (error && (error.message?.includes('exigir_pin_cliente') || error.message?.includes('dias_inatividade_crm'))) {
+      const retry = await supabase.from('configuracoes_loja').upsert(payloadBase, { onConflict: 'loja_id' });
+      error = retry.error;
+    }
 
     if (config.senha && config.senha.trim() !== '') await supabase.from('lojas').update({ senha: config.senha }).eq('id', lojaId);
     
     // Salvar também as configurações do QR Mesa
     if (lojaId) await salvarConfigQrMesa(lojaId);
 
-    // Salvar dias de inatividade localmente
+    // Salvar dias de inatividade e preferência de PIN localmente como redundância
     if (typeof window !== 'undefined' && lojaId) {
       localStorage.setItem(`@dias_inatividade_${lojaId}`, String(config.dias_inatividade_crm || '15'));
+      localStorage.setItem(`@exigir_pin_${lojaId}`, String(config.exigir_pin_cliente === true));
     }
     
     setLoadingSalvar(false);
