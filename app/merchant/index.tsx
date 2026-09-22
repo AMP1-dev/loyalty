@@ -1480,7 +1480,15 @@ export default function MerchantPanel() {
 
   const editarReward = (r: any) => {
     setEditandoRewardId((prev) => (prev === r.id ? null : r.id)); setFormError('');
-    setForm({ nome: r.nome || '', pontos: r.custo_pontos !== null ? String(r.custo_pontos) : '', imagem: r.imagem || '', limiteCliente: r.limite_por_cliente !== null ? String(r.limite_por_cliente) : '', limiteDia: r.limite_quantidade !== null ? String(r.limite_quantidade) : '', limiteTotal: r.limite_total !== null ? String(r.limite_total) : '' });
+    setForm({
+      nome: r.nome || '',
+      pontos: r.custo_pontos !== null ? String(r.custo_pontos) : '',
+      imagem: r.imagem || '',
+      limiteCliente: r.limite_por_cliente !== null ? String(r.limite_por_cliente) : '',
+      limiteDia: r.limite_quantidade !== null ? String(r.limite_quantidade) : '',
+      limiteTotal: r.limite_total !== null ? String(r.limite_total) : '',
+      aceitaTroca: r.limite_tipo === 'aceita_troca'
+    });
   };
 
   const excluirReward = async (id: string, nome: string) => {
@@ -1547,7 +1555,17 @@ export default function MerchantPanel() {
     const pontos = parseInt(form.pontos);
     if (!pontos || isNaN(pontos) || pontos <= 0) { setFormError("O custo em Springs deve ser maior que zero."); return; }
 
-    const payload = { loja_id: lojaId, nome: form.nome, custo_pontos: pontos, imagem: form.imagem || null, limite_por_cliente: form.limiteCliente ? Number(form.limiteCliente) : null, limite_quantidade: form.limiteDia ? Number(form.limiteDia) : null, limite_total: form.limiteTotal ? Number(form.limiteTotal) : null, ativo: true };
+    const payload = {
+      loja_id: lojaId,
+      nome: form.nome,
+      custo_pontos: pontos,
+      imagem: form.imagem || null,
+      limite_por_cliente: form.limiteCliente ? Number(form.limiteCliente) : null,
+      limite_quantidade: form.limiteDia ? Number(form.limiteDia) : null,
+      limite_total: form.limiteTotal ? Number(form.limiteTotal) : null,
+      limite_tipo: form.aceitaTroca ? 'aceita_troca' : null,
+      ativo: true
+    };
     if (editandoRewardId === 'novo') await supabase.from('recompensas').insert([payload]);
     else await supabase.from('recompensas').update(payload).eq('id', editandoRewardId);
     
@@ -2661,7 +2679,7 @@ export default function MerchantPanel() {
 
           {mostrarCatalogo && (
             <View>
-              <TouchableOpacity style={[styles.buttonCenter, { marginBottom: 20 }]} onPress={() => { setEditandoRewardId('novo'); setForm({ nome: '', pontos: '', imagem: '', limiteCliente: '', limiteDia: '', limiteTotal: '' }); }}><Text style={styles.buttonText}>+ NOVO PRÊMIO</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.buttonCenter, { marginBottom: 20 }]} onPress={() => { setEditandoRewardId('novo'); setForm({ nome: '', pontos: '', imagem: '', limiteCliente: '', limiteDia: '', limiteTotal: '', aceitaTroca: false }); }}><Text style={styles.buttonText}>+ NOVO PRÊMIO</Text></TouchableOpacity>
               {editandoRewardId !== null && (
                 <View style={[styles.editBox, { marginBottom: 20 }]}>
                   <TextInput value={form.nome || ''} onChangeText={(t) => setForm({ ...form, nome: t })} placeholder="Nome do Prêmio" placeholderTextColor="#94A3B8" style={styles.input} />
@@ -2695,6 +2713,22 @@ export default function MerchantPanel() {
                       )}
                     </TouchableOpacity>
                   </View>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#0f172a', padding: 12, borderRadius: 10, marginBottom: 14, borderWidth: 1, borderColor: form.aceitaTroca ? '#8B5CF6' : '#334155' }}>
+                    <View style={{ flex: 1, paddingRight: 10 }}>
+                      <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>🔄 Aceitar Troca de Pontos da Rede (Exchange)</Text>
+                      <Text style={{ color: '#94a3b8', fontSize: 10, marginTop: 2 }}>
+                        {form.aceitaTroca 
+                          ? 'SIM: Clientes de outras lojas parceiras podem trocar pontos por este produto.' 
+                          : 'NÃO (Padrão): Produto exclusivo para resgate com pontos desta loja.'}
+                      </Text>
+                    </View>
+                    <Switch
+                      value={form.aceitaTroca === true}
+                      onValueChange={(v) => setForm({ ...form, aceitaTroca: v })}
+                    />
+                  </View>
+
                   <TouchableOpacity style={styles.button} onPress={salvarEdicao}><Text style={styles.buttonText}>SALVAR</Text></TouchableOpacity>
                 </View>
               )}
@@ -2704,6 +2738,11 @@ export default function MerchantPanel() {
                     {r.imagem && <Image source={{ uri: r.imagem }} style={styles.img} />}
                     <Text style={styles.phone}>{r.nome}</Text>
                     <Text style={styles.points}>{r.custo_pontos} Springs</Text>
+                    {r.limite_tipo === 'aceita_troca' ? (
+                      <View style={{ backgroundColor: '#8B5CF625', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, alignSelf: 'center', marginVertical: 4, borderWidth: 1, borderColor: '#8B5CF680' }}>
+                        <Text style={{ color: '#C4B5FD', fontSize: 9, fontWeight: '900' }}>🔄 ACEITA TROCA</Text>
+                      </View>
+                    ) : null}
                     <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, width: '100%' }}>
                       <TouchableOpacity style={[styles.editBtn, { flex: 1, marginTop: 0 }]} onPress={() => editarReward(r)}>
                         <Text style={styles.buttonText}>EDITAR</Text>

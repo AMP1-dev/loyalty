@@ -1404,10 +1404,12 @@ export default function Cliente() {
                           <Text style={{ color: '#fff', fontWeight: '900', fontSize: 22, marginBottom: 4 }}>{item.nome}</Text>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                             <Text style={{ color: c.neonVerde, fontWeight: '800', fontSize: 16 }}>{item.custo_pontos} SPG</Text>
-                            <View style={{ backgroundColor: '#10B98120', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#10B98160', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                              <Text style={{ fontSize: 10 }}>✨</Text>
-                              <Text style={{ color: '#6EE7B7', fontSize: 10, fontWeight: '800' }}>LOJA ATUAL</Text>
-                            </View>
+                            {item.limite_tipo === 'aceita_troca' && (
+                              <View style={{ backgroundColor: '#8B5CF625', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#8B5CF680', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                <Text style={{ fontSize: 10 }}>🔄</Text>
+                                <Text style={{ color: '#C4B5FD', fontSize: 10, fontWeight: '800' }}>ACEITA TROCA</Text>
+                              </View>
+                            )}
                           </View>
                         </View>
 
@@ -1465,6 +1467,7 @@ export default function Cliente() {
               {recompensasRede.map((item, idx) => {
                 const rawImg = item.imagem || item.foto || item.imagem_url;
                 const hasImg = rawImg && String(rawImg).startsWith('http');
+                const aceitaTroca = item.limite_tipo === 'aceita_troca';
                 return (
                   <View key={idx} style={[styles.brindeCardGrande, { backgroundColor: c.card, borderColor: c.borda }]}>
                     <View style={{ width: '100%', height: '100%', borderRadius: 28, overflow: 'hidden', backgroundColor: '#000' }}>
@@ -1485,18 +1488,22 @@ export default function Cliente() {
                         <Text style={{ color: '#fff', fontWeight: '900', fontSize: 22, marginBottom: 4 }}>{item.nome}</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                           <Text style={{ color: c.neonVerde, fontWeight: '800', fontSize: 16 }}>{item.custo_pontos} SPG</Text>
-                          <View style={{ backgroundColor: '#8B5CF625', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#8B5CF680', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                            <Text style={{ fontSize: 10 }}>🔄</Text>
-                            <Text style={{ color: '#C4B5FD', fontSize: 10, fontWeight: '800' }}>ACEITA TROCA</Text>
-                          </View>
+                          {aceitaTroca && (
+                            <View style={{ backgroundColor: '#8B5CF625', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#8B5CF680', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                              <Text style={{ fontSize: 10 }}>🔄</Text>
+                              <Text style={{ color: '#C4B5FD', fontSize: 10, fontWeight: '800' }}>ACEITA TROCA</Text>
+                            </View>
+                          )}
                         </View>
                         {item.nomeLoja && <Text style={{ color: '#aaa', fontSize: 11, marginTop: 4 }}>📍 {item.nomeLoja}</Text>}
                       </View>
 
-                      <View style={{ position: 'absolute', top: 20, right: 20, backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, borderWidth: 1, borderColor: '#8B5CF680', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Text style={{ fontSize: 10 }}>🌐</Text>
-                        <Text style={{ color: '#C4B5FD', fontSize: 10, fontWeight: '900' }}>REDE • TROCA LIVRE</Text>
-                      </View>
+                      {aceitaTroca && (
+                        <View style={{ position: 'absolute', top: 20, right: 20, backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, borderWidth: 1, borderColor: '#8B5CF680', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Text style={{ fontSize: 10 }}>🌐</Text>
+                          <Text style={{ color: '#C4B5FD', fontSize: 10, fontWeight: '900' }}>REDE • TROCA LIVRE</Text>
+                        </View>
+                      )}
                     </View>
                   </View>
                 );
