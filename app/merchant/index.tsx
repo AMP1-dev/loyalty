@@ -48,7 +48,7 @@ export default function MerchantPanel() {
   const [formRoleta, setFormRoleta] = useState<any>({});
   const [formError, setFormError] = useState('');
   const [mostrarConfig, setMostrarConfig] = useState(false);
-  const [config, setConfig] = useState<any>({ nome_loja: '', cor_primaria: '#10b981', cashback_percent: '10', cashback_expiracao_dias: '30', reais_por_ponto: '1', pontos_expiracao_dias: '365', pontos_sobre_valor_bruto: true, usar_cashback_total: false, limite_resgates_diario_cliente: '', tempo_bloqueio_minutos: '', bonus_retorno_pontos: '50', bonus_retorno_validade_dias: '3', senha: '', link_google_meu_negocio: '', intercambio_taxa: '0.1', exigir_pin_cliente: false });
+  const [config, setConfig] = useState<any>({ nome_loja: '', cor_primaria: '#10b981', cashback_percent: '10', cashback_expiracao_dias: '30', reais_por_ponto: '1', pontos_expiracao_dias: '365', pontos_sobre_valor_bruto: true, usar_cashback_total: false, limite_resgates_diario_cliente: '', tempo_bloqueio_minutos: '', bonus_retorno_pontos: '50', bonus_retorno_validade_dias: '3', senha: '', link_google_meu_negocio: '', intercambio_taxa: '0.1', exigir_pin_cliente: false, dias_inatividade_crm: '15' });
   const [loadingSalvar, setLoadingSalvar] = useState(false);
   const [carregandoFoto, setCarregandoFoto] = useState(false);
   const [toast, setToast] = useState({ message: '', tipo: 'sucesso', visible: false });
@@ -853,11 +853,15 @@ export default function MerchantPanel() {
         if (!ultimoPorCliente.has(cpfNorm)) ultimoPorCliente.set(cpfNorm, v);
       });
 
+      const diasInatividade = (typeof window !== 'undefined' && lojaId && localStorage.getItem(`@dias_inatividade_${lojaId}`))
+        ? (Number(localStorage.getItem(`@dias_inatividade_${lojaId}`)) || 15)
+        : (Number(config.dias_inatividade_crm) || 15);
+
       const crmLista = Array.from(ultimoPorCliente.values()).map((v: any) => {
         const ultimaCompra = parseDataSupabase(v.created_at);
         const retorno = new Date(ultimaCompra);
-        retorno.setDate(retorno.getDate() + 15);
-        return { ...v, atrasado: retorno.getTime() < Date.now(), dataRetorno: retorno };
+        retorno.setDate(retorno.getDate() + diasInatividade);
+        return { ...v, atrasado: retorno.getTime() < Date.now(), dataRetorno: retorno, diasInatividade };
       });
 
       const atrasados = crmLista.filter((c: any) => c.atrasado);
@@ -1002,10 +1006,15 @@ export default function MerchantPanel() {
         roleta_ativa: data.roleta_ativa || false,
         roleta_intervalo_dias: data.roleta_intervalo_dias !== null && data.roleta_intervalo_dias !== undefined ? String(data.roleta_intervalo_dias) : '1',
         intercambio_taxa: data.intercambio_taxa !== null && data.intercambio_taxa !== undefined ? String(data.intercambio_taxa) : '0.1',
-        exigir_pin_cliente: data.exigir_pin_cliente === true
+        exigir_pin_cliente: data.exigir_pin_cliente === true,
+        dias_inatividade_crm: (typeof window !== 'undefined' && localStorage.getItem(`@dias_inatividade_${lojaId}`)) || '15'
       }));
     } else {
-      setConfig((prev: any) => ({ ...prev, senha: lojaData?.senha || '' }));
+      setConfig((prev: any) => ({
+        ...prev,
+        senha: lojaData?.senha || '',
+        dias_inatividade_crm: (typeof window !== 'undefined' && localStorage.getItem(`@dias_inatividade_${lojaId}`)) || '15'
+      }));
     }
 
     if (typeof window !== 'undefined') {
@@ -1386,10 +1395,16 @@ export default function MerchantPanel() {
     
     // Salvar também as configurações do QR Mesa
     if (lojaId) await salvarConfigQrMesa(lojaId);
+
+    // Salvar dias de inatividade localmente
+    if (typeof window !== 'undefined' && lojaId) {
+      localStorage.setItem(`@dias_inatividade_${lojaId}`, String(config.dias_inatividade_crm || '15'));
+    }
     
     setLoadingSalvar(false);
     if (error) { mostrarToast(`Erro ao salvar: ${error.message}`, 'erro'); return; }
     mostrarToast('⚙️ Configurações salvas com sucesso!', 'sucesso');
+    buscarStats();
     setTimeout(() => { setMostrarConfig(false); }, 1000);
   };
 
@@ -1466,6 +1481,24 @@ export default function MerchantPanel() {
   const editarReward = (r: any) => {
     setEditandoRewardId((prev) => (prev === r.id ? null : r.id)); setFormError('');
     setForm({ nome: r.nome || '', pontos: r.custo_pontos !== null ? String(r.custo_pontos) : '', imagem: r.imagem || '', limiteCliente: r.limite_por_cliente !== null ? String(r.limite_por_cliente) : '', limiteDia: r.limite_quantidade !== null ? String(r.limite_quantidade) : '', limiteTotal: r.limite_total !== null ? String(r.limite_total) : '' });
+  };
+
+  const excluirReward = async (id: string, nome: string) => {
+    const confirmar = Platform.OS === 'web'
+      ? window.confirm(`Deseja realmente excluir o prêmio "${nome}" do catálogo?`)
+      : true;
+    if (!confirmar) return;
+
+    try {
+      const { error } = await supabase.from('recompensas').delete().eq('id', id);
+      if (error) throw error;
+      mostrarToast(`🗑️ Prêmio "${nome}" excluído com sucesso!`, 'sucesso');
+      if (editandoRewardId === id) setEditandoRewardId(null);
+      buscarRewards();
+    } catch (err: any) {
+      console.error('Erro ao excluir prêmio:', err);
+      mostrarToast('Erro ao excluir: ' + err.message, 'erro');
+    }
   };
 
   const selecionarEEnviarFoto = async () => {
@@ -1618,15 +1651,19 @@ export default function MerchantPanel() {
                 <Text style={{ color: '#fff', fontSize: 12 }}>Usar Saldo Total de Cashback (Acumulativo)</Text>
               </View>
 
-              <Text style={[styles.label, { color: '#facc15', marginTop: 20 }]}>🎡 FIDELIDADE E ROLETA:</Text>
+              <Text style={[styles.label, { color: '#facc15', marginTop: 20 }]}>🎡 FIDELIDADE, CRM E ROLETA:</Text>
               <View style={{ flexDirection: 'row', gap: 10 }}>
-                 <View style={{ flex: 2 }}>
+                 <View style={{ flex: 1 }}>
                     <Text style={{ color: '#94a3b8', fontSize: 10 }}>PONTOS BÔNUS (RETORNO)</Text>
                     <TextInput value={config.bonus_retorno_pontos} onChangeText={(t) => setConfig({ ...config, bonus_retorno_pontos: t })} style={styles.input} keyboardType="numeric" />
                  </View>
                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: '#94a3b8', fontSize: 10 }}>VALIDADE BÔNUS</Text>
+                    <Text style={{ color: '#94a3b8', fontSize: 10 }}>VALIDADE BÔNUS (DIAS)</Text>
                     <TextInput value={config.bonus_retorno_validade_dias} onChangeText={(t) => setConfig({ ...config, bonus_retorno_validade_dias: t })} style={styles.input} keyboardType="numeric" />
+                 </View>
+                 <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#8b5cf6', fontSize: 10, fontWeight: 'bold' }}>INATIVIDADE CRM (DIAS)</Text>
+                    <TextInput value={String(config.dias_inatividade_crm || '15')} onChangeText={(t) => setConfig({ ...config, dias_inatividade_crm: t.replace(/\D/g, '') })} placeholder="15" placeholderTextColor="#475569" style={[styles.input, { borderColor: '#8b5cf6' }]} keyboardType="numeric" />
                  </View>
               </View>
 
@@ -1636,7 +1673,7 @@ export default function MerchantPanel() {
                   <TextInput value={config.roleta_intervalo_dias} onChangeText={(t) => setConfig({ ...config, roleta_intervalo_dias: t })} style={styles.input} keyboardType="numeric" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>TAXA INTERCÂMBIO (%)</Text>
+                  <Text style={{ color: '#94a3b8', fontSize: 10 }}>TAXA INTERCÂMBIO / REDE (%)</Text>
                   <TextInput value={config.intercambio_taxa} onChangeText={(t) => setConfig({ ...config, intercambio_taxa: t })} style={styles.input} keyboardType="numeric" placeholder="0.10" />
                 </View>
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 15 }}>
@@ -2585,7 +2622,7 @@ export default function MerchantPanel() {
 
           {mostrarCRM && (
             <View style={styles.card}>
-              <Text style={styles.title}>📲 Clientes para Contato (Ausentes há mais de 15 dias)</Text>
+              <Text style={styles.title}>📲 Clientes para Contato (Ausentes há mais de {config.dias_inatividade_crm || 15} dias)</Text>
               {historicoCRM.length === 0 ? (
                 <Text style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', padding: 15 }}>Nenhum cliente atrasado no momento! 🎉</Text>
               ) : (
@@ -2665,8 +2702,16 @@ export default function MerchantPanel() {
                 {rewards.map((r) => (
                   <View key={r.id} style={[styles.cardGrid, { width: itemWidth as any }]}>
                     {r.imagem && <Image source={{ uri: r.imagem }} style={styles.img} />}
-                    <Text style={styles.phone}>{r.nome}</Text><Text style={styles.points}>{r.custo_pontos} Springs</Text>
-                    <TouchableOpacity style={styles.editBtn} onPress={() => editarReward(r)}><Text style={styles.buttonText}>EDITAR</Text></TouchableOpacity>
+                    <Text style={styles.phone}>{r.nome}</Text>
+                    <Text style={styles.points}>{r.custo_pontos} Springs</Text>
+                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, width: '100%' }}>
+                      <TouchableOpacity style={[styles.editBtn, { flex: 1, marginTop: 0 }]} onPress={() => editarReward(r)}>
+                        <Text style={styles.buttonText}>EDITAR</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.editBtn, { flex: 1, marginTop: 0, backgroundColor: '#ef4444' }]} onPress={() => excluirReward(r.id, r.nome)}>
+                        <Text style={styles.buttonText}>🗑️ EXCLUIR</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 ))}
               </View>
